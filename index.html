@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Death Note</title>
+
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Creepster&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    height:100vh;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+
+    overflow:hidden;
+
+    font-family:'Creepster', cursive;
+
+    background:
+    radial-gradient(circle at center,
+    #1a0000 0%,
+    #000000 70%);
+
+    animation:fadeIn 2s ease;
+}
+
+/* 배경 움직임 */
+body::before{
+    content:"";
+    position:absolute;
+
+    width:200%;
+    height:200%;
+
+    background:
+    repeating-linear-gradient(
+        45deg,
+        rgba(255,0,0,0.03) 0px,
+        rgba(255,0,0,0.03) 2px,
+        transparent 2px,
+        transparent 20px
+    );
+
+    animation:bgMove 10s linear infinite;
+}
+
+@keyframes bgMove{
+    from{
+        transform:translate(0,0);
+    }
+
+    to{
+        transform:translate(-100px,-100px);
+    }
+}
+
+/* 전체 등장 */
+@keyframes fadeIn{
+    from{
+        opacity:0;
+    }
+
+    to{
+        opacity:1;
+    }
+}
+
+/* 제목 */
+h1{
+    color:red;
+
+    font-size:110px;
+    letter-spacing:5px;
+
+    z-index:1;
+
+    opacity:0;
+    transform:translateY(-40px);
+
+    text-shadow:
+    0 0 10px red,
+    0 0 20px red,
+    0 0 40px darkred;
+
+    animation:
+    titleShow 2s ease forwards,
+    glow 2s infinite alternate;
+
+    animation-delay:0.5s;
+}
+
+@keyframes titleShow{
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* 네온 */
+@keyframes glow{
+
+    from{
+        text-shadow:
+        0 0 10px red,
+        0 0 20px red;
+    }
+
+    to{
+        text-shadow:
+        0 0 20px red,
+        0 0 40px crimson,
+        0 0 60px darkred;
+    }
+}
+
+/* 부제목 */
+.subtitle{
+
+    color:#999;
+
+    font-size:25px;
+    letter-spacing:3px;
+
+    margin-top:10px;
+    margin-bottom:50px;
+
+    z-index:1;
+
+    opacity:0;
+
+    animation:subShow 2s ease forwards;
+    animation-delay:1.5s;
+}
+
+@keyframes subShow{
+    to{
+        opacity:1;
+    }
+}
+
+/* 버튼 */
+a{
+
+    z-index:1;
+
+    color:white;
+    text-decoration:none;
+
+    font-size:35px;
+
+    padding:18px 60px;
+
+    border:2px solid red;
+    border-radius:15px;
+
+    background:rgba(255,0,0,0.1);
+
+    box-shadow:
+    0 0 10px red,
+    inset 0 0 10px rgba(255,0,0,0.5);
+
+    transition:0.3s;
+
+    opacity:0;
+    transform:translateY(30px);
+
+    animation:buttonShow 2s ease forwards;
+    animation-delay:2.5s;
+}
+
+@keyframes buttonShow{
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* hover */
+a:hover{
+
+    transform:scale(1.1);
+
+    background:red;
+    color:black;
+
+    box-shadow:
+    0 0 20px red,
+    0 0 40px crimson,
+    0 0 60px darkred;
+}
+
+/* 클릭 시 */
+a:active{
+
+    transform:scale(0.9);
+}
+
+/* 화면 전환 효과 */
+.fade-out{
+
+    animation:screenFade 1.5s forwards;
+}
+
+@keyframes screenFade{
+
+    0%{
+        opacity:1;
+        transform:scale(1);
+        filter:blur(0px);
+    }
+
+    100%{
+        opacity:0;
+        transform:scale(1.3);
+        filter:blur(10px);
+        background:black;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>DEATH NOTE</h1>
+
+<div class="subtitle">
+    The game has begun...
+</div>
+
+<a id="playButton"
+href="https://waveppp6-lgtm.github.io/My-Death-Note/">
+
+PLAY
+
+</a>
+
+<script>
+
+const button = document.getElementById("playButton");
+
+button.addEventListener("click", function(event){
+
+    /* 바로 이동 막기 */
+    event.preventDefault();
+
+    /* 화면 사라지는 효과 */
+    document.body.classList.add("fade-out");
+
+    /* 1.5초 후 이동 */
+    setTimeout(() => {
+
+        window.location.href = button.href;
+
+    }, 1500);
+
+});
+
+</script>
+
+</body>
+</html>

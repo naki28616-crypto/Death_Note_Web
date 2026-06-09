@@ -1,282 +1,702 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>The Backrooms - Ultimate Edition (2026)</title>
+    <style>
+        html, body { 
+            width: 100%; height: 100%; margin: 0; padding: 0; 
+            overflow: hidden; background-color: #0f0e0a; 
+            touch-action: none; -webkit-touch-callout: none;
+            user-select: none; -webkit-user-select: none; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas { display: block; width: 100% !important; height: 100% !important; position: absolute; top:0; left:0; z-index: 1; }
+        
+        /* 영화적 연출 오버레이 */
+        #vhs-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%);
+            pointer-events: none; z-index: 2;
+        }
+        #cctv-ui {
+            position: absolute; top: 20px; right: 20px; color: #e03131; font-weight: bold;
+            font-size: 14px; z-index: 210; letter-spacing: 1px; display: block; pointer-events: none;
+        }
 
-<title>Death Note</title>
+        /* 메인 유저 인터페이스 */
+        #ui-container {
+            position: absolute; top: 16px; left: 16px; color: #d4cfb4;
+            background: rgba(15, 15, 10, 0.85); padding: 12px; border-radius: 4px; 
+            border: 1px solid #444135; z-index: 10; display: none; pointer-events: auto;
+        }
+        .btn {
+            background: #25241f; color: #bfae6f; border: 1px solid #444135; padding: 8px 14px; 
+            margin-right: 5px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;
+        }
+        .btn:hover { background: #38362f; }
+        .btn.active { background: #733333; color: #fff; border-color: #9c4444; }
 
-<style>
+        /* 설정 및 감도 패널 */
+        #settings-panel {
+            margin-top: 10px; border-top: 1px dashed #444135; padding-top: 10px; display: none;
+        }
+        .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+        .setting-row input[type="range"] { width: 90px; accent-color: #bfae6f; }
 
-@import url('https://fonts.googleapis.com/css2?family=Creepster&display=swap');
+        /* 모바일 전용 가젯 */
+        #mobile-flashlight-btn {
+            position: absolute; bottom: 30px; right: 30px; width: 65px; height: 65px;
+            background: rgba(37, 36, 31, 0.9); border: 2px solid #5c5746; border-radius: 50%;
+            color: #d4cfb4; font-size: 24px; display: none; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 10; touch-action: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #mobile-flashlight-btn.active {
+            background: #c7b256; color: #000; border-color: #fff; box-shadow: 0 0 15px rgba(255,253,232,0.6);
+        }
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+        #stamina-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 140px; background: rgba(15, 15, 10, 0.85); border: 2px solid #444135; 
+            padding: 5px; border-radius: 4px; z-index: 10; display: none;
+        }
+        .stamina-bg { background: rgba(0,0,0,0.6); border-radius: 2px; overflow: hidden; height: 6px; }
+        #stamina-bar { width: 100%; height: 100%; background: #c7b256; }
 
-body{
-    height:100vh;
+        #glitch-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(220, 40, 40, 0); opacity: 0; pointer-events: none; z-index: 3;
+        }
 
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    flex-direction:column;
+        /* 화면 분기 시스템 */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 14, 10, 0.4); z-index: 200; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #bfae6f; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .platform-box {
+            display: flex; gap: 20px; margin-top: 20px;
+        }
+        .btn-start {
+            background: #401717; color: #fff; border: 2px solid #bd3a3a; padding: 14px 28px;
+            font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer;
+        }
+        .btn-start:hover { background: #5e2323; }
 
-    overflow:hidden;
+        #gameover-screen, #pause-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 150; display: none; flex-direction: column;
+            justify-content: center; align-items: center; color: #a62424;
+        }
 
-    font-family:'Creepster', cursive;
-
-    background:
-    radial-gradient(circle at center,
-    #1a0000 0%,
-    #000000 70%);
-
-    animation:fadeIn 2s ease;
-}
-
-/* 배경 움직임 */
-body::before{
-    content:"";
-    position:absolute;
-
-    width:200%;
-    height:200%;
-
-    background:
-    repeating-linear-gradient(
-        45deg,
-        rgba(255,0,0,0.03) 0px,
-        rgba(255,0,0,0.03) 2px,
-        transparent 2px,
-        transparent 20px
-    );
-
-    animation:bgMove 10s linear infinite;
-}
-
-@keyframes bgMove{
-    from{
-        transform:translate(0,0);
-    }
-
-    to{
-        transform:translate(-100px,-100px);
-    }
-}
-
-/* 전체 등장 */
-@keyframes fadeIn{
-    from{
-        opacity:0;
-    }
-
-    to{
-        opacity:1;
-    }
-}
-
-/* 제목 */
-h1{
-    color:red;
-
-    font-size:50px;
-    letter-spacing:5px;
-
-    z-index:1;
-
-    opacity:0;
-    transform:translateY(-40px);
-
-    text-shadow:
-    0 0 10px red,
-    0 0 20px red,
-    0 0 40px darkred;
-
-    animation:
-    titleShow 2s ease forwards,
-    glow 2s infinite alternate;
-
-    animation-delay:0.5s;
-}
-
-@keyframes titleShow{
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-/* 네온 */
-@keyframes glow{
-
-    from{
-        text-shadow:
-        0 0 10px red,
-        0 0 20px red;
-    }
-
-    to{
-        text-shadow:
-        0 0 20px red,
-        0 0 40px crimson,
-        0 0 60px darkred;
-    }
-}
-
-/* 부제목 */
-.subtitle{
-
-    color:#999;
-
-    font-size:25px;
-    letter-spacing:3px;
-
-    margin-top:10px;
-    margin-bottom:50px;
-
-    z-index:1;
-
-    opacity:0;
-
-    animation:subShow 2s ease forwards;
-    animation-delay:1.5s;
-}
-
-@keyframes subShow{
-    to{
-        opacity:1;
-    }
-}
-
-/* 버튼 */
-a{
-
-    z-index:1;
-
-    margin: 10px;
-    float: left;
-
-    color:white;
-    text-decoration:none;
-
-    font-size:35px;
-
-    padding:18px 60px;
-
-    border:2px solid red;
-    border-radius:15px;
-
-    background:rgba(255,0,0,0.1);
-
-    box-shadow:
-    0 0 10px red,
-    inset 0 0 10px rgba(255,0,0,0.5);
-
-    transition:0.3s;
-
-    opacity:0;
-    transform:translateY(30px);
-
-    animation:buttonShow 2s ease forwards;
-    animation-delay:2.5s;
-}
-
-@keyframes buttonShow{
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-/* hover */
-a:hover{
-
-    transform:scale(1.1);
-
-    background:red;
-    color:black;
-
-    box-shadow:
-    0 0 20px red,
-    0 0 40px crimson,
-    0 0 60px darkred;
-}
-
-/* 클릭 시 */
-a:active{
-
-    transform:scale(0.9);
-}
-
-/* 화면 전환 효과 */
-.fade-out{
-
-    animation:screenFade 1.5s forwards;
-}
-
-@keyframes screenFade{
-
-    0%{
-        opacity:1;
-        transform:scale(1);
-        filter:blur(0px);
-    }
-
-    100%{
-        opacity:0;
-        transform:scale(1.3);
-        filter:blur(10px);
-        background:black;
-    }
-}
-
-</style>
+        #joystick-zone {
+            position: absolute; bottom: 30px; left: 30px;
+            width: 110px; height: 110px; background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.15); border-radius: 50%; z-index: 10; touch-action: none; display: none;
+        }
+        #joystick-stick {
+            position: absolute; top: 35px; left: 35px;
+            width: 40px; height: 40px; background: rgba(255,255,255,0.3); border-radius: 50%;
+        }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 4px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 50%;
+            pointer-events: none; z-index: 5; display: none;
+        }
+        #top-right-controls {
+            position: absolute; top: 16px; right: 16px; z-index: 12; display: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-
 <body>
+    <div id="vhs-overlay"></div>
+    <div id="glitch-overlay"></div>
+    <div id="crosshair"></div>
+    <div id="cctv-ui">🔴 REC LIVE <span id="cctv-time">00:00:00</span></div>
+    
+    <div id="start-screen">
+        <h1 style="font-size: 32px; letter-spacing: 5px; margin-bottom: 0px; color:#bd3a3a;">THE BACKROOMS</h1>
+        <p style="color: #9c9680; font-size: 13px; margin-bottom: 25px; text-align:center;">CCTV 시스템 연결됨. 기기를 선택하십시오.</p>
+        <div class="platform-box">
+            <button class="btn-start" onclick="selectPlatform('pc')">💻 PC PLATFORM</button>
+            <button class="btn-start" style="background:#1d2d40; border-color:#346194;" onclick="selectPlatform('mobile')">📱 MOBILE PLATFORM</button>
+        </div>
+    </div>
 
-<h1>DEATH NOTE</h1>
+    <div id="top-right-controls">
+        <button class="btn" style="margin:0; background:#1c1b17;" onclick="triggerPause(true)">⏸️ PAUSE</button>
+    </div>
 
-<div class="subtitle">
-    The game has begun...
-</div>
+    <div id="ui-container">
+        <div style="font-size: 11px; font-weight: bold; color: #bd3a3a; margin-bottom: 5px;">SYSTEM PANEL</div>
+        <button id="btn-view" class="btn btn-view" onclick="toggleViewMode()">🎥 1인칭 시점</button>
+        <button class="btn" style="background:#171613;" onclick="toggleSettingsPanel()">⚙️ 설정 펼치기</button>
+        
+        <div id="settings-panel">
+            <div class="setting-row">
+               <span>시점 감도</span>
+               <input type="range" id="cfg-sensitivity" min="0.1" max="2.5" step="0.1" value="1.0">
+            </div>
+            <div style="font-size:9px; color:#706b59; text-align:center; margin-top:4px;">PC는 ESC로 마우스 가둠 해제 가능</div>
+        </div>
+    </div>
 
-<a id="playButton"
-href="https://waveppp6-lgtm.github.io/My-Death-Note/">
+    <div id="mobile-flashlight-btn" onclick="toggleFlashlight()">🔦</div>
+    <div id="stamina-container"><div class="stamina-bg"><div id="stamina-bar"></div></div></div>
+    <div id="joystick-zone"><div id="joystick-stick"></div></div>
 
-PLAY
+    <div id="pause-screen">
+        <h1 style="font-size: 30px; letter-spacing: 3px; margin-bottom: 8px; color:#bfae6f;">GAME PAUSED</h1>
+        <p style="color: #6e6958; font-size: 13px; margin-bottom: 25px;">연산 및 탐색이 일시 중단되었습니다.</p>
+        <button class="btn" style="color:#fff; border-color:#bfae6f; padding:10px 20px;" onclick="triggerPause(false)">계속하기 (RESUME)</button>
+    </div>
 
-</a>
+    <div id="gameover-screen">
+        <h1 style="font-size: 28px; letter-spacing: 2px; margin-bottom: 10px;">LOST IN SPACE</h1>
+        <p style="color: #615d52; font-size: 13px; margin-bottom: 25px;">당신의 신호가 미로 내부에서 소멸되었습니다.</p>
+        <button class="btn" onclick="resetGame()" style="color:#fff; border-color:#a62424; padding:10px 20px;">다시 재연결</button>
+    </div>
 
-<a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDEMt6MUSQI0t_Ts2EDUDWGRhQ&start_radio=1">
-BACK
-</a>
+    <script>
+        let platform = null;
+        let viewMode = '3rd'; 
+        let isGameOver = false;
+        let isPaused = false;
+        let gameActive = false;
+        let isFlashlightOn = true;
+        let globalSensitivity = 1.0;
 
-<script>
+        // 배터리 타이머 설정 (4분 = 240초)
+        let batteryTimer = 0;
+        const batteryDuration = 240; 
+        
+        let audioCtx = null, mainGain = null, oscillators = [], lfo = null, lastFootstepTime = 0; 
 
-const button = document.getElementById("playButton");
+        // 쓰리디 씬 핵심 객체 및 🛠️ [벽 뚫림 원천 차단 Near 값 조율]
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x15130f); 
+        scene.fog = new THREE.FogExp2(0x15130f, 0.03); 
 
-button.addEventListener("click", function(event){
+        // Near 클리핑 단계를 0.02로 낮춰 초밀착 시에도 벽 렌더링 깨짐을 원천 방어합니다.
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.02, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
 
-    /* 바로 이동 막기 */
-    event.preventDefault();
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.16); 
+        scene.add(ambientLight);
 
-    /* 화면 사라지는 효과 */
-    document.body.classList.add("fade-out");
+        // 맵 설계
+        const mapRows = 45, mapCols = 45, unitSize = 5, wallHeight = 4.2;
+        let mapData = [], instancedWalls = null, lamps = [];
 
-    /* 1.5초 후 이동 */
-    setTimeout(() => {
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xd6c787, roughness: 0.6 });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x736846, roughness: 0.9 });
+        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xe6d6aa, roughness: 0.6 });
 
-        window.location.href = button.href;
+        function generateRandomMaze() {
+            mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
+            let visited = Array(mapRows).fill().map(() => Array(mapCols).fill(false));
+            function carve(r, c) {
+                visited[r][c] = true; mapData[r][c] = 0;
+                const dirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(() => Math.random() - 0.5);
+                for(let [dr, dc] of dirs) {
+                    let nr = r + dr, nc = c + dc;
+                    if(nr > 0 && nr < mapRows-1 && nc > 0 && nc < mapCols-1 && !visited[nr][nc]) {
+                        mapData[r + dr/2][c + dc/2] = 0; carve(nr, nc);
+                    }
+                }
+            }
+            carve(1, 1);
+            for(let i=0; i<180; i++) {
+                let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
+                mapData[r][c] = 0;
+            }
+        }
 
-    }, 1500);
+        function buildMazeGraphics() {
+            if(instancedWalls) scene.remove(instancedWalls);
+            lamps.forEach(l => scene.remove(l)); lamps = [];
+            
+            let wallCount = 0;
+            for(let r=0; r<mapRows; r++) { for(let c=0; c<mapCols; c++) { if(mapData[r][c] === 1) wallCount++; } }
 
-});
+            const wallGeo = new THREE.BoxGeometry(unitSize, wallHeight, unitSize);
+            instancedWalls = new THREE.InstancedMesh(wallGeo, wallMat, wallCount);
+            let dummy = new THREE.Object3D(), idx = 0;
 
-</script>
+            for(let r=0; r<mapData.length; r++) {
+                for(let c=0; c<mapData[r].length; c++) {
+                    const x = (c - mapCols/2) * unitSize + unitSize/2;
+                    const z = (r - mapRows/2) * unitSize + unitSize/2;
+                    if(mapData[r][c] === 1) {
+                        dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
+                        instancedWalls.setMatrixAt(idx++, dummy.matrix);
+                    } else if(Math.random() < 0.06) {
+                        const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.4), new THREE.MeshBasicMaterial({ color: 0xfffee4 }));
+                        lamp.position.set(x, wallHeight - 0.02, z); scene.add(lamp); lamps.push(lamp);
+                        const pl = new THREE.PointLight(0xfffcd4, 0.6, 12); pl.position.set(x, wallHeight - 0.3, z); lamp.add(pl);
+                    }
+                }
+            }
+            scene.add(instancedWalls);
+            const mW = mapCols*unitSize, mH = mapRows*unitSize;
+            const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; scene.add(f);
+            const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl);
+        }
 
+        function getSafeSpawn() {
+            while(true) {
+                let r = Math.floor(Math.random()*mapRows), c = Math.floor(Math.random()*mapCols);
+                if(mapData[r][c] === 0) return { x: (c - mapCols/2)*unitSize + unitSize/2, z: (r - mapRows/2)*unitSize + unitSize/2 };
+            }
+        }
+
+        generateRandomMaze(); buildMazeGraphics();
+
+        // 플레이어 캐릭터 빌드 및 충돌 두께 상향 수정 (`radius = 0.55`)
+        let player = new THREE.Group(); player.position.set(0, 0, 0); scene.add(player);
+        let playerParts = []; const hazmatColor = 0xde8100;
+        const bMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.2, 8), new THREE.MeshStandardMaterial({color: hazmatColor})); bMesh.position.y = 0.7; player.add(bMesh); playerParts.push(bMesh);
+        const hMesh = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 10), new THREE.MeshStandardMaterial({color: hazmatColor})); hMesh.position.set(0, 1.4, 0); player.add(hMesh); playerParts.push(hMesh);
+        const vMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.15), new THREE.MeshStandardMaterial({color: 0x111111, metalness:0.9})); vMesh.position.set(0, 1.42, 0.18); player.add(vMesh); playerParts.push(vMesh);
+
+        // 손전등 위치 최적화 (1인칭 시야 가림을 최소화하기 위해 타겟 전방 축 이격 가공)
+        const flashlight = new THREE.SpotLight(0xfffefa, 14.0, 65, Math.PI / 4.5, 0.55, 0.8);
+        scene.add(flashlight);
+        const flashlightTarget = new THREE.Object3D(); scene.add(flashlightTarget); flashlight.target = flashlightTarget;
+
+        // 👾 듀얼 엔티티(2마리) 시스템 및 고유 AI 상태 정의
+        let entities = [];
+        const entityColors = [0x990000, 0x0044aa]; 
+        
+        for(let i=0; i<2; i++) {
+            let ent = new THREE.Group();
+            let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.9 });
+            let eCore = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), eMat); eCore.position.y = 1.2; ent.add(eCore);
+            for(let j=0; j<5; j++) {
+                let t = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.01, 1.5), eMat);
+                t.position.set((Math.random()-0.5)*0.5, 2.0, (Math.random()-0.5)*0.5); ent.add(t);
+            }
+            scene.add(ent);
+            entities.push({
+                mesh: ent,
+                state: 'patrol', 
+                patrolTarget: getSafeSpawn(),
+                speed: 0.045 + (i * 0.01),
+                colorCode: entityColors[i]
+            });
+        }
+
+        // 초기 스폰 동기화
+        const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z);
+        entities.forEach(e => { const esp = getSafeSpawn(); e.mesh.position.set(esp.x, 0, esp.z); });
+
+        // 상태 지표 제어 컨트롤 변수들
+        let cameraAngleX = 0, cameraAngleY = 0, targetRotationY = 0;
+        let stamina = 100, isExhausted = false, isMoving = false, isSprinting = false;
+        const keys = { w: false, a: false, s: false, d: false, shift: false };
+
+        // UI 이벤트 핸들러 연동
+        const sensitivityInput = document.getElementById('cfg-sensitivity');
+        sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value); });
+
+        function toggleSettingsPanel() {
+            const panel = document.getElementById('settings-panel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectPlatform(type) {
+            platform = type;
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('ui-container').style.display = 'block';
+            document.getElementById('top-right-controls').style.display = 'block';
+            
+            if(platform === 'mobile') {
+                document.getElementById('joystick-zone').style.display = 'block';
+                document.getElementById('mobile-flashlight-btn').style.display = 'flex';
+                document.getElementById('mobile-flashlight-btn').classList.add('active');
+                document.getElementById('stamina-container').style.display = 'block';
+            } else {
+                // PC는 마우스 커서 숨김 메커니즘 락 인입 처리 수행
+                document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
+                document.body.requestPointerLock();
+            }
+            
+            gameActive = true;
+            initHorrorBGM();
+        }
+
+        // Pointer Lock 상태 감지 연동 리스너
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === document.body) {
+                if(isPaused) triggerPause(false);
+            } else {
+                if(gameActive && !isGameOver && platform === 'pc' && !isPaused) {
+                    triggerPause(true);
+                }
+            }
+        });
+
+        function triggerPause(pauseState) {
+            if(!gameActive || isGameOver) return;
+            isPaused = pauseState;
+            document.getElementById('pause-screen').style.display = isPaused ? 'flex' : 'none';
+            if(!isPaused && platform === 'pc') {
+                document.body.requestPointerLock();
+            }
+        }
+
+        function toggleFlashlight() {
+            isFlashlightOn = !isFlashlightOn;
+            const mBtn = document.getElementById('mobile-flashlight-btn');
+            if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
+        }
+
+        function toggleViewMode() {
+            const btn = document.getElementById('btn-view'), ch = document.getElementById('crosshair');
+            if (viewMode === '3rd') {
+                viewMode = '1st'; btn.textContent = "🎥 3인칭 시점"; btn.classList.add('active'); if(platform === 'pc') ch.style.display = 'block';
+                playerParts.forEach(p => p.visible = false);
+            } else {
+                viewMode = '3rd'; btn.textContent = "🎥 1인칭 시점"; btn.classList.remove('active'); ch.style.display = 'none';
+                playerParts.forEach(p => p.visible = true);
+            }
+        }
+
+        // 키보드 바인딩 리스너 및 멈춤(`P` 키) 연동
+        window.addEventListener('keydown', (e) => { 
+            const k = e.key.toLowerCase(); if (k in keys) keys[k] = true; 
+            if (e.key === 'Shift') keys.shift = true;
+            if (k === 'f' && gameActive && !isGameOver && !isPaused) toggleFlashlight();
+            if (k === 'p' && gameActive && !isGameOver) triggerPause(!isPaused);
+        });
+        window.addEventListener('keyup', (e) => { 
+            const k = e.key.toLowerCase(); if (k in keys) keys[k] = false; 
+            if (e.key === 'Shift') keys.shift = false;
+        });
+
+        // 💻 PC 지향용 마우스 시선 변환 핸들링 조율
+        window.addEventListener('mousemove', (e) => {
+            if (!gameActive || isGameOver || isPaused) return;
+            if (platform === 'pc' && document.pointerLockElement !== document.body) return;
+
+            if (platform === 'pc') {
+                const speedMultiplier = 0.0022 * globalSensitivity;
+                cameraAngleX -= e.movementX * speedMultiplier;
+                cameraAngleY -= e.movementY * speedMultiplier;
+                cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
+            }
+        });
+
+        // 📱 모바일 지향용 가상 조이스틱 및 드래그 터치 핸들링 조율
+        let joystickInput = { x: 0, y: 0 }, joystickDistanceRatio = 0, joystickTouchId = null, rotationTouchId = null, prevX = 0, prevY = 0, joystickStartPos = { x: 0, y: 0 };
+        const joystickZone = document.getElementById('joystick-zone'), joystickStick = document.getElementById('joystick-stick');
+
+        function calculateJoystick(cX, cY) {
+            let dX = cX - joystickStartPos.x, dY = cY - joystickStartPos.y;
+            const dist = Math.sqrt(dX*dX + dY*dY), maxR = 40;
+            if (dist > maxR) { dX = (dX / dist) * maxR; dY = (dY / dist) * maxR; }
+            joystickStick.style.transform = `translate(${dX}px, ${dY}px)`;
+            joystickInput.x = dX / maxR; joystickInput.y = dY / maxR; joystickDistanceRatio = dist / maxR;
+        }
+
+        window.addEventListener('touchstart', (e) => {
+            if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.target.closest('#ui-container') || t.target.closest('#mobile-flashlight-btn') || t.target.closest('#top-right-controls')) continue;
+                if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
+                    joystickTouchId = t.identifier;
+                    joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`;
+                    joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY);
+                } else if (t.clientX >= window.innerWidth / 2 && rotationTouchId === null) {
+                    rotationTouchId = t.identifier; prevX = t.clientX; prevY = t.clientY;
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if(platform !== 'mobile') return;
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                if (t.identifier === joystickTouchId) calculateJoystick(t.clientX, t.clientY);
+                if (t.identifier === rotationTouchId) {
+                    const speedMultiplier = 0.005 * globalSensitivity;
+                    cameraAngleX -= (t.clientX - prevX) * speedMultiplier;
+                    cameraAngleY -= (t.clientY - prevY) * speedMultiplier;
+                    prevX = t.clientX; prevY = t.clientY;
+                    cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === joystickTouchId) {
+                    joystickTouchId = null; joystickStick.style.transform = 'translate(0px, 0px)';
+                    joystickInput = { x: 0, y: 0 }; joystickDistanceRatio = 0;
+                    joystickZone.style.left = '30px'; joystickZone.style.bottom = '30px';
+                }
+                if (t.identifier === rotationTouchId) rotationTouchId = null;
+            }
+        });
+
+        // ⚡ 그리드 기반 벽 충돌 감지 및 방어 시스템 (반경 상향 `radius=0.55`)
+        function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
+            let res = { x: tentativePos.x, z: tentativePos.z };
+            const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
+            const pRow = Math.floor((oldPos.z - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
+
+            for (let r = pRow - 1; r <= pRow + 1; r++) {
+                for (let c = pCol - 1; c <= pCol + 1; c++) {
+                    if (r < 0 || r >= mapRows || c < 0 || c >= mapCols) continue;
+                    if (mapData[r][c] === 1) {
+                        const wX = (c - mapCols/2) * unitSize + unitSize/2;
+                        const wZ = (r - mapRows/2) * unitSize + unitSize/2;
+                        const minX = wX - unitSize/2 - radius, maxX = wX + unitSize/2 + radius;
+                        const minZ = wZ - unitSize/2 - radius, maxZ = wZ + unitSize/2 + radius;
+
+                        if (res.x > minX && res.x < maxX && res.z > minZ && res.z < maxZ) {
+                            if (oldPos.x <= minX || oldPos.x >= maxX) res.x = oldPos.x;
+                            if (oldPos.z <= minZ || oldPos.z >= maxZ) res.z = oldPos.z;
+                        }
+                    }
+                }
+            }
+            return res;
+        }
+
+        // 👾 듀얼 엔티티 인공지능 패스 트래킹 로직 통합 업데이트
+        function processEntityAI(e, playerPos) {
+            const ePos = e.mesh.position;
+            const distToPlayer = ePos.distanceTo(playerPos);
+
+            // 상태 전이 분기 검사 (추격 반경 16 유닛)
+            if (distToPlayer < 16 && !isGameOver) {
+                e.state = 'chase';
+            } else if (e.state === 'chase' && distToPlayer > 22) {
+                e.state = 'patrol'; e.patrolTarget = getSafeSpawn();
+            }
+
+            let dest = { x: 0, z: 0 };
+            let currentSpeed = e.speed;
+
+            if (e.state === 'chase') {
+                dest.x = playerPos.x; dest.z = playerPos.z;
+                if(isSprinting) currentSpeed *= 1.25; 
+            } else {
+                dest.x = e.patrolTarget.x; dest.z = e.patrolTarget.z;
+                // 목적지 근접 달성 시 새로운 패트롤 타겟 가공
+                if (Math.abs(ePos.x - dest.x) < 1.0 && Math.abs(ePos.z - dest.z) < 1.0) {
+                    e.patrolTarget = getSafeSpawn();
+                }
+            }
+
+            const dX = dest.x - ePos.x, dZ = dest.z - ePos.z;
+            const len = Math.sqrt(dX*dX + dZ*dZ);
+            if (len > 0.1) {
+                const sX = (dX / len) * currentSpeed, sZ = (dZ / len) * currentSpeed;
+                const oldE = { x: ePos.x, z: ePos.z }, tenE = { x: ePos.x + sX, z: ePos.z + sZ };
+                const safeE = checkGridCollision(oldE, tenE, 0.45);
+                ePos.x = safeE.x; ePos.z = safeE.z;
+                e.mesh.lookAt(dest.x, ePos.y, dest.z);
+            }
+        }
+
+        // 사운드 컴포넌트 라이브러리 구조
+        function playFootstepSound() {
+            if (!audioCtx || isPaused) return;
+            let osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), filter = audioCtx.createBiquadFilter();
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(54 + Math.random()*10, audioCtx.currentTime);
+            filter.type = 'lowpass'; filter.frequency.setValueAtTime(130, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.16);
+        }
+
+        function initHorrorBGM() {
+            try {
+                if (audioCtx) return;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                mainGain = audioCtx.createGain(); mainGain.gain.setValueAtTime(0.15, audioCtx.currentTime); 
+                let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(280, audioCtx.currentTime); 
+                lfo = audioCtx.createOscillator(); lfo.frequency.setValueAtTime(0.2, audioCtx.currentTime); 
+                let lfG = audioCtx.createGain(); lfG.gain.setValueAtTime(2.0, audioCtx.currentTime); 
+                [44.0, 55.0].forEach((freq) => {
+                    let osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    lfG.connect(osc.frequency); osc.connect(lp); oscillators.push(osc);
+                });
+                lp.connect(mainGain); mainGain.connect(audioCtx.destination);
+                lfo.start(); oscillators.forEach(o => o.start());
+            } catch(e) {}
+        }
+
+        function resetGame() {
+            generateRandomMaze(); buildMazeGraphics();
+            const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z);
+            entities.forEach(e => { const esp = getSafeSpawn(); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; });
+            stamina = 100; cameraAngleX = 0; cameraAngleY = 0; isExhausted = false; isGameOver = false; isPaused = false;
+            isFlashlightOn = true; batteryTimer = 0;
+            document.getElementById('gameover-screen').style.display = 'none';
+            document.getElementById('pause-screen').style.display = 'none';
+            if(platform === 'pc') document.body.requestPointerLock();
+        }
+
+        // 실시간 타임 스탬프 제어 전용 렌더 루프 가동
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 📹 [CCTV 배경 카메라 연출] 시작화면 전용 비주얼라이제이션 무대 구축
+            if (!gameActive) {
+                const cctvTimer = Date.now() * 0.0006;
+                // 미로 중심부 주변을 회전식 감시 장비처럼 스캔합니다.
+                camera.position.set(Math.sin(cctvTimer)*8, 3.5, Math.cos(cctvTimer)*8);
+                camera.lookAt(0, 1.5, 0);
+                
+                // CCTV UI 텍스트 시간 연동 처리
+                const d = new Date();
+                document.getElementById('cctv-time').textContent = d.toTimeString().split(' ')[0];
+                renderer.render(scene, camera);
+                return;
+            }
+
+            if (isGameOver || isPaused) return;
+
+            // 🔦 [배터리 타이머 및 깜빡임 시스템] 가동
+            batteryTimer += 1 / 60; 
+            let batteryPower = 1.0;
+
+            if (batteryTimer >= batteryDuration) {
+                // 4분 초과 통과 시 완전히 꺼지지 않고 미세한 불빛(0.08 파워)만 남기며 깜빡거림 연출
+                if (Math.random() < 0.12) {
+                    batteryPower = 0.08 + Math.random() * 0.15;
+                } else {
+                    batteryPower = 0.08;
+                }
+            } else if (batteryTimer > batteryDuration - 15) {
+                // 방전 마감 15초 전부터 전조 증상 깜빡임 고조 유도
+                if (Math.random() < 0.05) batteryPower = 0.2;
+            }
+
+            // 실시간 이동 벡터 매핑 가공
+            let moveX = 0, moveZ = 0;
+            if (platform === 'pc') {
+                if (keys.w) moveZ -= 1; if (keys.s) moveZ += 1; if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
+                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted);
+            } else {
+                if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = joystickInput.y; }
+                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.78 && !isExhausted);
+            }
+
+            // 스태미나 감쇠 계산 프로세스
+            if (isSprinting) { stamina -= 0.6; if (stamina <= 0) { stamina = 0; isExhausted = true; } } 
+            else { stamina += isMoving ? 0.18 : 0.45; if (stamina >= 100) { stamina = 100; isExhausted = false; } }
+
+            const sBar = document.getElementById('stamina-bar');
+            if(sBar) {
+                sBar.style.width = `${stamina}%`;
+                sBar.style.background = isExhausted ? '#e63946' : (isSprinting ? '#f39c12' : '#c7b256');
+            }
+
+            if (isMoving) {
+                let speed = isExhausted ? 0.048 : (isSprinting ? 0.14 : 0.085);
+                const sin = Math.sin(cameraAngleX), cos = Math.cos(cameraAngleX);
+                const fX = (moveX * cos + moveZ * sin) * speed;
+                const fZ = (-moveX * sin + moveZ * cos) * speed;
+
+                const oldP = { x: player.position.x, z: player.position.z };
+                const tenP = { x: player.position.x + fX, z: player.position.z + fZ };
+                
+                const safeP = checkGridCollision(oldP, tenP, 0.55);
+                player.position.x = safeP.x; player.position.z = safeP.z;
+                targetRotationY = cameraAngleX + Math.atan2(-moveX, -moveZ);
+
+                let now = Date.now(), sInterval = isSprinting ? 260 : 450;
+                if (now - lastFootstepTime > sInterval) { playFootstepSound(); lastFootstepTime = now; }
+            }
+
+            // 시선 각도 슬러프 모핑 연산
+            if (viewMode === '3rd') {
+                player.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY), 0.15);
+                flashlight.position.set(player.position.x, player.position.y + 1.3, player.position.z);
+                const dX = -Math.sin(targetRotationY), dZ = -Math.cos(targetRotationY);
+                flashlightTarget.position.set(player.position.x + dX*5, player.position.y + 1.3, player.position.z + dZ*5);
+            } else {
+                player.rotation.y = cameraAngleX;
+            }
+
+            // 👾 2마리의 엔티티 업데이트 루프 및 글리치 가중치 통합 산출
+            let maxIntensity = 0;
+            let closestEntityDist = 999;
+
+            entities.forEach(e => {
+                processEntityAI(e, player.position);
+                const d = player.position.distanceTo(e.mesh.position);
+                if (d < closestEntityDist) closestEntityDist = d;
+            });
+
+            const glitchOverlay = document.getElementById('glitch-overlay');
+            if (closestEntityDist < 16) {
+                maxIntensity = (16 - closestEntityDist) / 16;
+                glitchOverlay.style.background = `rgba(160, 15, 15, ${maxIntensity * 0.42})`;
+                glitchOverlay.style.opacity = (Math.sin(Date.now() * 0.08) * 0.2) + maxIntensity;
+                if(mainGain) mainGain.gain.setValueAtTime(0.15 + (maxIntensity * 0.35), audioCtx.currentTime);
+            } else {
+                glitchOverlay.style.opacity = 0;
+                if(mainGain) mainGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            }
+
+            // 데스 조건 트리거 핸들링
+            if (closestEntityDist < 1.3) {
+                isGameOver = true; document.getElementById('gameover-screen').style.display = 'flex';
+                if(platform === 'pc') document.exitPointerLock();
+                if (audioCtx) audioCtx.suspend(); return;
+            }
+
+            // 랜턴 총량 출력 조절 동기화 (배터리 지표 대입)
+            if (isFlashlightOn) {
+                flashlight.intensity = 14.0 * batteryPower;
+            } else {
+                flashlight.intensity = 0;
+            }
+
+            // 카메라 모드 체이싱 결산 포지셔닝
+            if (viewMode === '3rd') {
+                const r = 4.8;
+                const tCamX = player.position.x + Math.sin(cameraAngleX) * Math.cos(cameraAngleY) * r;
+                const tCamY = player.position.y + 1.3 + Math.sin(cameraAngleY) * r + 1.0;
+                const tCamZ = player.position.z + Math.cos(cameraAngleX) * Math.cos(cameraAngleY) * r;
+                camera.position.x += (tCamX - camera.position.x) * 0.18;
+                camera.position.y += (tCamY - camera.position.y) * 0.18;
+                camera.position.z += (tCamZ - camera.position.z) * 0.18;
+                camera.lookAt(player.position.x, player.position.y + 1.1, player.position.z);
+            } else {
+                // 1인칭 전용 눈높이 보정
+                camera.position.x = player.position.x; camera.position.y = player.position.y + 1.48; camera.position.z = player.position.z;
+                if (isMoving) camera.position.y += Math.sin(Date.now() * 0.01) * 0.012; // 헤드 밥 메커니즘
+                
+                const viewDir = new THREE.Vector3(-Math.sin(cameraAngleX)*Math.cos(cameraAngleY), Math.sin(cameraAngleY), -Math.cos(cameraAngleX)*Math.cos(cameraAngleY));
+                camera.lookAt(new THREE.Vector3().copy(camera.position).add(viewDir));
+
+                // 랜턴을 눈 바로 우측 하단 여백으로 평행 이격하여 화면 가림 증상 완전 치유
+                const rightVec = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0,1,0)).normalize();
+                flashlight.position.copy(camera.position).add(rightVec.multiplyScalar(0.18)).add(new THREE.Vector3(0, -0.15, 0));
+                flashlightTarget.position.copy(camera.position).add(viewDir.multiplyScalar(8));
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>

@@ -10,18 +10,18 @@
             overflow: hidden; background-color: #1a1913; 
             touch-action: none; -webkit-touch-callout: none;
             user-select: none; -webkit-user-select: none; 
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         canvas { display: block; width: 100% !important; height: 100% !important; position: absolute; top:0; left:0; z-index: 1; }
         
         #vhs-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(0,0,0,0) 35%, rgba(0,0,0,0.6) 100%);
+            background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%);
             pointer-events: none; z-index: 2;
         }
         #cctv-ui {
-            position: absolute; top: 20px; right: 20px; color: #cc2929; font-weight: bold;
-            font-size: 14px; z-index: 210; letter-spacing: 1px; pointer-events: none;
+            position: absolute; top: 20px; right: 20px; color: rgba(204, 41, 41, 0.7); font-weight: bold;
+            font-size: 14px; z-index: 210; letter-spacing: 1px; pointer-events: none; font-family: monospace; display: none;
         }
 
         #ui-container {
@@ -39,7 +39,7 @@
         .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
         .setting-row input[type="range"] { width: 90px; accent-color: #bfae6f; }
 
-        /* 모바일 레이아웃 */
+        /* 모바일 터치 패널 */
         #mobile-controls-right {
             position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 10;
         }
@@ -62,22 +62,41 @@
             background: rgba(220, 40, 40, 0); opacity: 0; pointer-events: none; z-index: 3;
         }
 
-        /* ❤️ 심장 박동 반응형 UI 구조 크기 정의 */
         #heartbeat-ui {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) scale(0);
             font-size: 42px; color: #cc1111; text-shadow: 0 0 16px rgba(200, 10, 10, 0.8);
             pointer-events: none; z-index: 15; transition: transform 0.1s ease-out;
         }
 
+        /* 🖼️ 오리지널 매칭 컨셉 이미지 디자인 기반 시작 화면 */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 14, 10, 0.35); z-index: 200; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: #bfae6f;
+            background: rgba(0, 0, 0, 0.05); z-index: 200; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #000000; text-align: center;
         }
-        .platform-box { display: flex; gap: 20px; margin-top: 20px; }
-        .btn-start {
-            background: #401717; color: #fff; border: 2px solid #bd3a3a; padding: 14px 28px;
-            font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer;
+        .title-main {
+            font-size: 24px; font-weight: 600; letter-spacing: 4px; margin: 0; text-shadow: 0 2px 4px rgba(255,255,255,0.4);
+        }
+        .title-sub {
+            font-size: 44px; font-weight: bold; letter-spacing: 5px; margin: 5px 0 0 0; text-shadow: 0 2px 5px rgba(255,255,255,0.4);
+        }
+        .title-level {
+            font-size: 16px; font-weight: 500; letter-spacing: 2px; margin: 8px 0 40px 0; color: #222;
+        }
+        
+        /* 동심원 그래픽 가이드 코어 결합 */
+        .start-btn-container {
+            position: relative; width: 110px; height: 110px; display: flex; justify-content: center; align-items: center; cursor: pointer;
+        }
+        .circle-ring {
+            position: absolute; border: 1.5px solid rgba(0,0,0,0.4); border-radius: 50%; pointer-events: none;
+        }
+        .ring-1 { width: 100px; height: 100px; }
+        .ring-2 { width: 88px; height: 88px; }
+        .ring-3 { width: 76px; height: 76px; border-style: dashed; }
+        
+        .start-label {
+            font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #111; z-index: 5; margin-top: -2px;
         }
 
         #gameover-screen, #pause-screen {
@@ -88,10 +107,10 @@
 
         #joystick-zone {
             position: absolute; bottom: 30px; left: 30px; width: 110px; height: 110px; 
-            background: rgba(255,255,255,0.02); border: 2px solid rgba(255,255,255,0.15); border-radius: 50%; z-index: 10; touch-action: none; display: none;
+            background: rgba(0,0,0,0.05); border: 2px solid rgba(0,0,0,0.2); border-radius: 50%; z-index: 10; touch-action: none; display: none;
         }
-        #joystick-stick { position: absolute; top: 35px; left: 35px; width: 40px; height: 40px; background: rgba(255,255,255,0.3); border-radius: 50%; }
-        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 5; display: none; }
+        #joystick-stick { position: absolute; top: 35px; left: 35px; width: 40px; height: 40px; background: rgba(0,0,0,0.4); border-radius: 50%; }
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; pointer-events: none; z-index: 5; display: none; }
         #top-controls { position: absolute; top: 16px; right: 16px; z-index: 12; display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -105,16 +124,20 @@
     <div id="heartbeat-ui">❤️</div>
 
     <div id="start-screen">
-        <h1 style="font-size: 32px; letter-spacing: 5px; margin-bottom: 0px; color:#bd3a3a;">THE BACKROOMS</h1>
-        <p style="color: #9c9680; font-size: 13px; margin-bottom: 25px; text-align:center;">실시간 감시 기기 프로토콜 시스템</p>
-        <div class="platform-box">
-            <button class="btn-start" onclick="selectPlatform('pc')">💻 PC CONTROL</button>
-            <button class="btn-start" style="background:#1d2d40; border-color:#346194;" onclick="selectPlatform('mobile')">📱 MOBILE TOUCH</button>
+        <h2 class="title-main">THE BACKROOMS</h2>
+        <h1 class="title-sub">START EXPLORATION</h1>
+        <div class="title-level">LEVEL 0</div>
+        
+        <div class="start-btn-container" onclick="detectAndStart()">
+            <div class="circle-ring ring-1"></div>
+            <div class="circle-ring ring-2"></div>
+            <div class="circle-ring ring-3"></div>
+            <span class="start-label">START</span>
         </div>
     </div>
 
     <div id="top-controls">
-        <button class="btn" style="margin:0; background:#1c1b17;" onclick="triggerPause(true)">⏸️ PAUSE</button>
+        <button class="btn" style="margin:0; background:#222; color:#fff;" onclick="triggerPause(true)">⏸️ PAUSE</button>
     </div>
 
     <div id="ui-container">
@@ -150,13 +173,13 @@
 
         let playerVelocityY = 0, isGrounded = true;
         const gravity = -0.012, jumpStrength = 0.28;
-
-        // 하트비트 내부 타이머 트리거
         let lastHeartbeatSoundTime = 0;
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xded095); 
-        scene.fog = new THREE.FogExp2(0xded095, 0.035); 
+        // 🎨 이미지 기반 올드 옐로우 무드 보정
+        const backroomsYellow = 0xdad1a2;
+        scene.background = new THREE.Color(backroomsYellow); 
+        scene.fog = new THREE.FogExp2(backroomsYellow, 0.038); 
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.015, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -164,15 +187,43 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xfffca8, 0.65); 
+        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.75); 
         scene.add(ambientLight);
 
         const mapRows = 41, mapCols = 41, unitSize = 5, wallHeight = 4.2;
         let mapData = [], instancedWalls = null, lamps = [];
 
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfd39a, roughness: 0.55, metalness: 0.02 });
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0xbdb076, roughness: 0.8 });
-        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xeae0b5, roughness: 0.5 });
+        // 🎨 절차적 화살표(Chevron) 벽지 패턴 캔버스 매핑 가공 전개
+        function generateWallTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#dfd59e'; ctx.fillRect(0, 0, 256, 256);
+            ctx.strokeStyle = '#c5ba82'; ctx.lineWidth = 4;
+            
+            // 이미지 특유의 세로 결 및 화살표 무늬 레이어화
+            for (let x = 0; x < 256; x += 32) {
+                ctx.beginPath();
+                for (let y = 0; y <= 256; y += 16) {
+                    if (y === 0) ctx.moveTo(x + 16, y);
+                    else ctx.lineTo(x + 16 + (y % 32 === 0 ? 6 : -6), y);
+                }
+                ctx.stroke();
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 1);
+            return texture;
+        }
+
+        const wallMat = new THREE.MeshStandardMaterial({ 
+            map: generateWallTexture(),
+            roughness: 0.6, 
+            metalness: 0.01 
+        });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0xb5a973, roughness: 0.95 }); // 칙칙한 카펫 톤 변경
+        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xe5dcba, roughness: 0.7 });
 
         function generateRandomMaze() {
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
@@ -212,9 +263,10 @@
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
                     } else if(Math.random() < 0.08) {
-                        const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.02, 0.6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                        // 이미지 매칭 가로 직사각형 전등 구조 변경 구현
+                        const lamp = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.02, 0.8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
                         lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
-                        const pl = new THREE.PointLight(0xfffca8, 0.75, 15); pl.position.set(x, wallHeight - 0.3, z); lamp.add(pl);
+                        const pl = new THREE.PointLight(0xfffca8, 0.8, 16); pl.position.set(x, wallHeight - 0.3, z); lamp.add(pl);
                     }
                 }
             }
@@ -254,7 +306,6 @@
         const flashlightTarget = new THREE.Object3D(); flashlightTarget.position.set(0.25, -0.2, -5);
         firstPersonRig.add(flashlightTarget); flashlight.target = flashlightTarget;
 
-        // 엔티티 배치
         let entities = []; const entityColors = [0x111111, 0x2b1100]; 
         for(let i=0; i<2; i++) {
             let ent = new THREE.Group();
@@ -278,11 +329,16 @@
         const sensitivityInput = document.getElementById('cfg-sensitivity');
         sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value); });
 
-        function selectPlatform(type) {
-            platform = type;
+        // 기기 체크 통합 시작 함수
+        function detectAndStart() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            platform = isMobile ? 'mobile' : 'pc';
+            
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('ui-container').style.display = 'block';
             document.getElementById('top-controls').style.display = 'block';
+            document.getElementById('cctv-ui').style.display = 'block';
+            
             if(platform === 'mobile') {
                 document.getElementById('joystick-zone').style.display = 'block';
                 document.getElementById('mobile-controls-right').style.display = 'flex';
@@ -291,7 +347,7 @@
                 document.body.requestPointerLock();
             }
             gameActive = true; 
-            initBackroomsAudio(); // 사운드 기동
+            initBackroomsAudio();
         }
 
         function triggerPause(pState) {
@@ -432,7 +488,7 @@
             }
         }
 
-        // 🔊 Web Audio API 기반 오리지널 백룸 지직 오디오 변수
+        // 🔊 오리지널 형광등 소리 엔진
         let audioCtx = null, mainGain = null, buzzOsc = null, buzzFilter = null;
 
         function initBackroomsAudio() {
@@ -440,16 +496,13 @@
                 if (audioCtx) return;
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // 오리지널 백룸 형광등 소리 저볼륨(0.065) 설정
                 mainGain = audioCtx.createGain(); 
                 mainGain.gain.setValueAtTime(0.065, audioCtx.currentTime); 
                 
-                // 형광등 특유의 60Hz 기반 웅우웅 소리 배합 (Humming)
                 buzzOsc = audioCtx.createOscillator();
                 buzzOsc.type = 'sawtooth';
                 buzzOsc.frequency.setValueAtTime(60, audioCtx.currentTime); 
 
-                // 로우패스 필터로 고주파를 깎아 먹먹하게 처리
                 buzzFilter = audioCtx.createBiquadFilter();
                 buzzFilter.type = 'lowpass';
                 buzzFilter.frequency.setValueAtTime(140, audioCtx.currentTime);
@@ -462,7 +515,7 @@
             } catch(e){}
         }
 
-        // ❤️ 지능형 심장 박동 합성 음향 생성기
+        // ❤️ 저주파 심장 박동 사운드 모듈
         function playHeartbeatSound(volume, isDouble) {
             if (!audioCtx || isPaused || isGameOver) return;
             
@@ -470,7 +523,6 @@
             let gain = audioCtx.createGain();
             
             osc.type = 'sine';
-            // 실제 심장 소리와 흡사한 55Hz 극저음 설정
             osc.frequency.setValueAtTime(55, audioCtx.currentTime); 
             
             gain.gain.setValueAtTime(volume * 0.8, audioCtx.currentTime);
@@ -481,7 +533,6 @@
             osc.start();
             osc.stop(audioCtx.currentTime + 0.13);
 
-            // 심장의 두 번째 쿵쾅 비트 (0.12초 뒤 작게 추적)
             if (isDouble) {
                 setTimeout(() => {
                     if (isPaused || isGameOver) return;
@@ -512,18 +563,18 @@
         function animate() {
             requestAnimationFrame(animate);
 
+            // 📺 시작 전 화면 상태일 때는 카메라가 백룸 미로 내부를 3인칭 뷰로 분위기 있게 회전시킵니다.
             if (!gameActive) {
-                const timer = Date.now() * 0.0005;
-                camera.position.set(Math.sin(timer)*7, 3.2, Math.cos(timer)*7);
-                camera.lookAt(0, 1.4, 0);
-                document.getElementById('cctv-time').textContent = new Date().toTimeString().split(' ')[0];
+                const timer = Date.now() * 0.0003;
+                camera.position.set(Math.sin(timer)*8, 2.5, Math.cos(timer)*8);
+                camera.lookAt(0, 1.6, 0);
                 renderer.render(scene, camera);
                 return;
             }
 
             if (isGameOver || isPaused) return;
 
-            // 🔦 배터리 타이머 수치 조율
+            // 🔦 4분 루프 전등 연산
             batteryTimer += 1 / 60; let bPower = 1.0;
             let isCurrentlyFlickering = false;
 
@@ -542,10 +593,10 @@
             }
             flashlight.intensity = isFlashlightOn ? 14.0 * bPower : 0;
 
-            // 💡 전등 깜빡임 연동 지직 노이즈 스파크 연출
+            // 💡 지직 스파크 연동
             if (isCurrentlyFlickering && audioCtx && buzzFilter) {
                 buzzFilter.frequency.setValueAtTime(350 + Math.random()*400, audioCtx.currentTime);
-                mainGain.gain.setValueAtTime(0.18, audioCtx.currentTime); // 일시적으로 지직 소리 커짐
+                mainGain.gain.setValueAtTime(0.18, audioCtx.currentTime); 
             } else if (audioCtx && buzzFilter) {
                 buzzFilter.frequency.setValueAtTime(140, audioCtx.currentTime);
                 mainGain.gain.setValueAtTime(0.065, audioCtx.currentTime);
@@ -595,7 +646,6 @@
                 player.rotation.y = cameraAngleX;
             }
 
-            // 엔티티 업데이트 루프
             let closestDist = 999;
             entities.forEach(e => {
                 processEntityAI(e, player.position);
@@ -603,12 +653,10 @@
                 if (d < closestDist) closestDist = d;
             });
 
-            // ❤️ 심장 박동 시각 애니메이션 및 사운드 다이내믹 디스패처
+            // ❤️ 하트비트 핸들러 루틴
             const heartUI = document.getElementById('heartbeat-ui');
             if (closestDist < 16) {
-                let proximityFactor = (16 - closestDist) / 16; // 0 (멂) ~ 1 (밀착)
-                
-                // 거리가 가까워질수록 심장 박동 주기 단축 (최대 0.3초 ~ 최소 0.9초 주기)
+                let proximityFactor = (16 - closestDist) / 16; 
                 let heartbeatInterval = 900 - (proximityFactor * 600); 
                 let now = Date.now();
                 
@@ -616,19 +664,16 @@
                     playHeartbeatSound(0.3 + (proximityFactor * 0.7), true);
                     lastHeartbeatSoundTime = now;
                     
-                    // 하트 수축 및 팽창 애니메이션 효과 부여
                     heartUI.style.transform = `translateX(-50%) scale(${1.2 + proximityFactor * 0.6})`;
                     setTimeout(() => {
                         heartUI.style.transform = `translateX(-50%) scale(${0.9 + proximityFactor * 0.3})`;
                     }, 140);
                 }
 
-                // 화면 붉은 글리치 강도 조율
                 const glitchOverlay = document.getElementById('glitch-overlay');
                 glitchOverlay.style.background = `rgba(140, 20, 20, ${proximityFactor * 0.45})`;
                 glitchOverlay.style.opacity = (Math.sin(Date.now() * 0.09) * 0.15) + proximityFactor;
             } else {
-                // 범위 밖일 경우 하트 숨김
                 heartUI.style.transform = 'translateX(-50%) scale(0)';
                 document.getElementById('glitch-overlay').style.opacity = 0;
             }

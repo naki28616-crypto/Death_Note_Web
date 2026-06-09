@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>The Backrooms - Advanced High Quality Edition</title>
+    <title>《The Backrooms》</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -19,24 +19,42 @@
             background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%);
             pointer-events: none; z-index: 2;
         }
+        
+        /* 🔴 CCTV UI 위치 조정 (상단 중앙 또는 패널 옆으로 자연스럽게 배치) */
         #cctv-ui {
-            position: absolute; top: 20px; right: 20px; color: rgba(204, 41, 41, 0.7); font-weight: bold;
+            position: absolute; top: 20px; left: 20px; color: rgba(204, 41, 41, 0.9); font-weight: bold;
             font-size: 14px; z-index: 210; letter-spacing: 1px; pointer-events: none; font-family: monospace; display: none;
         }
 
-        #ui-container {
-            position: absolute; top: 16px; left: 16px; color: #d4cfb4;
-            background: rgba(15, 15, 10, 0.9); padding: 12px; border-radius: 4px; 
-            border: 1px solid #444135; z-index: 10; display: none;
+        /* 🛠️ 우측 상단으로 이동한 설정 및 제어 레이아웃 */
+        #top-controls { 
+            position: absolute; top: 16px; right: 16px; z-index: 220; display: none; 
+            flex-direction: column; align-items: flex-end; gap: 6px;
         }
+        .control-row { display: flex; gap: 6px; }
+
+        /* 📋 우측 상단 접이식 설정 패널 */
+        #ui-container {
+            color: #d4cfb4; background: rgba(15, 15, 10, 0.95); padding: 12px; border-radius: 4px; 
+            border: 1px solid #444135; width: 200px; transition: all 0.3s ease-in-out;
+            max-height: 200px; opacity: 1; overflow: hidden; transform-origin: top right;
+        }
+        /* 패널이 접혔을 때의 스타일 */
+        #ui-container.collapsed {
+            max-height: 0px; padding: 0px 12px; opacity: 0; border: 0px solid transparent; pointer-events: none;
+        }
+        
         .btn {
             background: #25241f; color: #bfae6f; border: 1px solid #444135; padding: 8px 14px; 
-            margin-right: 5px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; white-space: nowrap;
         }
         .btn.active { background: #733333; color: #fff; border-color: #9c4444; }
 
+        .setting-row { display: flex; flex-direction: column; gap: 5px; font-size: 12px; margin-top: 5px; }
+        .setting-row input { width: 100%; accent-color: #bfae6f; }
+
         #mobile-controls-right {
-            position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 10;
+            position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 20;
         }
         .circle-btn {
             width: 60px; height: 60px; background: rgba(37, 36, 31, 0.9); border: 2px solid #5c5746; 
@@ -54,7 +72,8 @@
 
         #glitch-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(220, 40, 40, 0); opacity: 0; pointer-events: none; z-index: 3;
+            background: rgba(0, 0, 0, 0); opacity: 0; pointer-events: none; z-index: 3;
+            transition: background-color 0.5s ease, opacity 0.5s ease;
         }
 
         #heartbeat-ui {
@@ -63,11 +82,10 @@
             pointer-events: none; z-index: 15; transition: transform 0.1s ease-out;
         }
 
-        /* 시작 화면 기기 매칭 UI 디자인 */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.05); z-index: 200; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: #000000; text-align: center;
+            background: rgba(218, 209, 162, 1); z-index: 200; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #111; text-align: center;
         }
         .title-main { font-size: 24px; font-weight: 600; letter-spacing: 4px; margin: 0; text-shadow: 0 2px 4px rgba(255,255,255,0.4); }
         .title-sub { font-size: 44px; font-weight: bold; letter-spacing: 5px; margin: 5px 0 0 0; text-shadow: 0 2px 5px rgba(255,255,255,0.4); }
@@ -111,7 +129,6 @@
         }
         #joystick-stick { position: absolute; top: 35px; left: 35px; width: 40px; height: 40px; background: rgba(0,0,0,0.4); border-radius: 50%; }
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; pointer-events: none; z-index: 5; display: none; }
-        #top-controls { position: absolute; top: 16px; right: 16px; z-index: 12; display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -119,7 +136,7 @@
     <div id="vhs-overlay"></div>
     <div id="glitch-overlay"></div>
     <div id="crosshair"></div>
-    <div id="cctv-ui">🔴 REC LIVE <span id="cctv-time">00:00:00</span></div>
+    <div id="cctv-ui">🔴 REC <span id="cctv-time">00:00</span></div>
     
     <div id="heartbeat-ui">❤️</div>
 
@@ -142,22 +159,25 @@
     </div>
 
     <div id="top-controls">
-        <button class="btn" style="margin:0; background:#222; color:#fff;" onclick="triggerPause(true)">⏸️ PAUSE</button>
-    </div>
-
-    <div id="ui-container">
-        <button id="btn-view" class="btn btn-view" onclick="toggleViewMode()">🎥 1인칭 시점</button>
-        <div id="settings-panel">
-            <div class="setting-row">
-               <span>시점 감도</span>
-               <input type="range" id="cfg-sensitivity" min="0.1" max="2.5" step="0.1" value="1.0">
+        <div class="control-row">
+            <button id="btn-view" class="btn" onclick="toggleViewMode()">🎥 1인칭 시점</button>
+            <button class="btn" style="background:#222; color:#fff;" onclick="triggerPause(true)">⏸️ PAUSE</button>
+            <button id="btn-toggle-panel" class="btn" style="background:#333; color:#dfd59e;" onclick="toggleSettingsPanel()">◢</button>
+        </div>
+        
+        <div id="ui-container">
+            <div id="settings-panel">
+                <div class="setting-row">
+                   <span>시점 감도</span>
+                   <input type="range" id="cfg-sensitivity" min="0.1" max="2.5" step="0.1" value="1.0">
+                </div>
             </div>
         </div>
     </div>
 
     <div id="mobile-controls-right">
-        <div id="btn-mobile-flash" class="circle-btn active" onclick="toggleFlashlight()">🔦</div>
-        <div id="btn-mobile-jump" class="circle-btn" style="font-size:20px; font-weight:bold;">▲</div>
+        <div id="btn-mobile-flash" class="circle-btn active" ontouchstart="handleMobileFlash(event)">🔦</div>
+        <div id="btn-mobile-jump" class="circle-btn" style="font-size:20px; font-weight:bold;" ontouchstart="handleMobileJump(event)">▲</div>
     </div>
     <div id="stamina-container"><div class="stamina-bg"><div id="stamina-bar"></div></div></div>
     <div id="joystick-zone"><div id="joystick-stick"></div></div>
@@ -180,11 +200,16 @@
         let platform = null, viewMode = '3rd', isGameOver = false, isPaused = false, gameActive = false, isFlashlightOn = true, globalSensitivity = 1.0;
         let batteryTimer = 0; const batteryDuration = 240; 
 
+        // ⏱️ 실제 작동 타이머 및 4분 이벤트 관련 제어 변수
+        let actualRecordTime = 0; 
+        let isSpeedBoosted = false;
+        let isPanelExpanded = true;
+
+        // ⚖️ 점프 물리 밸런스 전면 수정
         let playerVelocityY = 0, isGrounded = true;
-        const gravity = -0.012, jumpStrength = 0.28;
+        const gravity = -0.016, jumpStrength = 0.17; 
         let lastHeartbeatSoundTime = 0;
 
-        // 세이프 롤백용 좌표 기록 트래커
         let safeSpawnPosition = new THREE.Vector3();
 
         const scene = new THREE.Scene();
@@ -201,7 +226,6 @@
         const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.75); 
         scene.add(ambientLight);
 
-        // 천장 높이 대폭 상향 수정 (6.5 유닛)
         const mapRows = 43, mapCols = 43, unitSize = 5, wallHeight = 6.5;
         let mapData = [], instancedWalls = null, lamps = [];
 
@@ -228,7 +252,6 @@
         const floorMat = new THREE.MeshStandardMaterial({ color: 0xb5a973, roughness: 0.95 }); 
         const ceilMat = new THREE.MeshStandardMaterial({ color: 0xe5dcba, roughness: 0.7 });
 
-        // 여러 갈래 길이 있는 광장형 랜덤 복합 미로 생성 알고리즘 개편
         function generateRandomMaze() {
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
             let visited = Array(mapRows).fill().map(() => Array(mapCols).fill(false));
@@ -244,20 +267,18 @@
             }
             carve(1, 1);
             
-            // 🗺️ 랜덤 여러 갈래 다중 광장 공간 파괴 가공 레이어
             for(let k=0; k<12; k++) {
                 let centerR = Math.floor(Math.random()*(mapRows-6))+3;
                 let centerC = Math.floor(Math.random()*(mapCols-6))+3;
-                let size = Math.floor(Math.random()*3)+3; // 3x3 ~ 5x5 규모의 광장 공간 방 배치
+                let size = Math.floor(Math.random()*3)+3; 
                 for(let r = centerR-size; r<=centerR+size; r++) {
                     for(let c = centerC-size; c<=centerC+size; c++) {
                         if(r>0 && r<mapRows-1 && c>0 && c<mapCols-1) {
-                            mapData[r][c] = 0; // 광장 허물기
+                            mapData[r][c] = 0; 
                         }
                     }
                 }
             }
-            // 잔여 통로 완화 통로 추가 개척
             for(let i=0; i<200; i++) {
                 let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
                 mapData[r][c] = 0;
@@ -303,26 +324,20 @@
 
         generateRandomMaze(); buildMazeGraphics();
 
-        // 🕴️ 고퀄리티 인간형 캐릭터 리그 조립 (헤드, 바디, 양팔, 양다리 분할 구조화)
         let player = new THREE.Group(); scene.add(player);
         let playerParts = []; const hazmatColor = 0xd9ab26;
         const pMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.6 });
 
-        // 몸통 (Torso)
         const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.8, 12), pMat); torso.position.y = 0.85; player.add(torso); playerParts.push(torso);
-        // 머리 (Head) & 바이저 가공
         const headGroup = new THREE.Group(); headGroup.position.set(0, 1.4, 0); player.add(headGroup); playerParts.push(headGroup);
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), pMat); headGroup.add(head);
         const visor = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, 0.1), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9 })); visor.position.set(0, 0.02, 0.15); headGroup.add(visor);
 
-        // 양팔 (Arms)
         let leftArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.5), pMat); leftArm3rd.position.set(-0.35, 0.8, 0); player.add(leftArm3rd); playerParts.push(leftArm3rd);
         let rightArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.5), pMat); rightArm3rd.position.set(0.35, 0.8, 0); player.add(rightArm3rd); playerParts.push(rightArm3rd);
-        // 양다리 (Legs)
         let leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.55), pMat); leftLeg.position.set(-0.13, 0.28, 0); player.add(leftLeg); playerParts.push(leftLeg);
         let rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.55), pMat); rightLeg.position.set(0.13, 0.28, 0); player.add(rightLeg); playerParts.push(rightLeg);
 
-        // 1인칭 전용 핸들링 암 구조체 리깅
         let firstPersonRig = new THREE.Group(); scene.add(firstPersonRig);
         const armMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.7 });
         const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.5), armMat); leftArm.rotation.x = Math.PI / 2; leftArm.position.set(-0.25, -0.25, -0.35); firstPersonRig.add(leftArm);
@@ -331,18 +346,16 @@
         const flashlightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.3), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7 }));
         flashlightMesh.rotation.x = Math.PI / 2; flashlightMesh.position.set(0.25, -0.2, -0.5); firstPersonRig.add(flashlightMesh);
 
-        const flashlight = new THREE.SpotLight(0xfffefa, 14.0, 60, Math.PI / 4.2, 0.6, 0.8); firstPersonRig.add(flashlight);
+        const flashlight = new THREE.SpotLight(0xfffefa, 4.5, 55, Math.PI / 4.8, 0.7, 0.8); firstPersonRig.add(flashlight);
         flashlight.position.set(0.25, -0.2, -0.5);
         const flashlightTarget = new THREE.Object3D(); flashlightTarget.position.set(0.25, -0.2, -5); firstPersonRig.add(flashlightTarget); flashlight.target = flashlightTarget;
 
-        // 엔티티 기동 파츠 재조립
         let entities = []; const entityColors = [0x090909, 0x1a1108]; 
         for(let i=0; i<2; i++) {
             let ent = new THREE.Group();
             let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.9 });
             let body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 2.2, 6), eMat); body.position.y = 1.1; ent.add(body);
             
-            // 움직이는 모션 관절 지지대용 다리 어레이 할당
             let legParts = [];
             for(let j=0; j<6; j++) {
                 let t = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.01, 1.5), eMat);
@@ -350,7 +363,7 @@
                 legParts.push(t);
             }
             scene.add(ent);
-            entities.push({ mesh: ent, legs: legParts, state: 'patrol', patrolTarget: getSafeSpawn(), speed: 0.052 + (i*0.01), stuckCheckTimer: 0, lastPos: new THREE.Vector3() });
+            entities.push({ mesh: ent, legs: legParts, state: 'patrol', patrolTarget: getSafeSpawn(), baseSpeed: 0.052 + (i*0.01), speed: 0.052 + (i*0.01), stuckCheckTimer: 0, lastPos: new THREE.Vector3() });
         }
 
         const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
@@ -363,6 +376,21 @@
         const sensitivityInput = document.getElementById('cfg-sensitivity');
         sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value); });
 
+        // 📋 세부 설정 패널 접기 / 펼치기 함수
+        function toggleSettingsPanel() {
+            isPanelExpanded = !isPanelExpanded;
+            const panel = document.getElementById('ui-container');
+            const toggleBtn = document.getElementById('btn-toggle-panel');
+            
+            if (isPanelExpanded) {
+                panel.classList.remove('collapsed');
+                toggleBtn.textContent = "◢";
+            } else {
+                panel.classList.add('collapsed');
+                toggleBtn.textContent = "◣";
+            }
+        }
+
         function setPlatformType(type) {
             platform = type;
             document.getElementById('pc-select-btn').classList.remove('selected');
@@ -374,8 +402,7 @@
         function launchGameCore() {
             if(!platform) return;
             document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('ui-container').style.display = 'block';
-            document.getElementById('top-controls').style.display = 'block';
+            document.getElementById('top-controls').style.display = 'flex';
             document.getElementById('cctv-ui').style.display = 'block';
             
             if(platform === 'mobile') {
@@ -386,6 +413,8 @@
                 document.body.requestPointerLock();
             }
             gameActive = true; 
+            actualRecordTime = 0;
+            isSpeedBoosted = false;
             initBackroomsAudio();
         }
 
@@ -399,6 +428,23 @@
             isFlashlightOn = !isFlashlightOn;
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
+            if(flashlight) flashlight.intensity = isFlashlightOn ? 4.5 : 0;
+        }
+
+        function handleMobileFlash(e) {
+            e.preventDefault();
+            e.stopPropagation(); 
+            if(!gameActive || isPaused || isGameOver) return;
+            toggleFlashlight();
+        }
+
+        function handleMobileJump(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if(isGrounded && gameActive && !isPaused && !isGameOver) { 
+                playerVelocityY = jumpStrength; 
+                isGrounded = false; 
+            }
         }
 
         function toggleViewMode() {
@@ -411,10 +457,6 @@
                 playerParts.forEach(p => p.visible = true); firstPersonRig.visible = false;
             }
         }
-
-        document.getElementById('btn-mobile-jump').addEventListener('touchstart', (e) => {
-            e.preventDefault(); if(isGrounded && gameActive && !isPaused && !isGameOver) { playerVelocityY = jumpStrength; isGrounded = false; }
-        });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
@@ -449,7 +491,7 @@
             if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
-                if (t.target.closest('#ui-container') || t.target.closest('#mobile-controls-right') || t.target.closest('#top-controls')) continue;
+                if (t.target.closest('#top-controls') || t.target.closest('#mobile-controls-right')) continue;
                 if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                     joystickTouchId = t.identifier; joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`;
                     joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY);
@@ -527,7 +569,6 @@
             }
         }
 
-        // 🔊 배경음 및 발소리 재생 신호 합성 인터페이스
         let audioCtx = null, mainGain = null, buzzOsc = null, buzzFilter = null;
         let lastFootstepTime = 0;
 
@@ -537,7 +578,7 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 
                 mainGain = audioCtx.createGain(); 
-                mainGain.gain.setValueAtTime(0.02, audioCtx.currentTime); // 🔊 유저 요청: 배경음 볼륨 대폭 축소 (0.02)
+                mainGain.gain.setValueAtTime(0.02, audioCtx.currentTime); 
                 
                 buzzOsc = audioCtx.createOscillator();
                 buzzOsc.type = 'sawtooth';
@@ -554,7 +595,6 @@
             } catch(e){}
         }
 
-        // 👣 발소리 사운드 트리거 오디오 레이어
         function playFootstepSound(volume) {
             if (!audioCtx || isPaused || isGameOver) return;
             let osc = audioCtx.createOscillator();
@@ -591,12 +631,10 @@
             }
         }
 
-        // 죽으면 완전히 초기 메인 페이지로 돌아가는 리셋 핸들러
         function backToMainMenu() {
             isGameOver = false; gameActive = false; isPaused = false;
             platform = null;
             document.getElementById('gameover-screen').style.display = 'none';
-            document.getElementById('ui-container').style.display = 'none';
             document.getElementById('top-controls').style.display = 'none';
             document.getElementById('cctv-ui').style.display = 'none';
             document.getElementById('joystick-zone').style.display = 'none';
@@ -607,16 +645,20 @@
             document.getElementById('mobile-select-btn').classList.remove('selected');
             document.getElementById('main-start-trigger').classList.remove('ready');
             document.getElementById('start-screen').style.display = 'flex';
+            
+            // 메인 화면 복귀 시 정전 상태 초기화
+            document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
+            document.getElementById('glitch-overlay').style.opacity = 0;
+            scene.fog.density = 0.038;
+            ambientLight.intensity = 0.75;
         }
 
-        // 🛡️ 세이프 리턴 시스템: 안전 구역 롤백 맵 재배치
         function rollback30SecondsSafe() {
             isGameOver = false;
-            player.position.copy(safeSpawnPosition); // 기록해둔 최초 안전 위치로 역추적 텔레포트
+            player.position.copy(safeSpawnPosition); 
             playerVelocityY = 0; isGrounded = true;
             stamina = 100; isExhausted = false;
             
-            // 근접한 엔티티 거리를 강제로 안전반경 외곽으로 리스폰 분산 유도
             entities.forEach(e => {
                 const esp = getSafeSpawn();
                 e.mesh.position.set(esp.x, 0, esp.z);
@@ -632,9 +674,35 @@
             playerVelocityY = 0; isGrounded = true;
             entities.forEach(e => { const esp = getSafeSpawn(); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; });
             stamina = 100; cameraAngleX = 0; cameraAngleY = 0; isExhausted = false; isGameOver = false; isPaused = false;
-            isFlashlightOn = true; batteryTimer = 0;
+            isFlashlightOn = true; batteryTimer = 0; actualRecordTime = 0; isSpeedBoosted = false;
             document.getElementById('gameover-screen').style.display = 'none';
             if(platform === 'pc') document.body.requestPointerLock();
+
+            // 게임 리셋 시 그래픽 및 웅웅 소리 복구
+            document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
+            document.getElementById('glitch-overlay').style.opacity = 0;
+            scene.fog.density = 0.038;
+            ambientLight.intensity = 0.75;
+            if(buzzOsc) { try { buzzOsc.frequency.setValueAtTime(60, audioCtx.currentTime); } catch(e){} }
+        }
+
+        // 🚨 4분 돌파 시 발생하는 정전 연출 함수 (화면이 어두워지고 웅웅거리는 전기 소리가 멈춤)
+        function triggerBlackoutPhase() {
+            const glitchOverlay = document.getElementById('glitch-overlay');
+            
+            // 화면을 검은색으로 어둡게 뒤덮음 (약간 보이도록 0.88 알파 처리)
+            glitchOverlay.style.background = 'rgba(0, 0, 0, 0.88)';
+            glitchOverlay.style.opacity = 1;
+
+            // 3D 공간 연출: 안개를 엄청 짙게 만들고 주변 광원을 차단하여 어둡게 처리
+            scene.fog.density = 0.18;
+            ambientLight.intensity = 0.02;
+
+            // 전기 기기 웅웅거리는 노이즈음 완전 차단 (정전 효과음 리얼리티 향상)
+            if (buzzOsc) {
+                try { buzzOsc.frequency.setValueAtTime(0, audioCtx.currentTime); } catch(e){}
+            }
+            console.warn("BLACKOUT: 4분이 지나 정전이 발생했습니다! 화면 시야가 어두워집니다.");
         }
 
         function animate() {
@@ -650,7 +718,25 @@
 
             if (isGameOver || isPaused) return;
 
-            // 🔦 4분 루프 연산
+            // ⏱️ 1. 녹화 타이머 로직 구동 및 UI 갱신
+            actualRecordTime += 1 / 60; // 초당 60프레임 기준 누적 계산
+            
+            const displayMin = Math.floor(actualRecordTime / 60);
+            const displaySec = Math.floor(actualRecordTime % 60);
+            document.getElementById('cctv-time').textContent = 
+                `${displayMin.toString().padStart(2, '0')}:${displaySec.toString().padStart(2, '0')}`;
+
+            // 🚨 2. 정확히 녹화 기준 4분(240초) 돌파 시 정전 이벤트 트리거
+            if (actualRecordTime >= 240 && !isSpeedBoosted) {
+                isSpeedBoosted = true;
+                triggerBlackoutPhase(); // 정전 연출 발생
+                
+                // 모든 엔티티의 속도를 한 단계(1.5배) 가속
+                entities.forEach(e => {
+                    e.speed = e.baseSpeed * 1.5;
+                });
+            }
+
             batteryTimer += 1 / 60; let bPower = 1.0;
             let isCurrentlyFlickering = false;
 
@@ -659,15 +745,23 @@
             } else if (batteryTimer > batteryDuration - 12) {
                 if (Math.random() < 0.06) { bPower = 0.15; isCurrentlyFlickering = true; }
             }
-            flashlight.intensity = isFlashlightOn ? 14.0 * bPower : 0;
+            
+            // 4분이 지난 정전 상태라면 손전등 성능도 크게 디버프 처리해서 약간만 보이게 유도
+            let finalFlashlightIntensity = actualRecordTime >= 240 ? 0.9 : 4.5;
+            flashlight.intensity = isFlashlightOn ? finalFlashlightIntensity * bPower : 0;
 
-            if (isCurrentlyFlickering && audioCtx && buzzFilter) {
+            if (isCurrentlyFlickering && audioCtx && buzzFilter && actualRecordTime < 240) {
                 buzzFilter.frequency.setValueAtTime(350 + Math.random()*400, audioCtx.currentTime); mainGain.gain.setValueAtTime(0.08, audioCtx.currentTime); 
-            } else if (audioCtx && buzzFilter) {
+            } else if (audioCtx && buzzFilter && actualRecordTime < 240) {
                 buzzFilter.frequency.setValueAtTime(140, audioCtx.currentTime); mainGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
             }
 
             playerVelocityY += gravity; player.position.y += playerVelocityY;
+            
+            if (player.position.y >= wallHeight - 1.8) {
+                player.position.y = wallHeight - 1.8;
+                playerVelocityY = 0; 
+            }
             if (player.position.y <= 0) { player.position.y = 0; playerVelocityY = 0; isGrounded = true; }
 
             let moveX = 0, moveZ = 0;
@@ -688,7 +782,6 @@
             const runtime = Date.now() * 0.005;
             let bobX = 0, bobY = 0;
             
-            // 🕴️ 고퀄리티 인간형 캐릭터 애니메이션 수치 적용 가공 처리부
             if (isMoving && isGrounded) {
                 let waveFreq = isSprinting ? 2.2 : 1.4;
                 bobX = Math.sin(runtime * waveFreq) * 0.025;
@@ -706,12 +799,10 @@
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 targetRotationY = cameraAngleX + Math.atan2(-moveX, -moveZ);
 
-                // 🚶 3인칭 팔다리 런타임 역학 교차 흔들림 구현 (고퀄리티 모션 추가)
                 const swing = Math.sin(runtime * waveFreq * 4) * 0.5;
                 leftArm3rd.rotation.x = swing; rightArm3rd.rotation.x = -swing;
                 leftLeg.rotation.x = -swing * 1.2; rightLeg.rotation.x = swing * 1.2;
 
-                // 👣 발소리 디스패처 연동 (0.42초 주기 간격)
                 let footstepInterval = isSprinting ? 230 : 380;
                 let now = Date.now();
                 if(now - lastFootstepTime > footstepInterval) {
@@ -719,7 +810,6 @@
                     lastFootstepTime = now;
                 }
             } else {
-                // 서있을 때 기본 대기(Idle) 자세 복원
                 leftArm3rd.rotation.x = 0; rightArm3rd.rotation.x = 0;
                 leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
             }
@@ -736,7 +826,6 @@
                 const d = player.position.distanceTo(e.mesh.position);
                 if (d < closestDist) closestDist = d;
 
-                // 👾 엔티티 다리 꿈틀거리는 기괴한 모션 처리 루프 추가
                 if(e.state === 'chase' || e.mesh.position.distanceTo(e.lastPos) > 0.01) {
                     e.legs.forEach((leg, idx) => {
                         leg.rotation.x = Math.sin(Date.now() * 0.02 + idx) * 0.6;
@@ -744,7 +833,6 @@
                 }
             });
 
-            // ❤️ 하트비트 레이아웃 핸들러
             const heartUI = document.getElementById('heartbeat-ui');
             if (closestDist < 16) {
                 let proximityFactor = (16 - closestDist) / 16; 
@@ -759,11 +847,14 @@
                 }
 
                 const glitchOverlay = document.getElementById('glitch-overlay');
-                glitchOverlay.style.background = `rgba(140, 20, 20, ${proximityFactor * 0.45})`;
-                glitchOverlay.style.opacity = (Math.sin(Date.now() * 0.09) * 0.15) + proximityFactor;
+                // 4분 미만일 때만 평소 접근 오버레이 연출 (4분 돌파 후에는 상시 정전 오버레이 상태 유지)
+                if (actualRecordTime < 240) {
+                    glitchOverlay.style.background = `rgba(140, 20, 20, ${proximityFactor * 0.45})`;
+                    glitchOverlay.style.opacity = (Math.sin(Date.now() * 0.09) * 0.15) + proximityFactor;
+                }
             } else {
                 heartUI.style.transform = 'translateX(-50%) scale(0)';
-                document.getElementById('glitch-overlay').style.opacity = 0;
+                if (actualRecordTime < 240) document.getElementById('glitch-overlay').style.opacity = 0;
             }
 
             if (closestDist < 1.3) {

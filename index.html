@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Escape Room Fixed</title>
+    <title>The Backrooms - Escape Room Interactive</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -42,6 +42,15 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
+        /* 🚪 상호작용 PC 프롬프트 UI */
+        #interact-prompt {
+            position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; background: rgba(0, 0, 0, 0.8); border: 1px solid #bfae6f;
+            padding: 8px 16px; border-radius: 4px; font-weight: bold; font-size: 14px;
+            z-index: 100; display: none; pointer-events: none; text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
         #top-controls { 
             position: absolute; top: 16px; right: 16px; z-index: 220; display: none; 
             flex-direction: column; align-items: flex-end; gap: 6px;
@@ -73,6 +82,17 @@
             align-items: center; cursor: pointer; touch-action: none; box-shadow: 0 6px 14px rgba(0,0,0,0.7);
         }
         .circle-btn.active { background: #bfae6f; color: #111; border-color: #fff; }
+
+        /* 🚪 모바일 전용 문 터치 버튼 */
+        #btn-mobile-interact {
+            background: #bfae6f !important; color: #111 !important; border-color: #fff !important;
+            display: none; animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); box-shadow: 0 0 15px #bfae6f; }
+            100% { transform: scale(1); }
+        }
 
         #stamina-container {
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
@@ -146,6 +166,7 @@
     <div id="crosshair"></div>
     <div id="cctv-ui">🔴 REC <span id="cctv-time">00:00</span></div>
     <div id="quest-ui">🔑 QUEST: 열쇠를 찾아 탈출하십시오.</div>
+    <div id="interact-prompt">🚪 [E] 문 열기</div>
     <div id="game-toast"></div>
     <div id="heartbeat-ui">❤️</div>
 
@@ -191,6 +212,7 @@
     </div>
 
     <div id="mobile-controls-right">
+        <div id="btn-mobile-interact" class="circle-btn" ontouchstart="handleDoorInteractButton(event)">🚪</div>
         <div id="btn-mobile-flash" class="circle-btn active" ontouchstart="handleMobileFlash(event)">🔦</div>
         <div id="btn-mobile-jump" class="circle-btn" style="font-size:20px; font-weight:bold;" ontouchstart="handleMobileJump(event)">▲</div>
     </div>
@@ -236,7 +258,7 @@
 
         let hasKey = false, isDoorOpened = false;
         let keyMesh = null, doorGroup = null, doorPivot = null;
-        let globalEscapeSensorPos = new THREE.Vector3(); // 📌 탈출 확정 구역 월드 좌표 연동 변수
+        let globalEscapeSensorPos = new THREE.Vector3(); 
         
         const mapRows = 22, mapCols = 22, unitSize = 5, wallHeight = 5.5;
         let mapData = [], instancedWalls = null, lamps = [];
@@ -417,8 +439,7 @@
             scene.add(doorGroup);
             doorGroup.updateMatrixWorld(true);
 
-            // 📌 뼈대 수정: 로컬 매트릭스를 월드 쿼터니언 기반 절대 위치로 파싱하여 내부 센서 좌표 산출
-            let sensorOffset = new THREE.Vector3(0, 1.0, -1.35); 
+            let sensorOffset = new THREE.Vector3(0, 1.0, -1.4); 
             sensorOffset.applyQuaternion(doorGroup.quaternion);
             globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
 
@@ -577,10 +598,27 @@
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
+        /* 🚪 상호작용 트리거 실행 함수 */
+        function openTheEscapeDoor() {
+            if(!hasKey || isDoorOpened) return;
+            isDoorOpened = true;
+            showToast("🔓 문이 열렸습니다! 내부의 검은 통로 안으로 걸어 들어가세요!");
+            document.getElementById('interact-prompt').style.display = 'none';
+            document.getElementById('btn-mobile-interact').style.display = 'none';
+        }
+
+        function handleDoorInteractButton(e) { e.preventDefault(); e.stopPropagation(); openTheEscapeDoor(); }
+
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
+            if (k === 'e' && gameActive && !isPaused) {
+                // 문 근처에 있고 열쇠가 있을 때 E키 입력 처리
+                if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) {
+                    openTheEscapeDoor();
+                }
+            }
         });
         window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (k in keys) keys[k] = false; });
 
@@ -642,11 +680,10 @@
             }
         });
 
-        // 📌 중요 수정: 문이 열렸을 때는 벽면 충돌 체크를 우회시켜 검은 공간으로 자유 진입 가능케 유도
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if(isDoorOpened && doorGroup) {
                 let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
-                if(distToDoorPivot < 2.5) {
+                if(distToDoorPivot < 2.8) {
                     return { x: tentativePos.x, z: tentativePos.z };
                 }
             }
@@ -790,6 +827,8 @@
             document.getElementById('top-controls').style.display = 'none';
             document.getElementById('cctv-ui').style.display = 'none';
             document.getElementById('quest-ui').style.display = 'none';
+            document.getElementById('interact-prompt').style.display = 'none';
+            document.getElementById('btn-mobile-interact').style.display = 'none';
             document.getElementById('joystick-zone').style.display = 'none';
             document.getElementById('mobile-controls-right').style.display = 'none';
             document.getElementById('stamina-container').style.display = 'none';
@@ -856,29 +895,33 @@
                 if(!isDoorOpened) {
                     document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>문을 찾아 탈출하십시오.<br><span style='color:#00ff66; font-size:15px;'>📍 남은 거리: ${currentDoorDist}m</span>`;
                 } else {
-                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>문이 열렸습니다! 어둠 속 센서로 돌진하세요!</span>`;
+                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>문이 열렸습니다! 어둠 속 센서로 진입하세요!</span>`;
                 }
             }
 
-            // 📌 중요 수정: 문이 열려 내부 터널 안으로 완전히 걸어 들어갈 때의 클리어 판정 정밀 강화
             if(doorGroup) {
                 let distToDoorFrame = player.position.distanceTo(doorGroup.position);
                 
+                /* 🚪 핀포인트 수정: 자동 오프닝을 막고 UI/버튼 활성화 처리 */
                 if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
-                    isDoorOpened = true;
-                    showToast("🔓 문이 열렸습니다! 내부의 검은 통로 안으로 걸어 들어가세요!");
+                    if(platform === 'pc') {
+                        document.getElementById('interact-prompt').style.display = 'block';
+                    } else {
+                        document.getElementById('btn-mobile-interact').style.display = 'flex';
+                    }
+                } else {
+                    // 범위를 벗어나면 상호작용 UI 숨기기
+                    document.getElementById('interact-prompt').style.display = 'none';
+                    if(!isDoorOpened) document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
 
                 if(isDoorOpened && doorPivot && doorPivot.rotation.y > -1.6) {
-                    doorPivot.rotation.y -= 0.05; // 부드럽고 신속하게 열리도록 회전 가속화
+                    doorPivot.rotation.y -= 0.08; 
                 }
 
-                // 🏃 핵심 버그 수정: 월드 기준 센서 좌표인 'globalEscapeSensorPos'와의 3차원 직선 거리 실시간 계산
                 if(isDoorOpened) {
                     let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
-                    
-                    // 판정 임계치를 1.7m로 늘려 문을 통과하여 한 발짝만 들어가도 100% 탈출이 확정 처리됩니다.
-                    if(distanceToEscapeSensor < 1.7) {
+                    if(distanceToEscapeSensor < 1.6) {
                         gameActive = false; playHorrorScream(false);
                         document.getElementById('clear-time-record').textContent = `⏱️ 탈출 소요 시간: ${calcMin}분 ${calcSec}초`;
                         document.getElementById('clear-screen').style.display = 'flex';

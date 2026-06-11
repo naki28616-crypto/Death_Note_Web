@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Fixed Escape</title>
+    <title>The Backrooms - Textured & Fixed Escape</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -329,80 +329,77 @@
             return tex;
         }
 
-        /* 🎨 [비주얼 강화] 카펫 질감 및 어두운 얼룩 대비 대폭 상승 */
         function generateFloorTexture() {
             const size = 512;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            ctx.fillStyle = '#6e5f31'; // 확연한 어두운 황갈색 카펫 베이스
+            ctx.fillStyle = '#837543'; // 갈색조 카펫 베이스
             ctx.fillRect(0, 0, size, size);
             
             const imgData = ctx.getImageData(0, 0, size, size);
             const data = imgData.data;
             for(let i = 0; i < data.length; i += 4) {
-                const carpetGrain = (Math.random() - 0.5) * 45; // 노이즈 강도 증가 (거친 카펫 질감)
+                const carpetGrain = (Math.random() - 0.5) * 24; // 거친 직물 질감
                 data[i] = Math.max(0, Math.min(255, data[i] + carpetGrain));
                 data[i+1] = Math.max(0, Math.min(255, data[i+1] + carpetGrain));
-                data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.7));
+                data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.8));
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 눅눅하고 더러운 오염 자국 시각화 대폭 강화
-            for (let i = 0; i < 12; i++) {
-                let x = Math.random() * size, y = Math.random() * size, r = 50 + Math.random() * 80;
+            // 🆕 어두운 얼룩 듬성듬성 추가
+            for (let i = 0; i < 8; i++) {
+                let x = Math.random() * size, y = Math.random() * size, r = 30 + Math.random() * 50;
                 let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(38, 31, 12, 0.7)');
-                grad.addColorStop(1, 'rgba(38, 31, 12, 0)');
+                grad.addColorStop(0, 'rgba(56, 48, 22, 0.5)'); // 어두운 갈색 얼룩
+                grad.addColorStop(1, 'rgba(56, 48, 22, 0)');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
             }
             
             const tex = new THREE.CanvasTexture(canvas);
             tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(12, 12); 
+            tex.repeat.set(16, 16); 
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
             tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
             return tex;
         }
 
-        /* 🎨 [비주얼 강화 + 버그 픽스] 석고 천장 타일 구멍 및 조립 라인 명확화 */
         function generateCeilTexture() {
             const size = 256;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            ctx.fillStyle = '#ccc193'; 
+            ctx.fillStyle = '#d3c79b'; 
             ctx.fillRect(0, 0, size, size);
             
             const imgData = ctx.getImageData(0, 0, size, size);
             const data = imgData.data;
             for(let i = 0; i < data.length; i += 4) {
-                const noise = (Math.random() - 0.5) * 12;
+                const noise = (Math.random() - 0.5) * 8;
                 data[i] = Math.max(0, Math.min(255, data[i] + noise));
                 data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
                 data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 사무실 천장 특유의 미세한 벌레무늬 구멍들 선명하게 각인
-            ctx.fillStyle = 'rgba(54, 49, 33, 0.75)';
-            for (let i = 0; i < 600; i++) {
+            // 텍스천 미세 구멍 및 벌레무늬
+            ctx.fillStyle = 'rgba(70, 65, 48, 0.6)';
+            for (let i = 0; i < 400; i++) {
                 let rx = Math.random() * size, ry = Math.random() * size;
-                let rw = 1.5 + Math.random() * 2, rh = 1.5 + Math.random() * 2;
+                let rw = 1 + Math.random() * 2, rh = 1 + Math.random() * 1.5;
                 ctx.fillRect(rx, ry, rw, rh);
             }
             
-            // 격자 테두리선 굵게 드로잉
-            ctx.strokeStyle = 'rgba(94, 87, 62, 0.75)'; ctx.lineWidth = 3;
+            // 사무실 격자 무늬 라인
+            ctx.strokeStyle = 'rgba(120, 112, 85, 0.6)'; ctx.lineWidth = 1.5;
             ctx.strokeRect(0, 0, size, size);
             
             const tex = new THREE.CanvasTexture(canvas);
-            // ⚠️ [중요 버그 픽스]: 반복 적용을 위해 반드시 필요한 랩핑 설정 추가
-            tex.wrapS = THREE.RepeatWrapping; 
-            tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(18, 18);
+            // ⚠️ 반복 설정 추가 (중요!)
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(22, 22);
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
             tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
             return tex;
@@ -430,7 +427,9 @@
                 }
             }
             carve(1, 1);
-            for(let k=0; k < 4; k++) {
+            
+            // 🆕 평지(방) 3개 추가
+            for(let k=0; k < 3; k++) {
                 let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3, centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
                 for(let r = centerR - 2; r <= centerR + 2; r++) {
                     for(let c = centerC - 2; c <= centerC + 2; c++) {
@@ -438,6 +437,7 @@
                     }
                 }
             }
+            
             for(let r=0; r<mapRows; r++) { mapData[r][0] = 1; mapData[r][mapCols-1] = 1; }
             for(let c=0; c<mapCols; c++) { mapData[0][c] = 1; mapData[mapRows-1][c] = 1; }
         }
@@ -698,7 +698,7 @@
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
-        /* 🛠️ [버그 픽스] 문 열기 판정 조건 완화 */
+        /* 🚪 [최적화 & 버그 픽스] 문 열기 판정 수정 */
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true;
@@ -721,7 +721,7 @@
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
             if (k === 'e' && gameActive && !isPaused) {
-                if(doorGroup && player.position.distanceTo(doorGroup.position) < 3.0) {
+                if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) {
                     openTheEscapeDoor();
                 }
             }
@@ -777,26 +777,29 @@
             }
         });
 
+        window.addEventListener('mousemove', (e) => {
+            if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
+            if (document.pointerLockElement === document.body) {
+                const multi = 0.0018 * globalSensitivity; 
+                cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi;
+                cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
+            }
+        });
+
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if(isDoorOpened && doorGroup) {
                 let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
-                if(distToDoorPivot < 3.0) {
+                if(distToDoorPivot < 2.8) {
                     return { x: tentativePos.x, z: tentativePos.z };
                 }
             }
             
             let res = { x: tentativePos.x, z: tentativePos.z };
-            
-            const pCol = Math.floor((oldPos.x + (mapCols * unitSize) / 2) / unitSize);
-            const pRow = Math.floor((oldPos.z + (mapRows * unitSize) / 2) / unitSize);
-            
-            const startRow = Math.max(0, pRow - 1);
-            const endRow = Math.min(mapRows - 1, pRow + 1);
-            const startCol = Math.max(0, pCol - 1);
-            const endCol = Math.min(mapCols - 1, pCol + 1);
-
-            for (let r = startRow; r <= endRow; r++) {
-                for (let c = startCol; c <= endCol; c++) {
+            const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
+            const pRow = Math.floor((oldPos.z - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
+            for (let r = pRow - 1; r <= pRow + 1; r++) {
+                for (let c = pCol - 1; c <= pCol + 1; c++) {
+                    if (r < 0 || r >= mapRows || c < 0 || c >= mapCols) continue;
                     if (mapData[r][c] === 1) {
                         const wX = (c - mapCols/2) * unitSize + unitSize/2;
                         const wZ = (r - mapRows/2) * unitSize + unitSize/2;
@@ -949,6 +952,7 @@
                 if(keyHintOsc) { keyHintOsc.stop(); keyHintOsc = null; }
                 audioCtx = null;
             } catch(e){}
+            if (document.pointerLockElement === document.body) document.exitPointerLock();
         }
 
         function rollback30SecondsSafe() {
@@ -958,6 +962,7 @@
             playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
             entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; });
             document.getElementById('gameover-screen').style.display = 'none';
+            if(platform === 'pc') document.body.requestPointerLock();
         }
 
         function triggerBlackoutPhase() {
@@ -970,7 +975,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            if (!gameActive) return;
+            if (!gameActive) { camera.position.set(0, 15, 20); camera.lookAt(0, 0, 0); renderer.render(scene, camera); return; }
             if (isGameOver || isPaused) return;
 
             actualRecordTime += 1 / 60; 
@@ -1003,7 +1008,7 @@
             if(doorGroup) {
                 let distToDoorFrame = player.position.distanceTo(doorGroup.position);
                 
-                if(hasKey && distToDoorFrame < 3.0 && !isDoorOpened) {
+                if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
                     if(platform === 'pc') {
                         document.getElementById('interact-prompt').style.display = 'block';
                     } else if(platform === 'mobile') {
@@ -1020,7 +1025,7 @@
 
                 if(isDoorOpened) {
                     let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
-                    if(distanceToEscapeSensor < 1.8) {
+                    if(distanceToEscapeSensor < 1.6) {
                         gameActive = false; playHorrorScream(false);
                         document.getElementById('clear-time-record').textContent = `⏱️ 탈출 소요 시간: ${calcMin}분 ${calcSec}초`;
                         document.getElementById('clear-screen').style.display = 'flex';

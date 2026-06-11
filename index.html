@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>《The Backrooms》</title>
+    <title>The Backrooms - Cinematic Ultra Quality Edition</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -14,7 +14,6 @@
         }
         canvas { display: block; width: 100% !important; height: 100% !important; position: absolute; top:0; left:0; z-index: 1; }
         
-        /* 영화 같은 연출을 위한 비네트 및 색수차 왜곡 효과 */
         #vhs-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, rgba(0,0,0,0) 25%, rgba(0,0,0,0.85) 100%);
@@ -214,7 +213,7 @@
         let playerVelocityY = 0, isGrounded = true;
         const gravity = -0.014, jumpStrength = 0.165; 
         let lastHeartbeatSoundTime = 0;
-        let landingImpactImpact = 0; // 착지 시 화면이 출렁이는 효과용 변수
+        let landingImpactImpact = 0;
 
         const basePlayerSpeed = 0.12;
         const sprintPlayerSpeed = 0.18;
@@ -222,45 +221,38 @@
 
         let safeSpawnPosition = new THREE.Vector3();
 
-        // 시네마틱 톤 매핑 기능이 적용된 WebGL 고품질 렌더러 구성
         const scene = new THREE.Scene();
-        const backroomsYellow = 0xbaa761; // 살짝 더 탁하고 무거운 컬러로 변경
+        const backroomsYellow = 0xbaa761; 
         scene.background = new THREE.Color(backroomsYellow); 
         scene.fog = new THREE.FogExp2(backroomsYellow, 0.042); 
 
         const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.01, 1000);
         
-        // 시각 깊이감 극대화를 위한 하이엔드 옵션 활성화
         const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 부드러운 하이엔드 그림자 효과
-        renderer.toneMapping = THREE.ReinhardToneMapping; // 실시간 컬러 그레이딩 효과 지원
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+        renderer.toneMapping = THREE.ReinhardToneMapping; 
         renderer.toneMappingExposure = 1.25;
         document.body.appendChild(renderer.domElement);
 
-        // 입체감을 살리기 위해 메인 환경광 낮추고 간접광 레이어 최적화
         const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.35); 
         scene.add(ambientLight);
 
         const mapRows = 39, mapCols = 39, unitSize = 5, wallHeight = 6.8;
         let mapData = [], instancedWalls = null, lamps = [];
 
-        // 🧱 [비주얼 상향] 조명을 받았을 때 홈과 요철이 생기는 범프 맵 텍스처 실시간 제작
         function generateHighQualityWallTextures() {
             const size = 512;
             const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            // 베이스 디퓨즈(색상) 맵
             ctx.fillStyle = '#dfd5a0'; ctx.fillRect(0, 0, size, size);
             ctx.fillStyle = '#d0c68f';
-            // 종이 질감의 불규칙한 노이즈 삽입
             for(let i=0; i<8000; i++) {
                 ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2);
             }
-            // 세로 스트라이프 벽지 문양
             ctx.strokeStyle = '#c2b77e'; ctx.lineWidth = 5;
             for (let x = 0; x < size; x += 40) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
@@ -268,16 +260,13 @@
             const diffuseTex = new THREE.CanvasTexture(canvas);
             diffuseTex.wrapS = THREE.RepeatWrapping; diffuseTex.wrapT = THREE.RepeatWrapping;
 
-            // 범프(입체감) 맵 생성
             const bumpCanvas = document.createElement('canvas'); bumpCanvas.width = size; bumpCanvas.height = size;
             const bCtx = bumpCanvas.getContext('2d');
             bCtx.fillStyle = '#808080'; bCtx.fillRect(0, 0, size, size);
             bCtx.fillStyle = '#000000';
-            // 세로 홈 부분에 음영 깊이 주입
             for (let x = 0; x < size; x += 40) {
                 bCtx.fillRect(x-2, 0, 4, size);
             }
-            // 미세 크랙 스크래치 주입
             bCtx.strokeStyle = '#222222'; bCtx.lineWidth = 1;
             for(let i=0; i<15; i++) {
                 bCtx.beginPath();
@@ -295,7 +284,7 @@
         const wallMat = new THREE.MeshStandardMaterial({ 
             map: wallTextures.diffuse, 
             bumpMap: wallTextures.bump,
-            bumpScale: 0.04, // 미세 굴곡 계수
+            bumpScale: 0.04, 
             roughness: 0.72, 
             metalness: 0.02 
         });
@@ -405,20 +394,17 @@
         const flashlightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.28), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, metalness: 0.8, roughness: 0.2 }));
         flashlightMesh.rotation.x = Math.PI / 2; flashlightMesh.position.set(0.22, -0.18, -0.45); firstPersonRig.add(flashlightMesh);
 
-        // 🔦 은은하게 사방으로 번지는 고품질 스폿 조명 구성
         const flashlight = new THREE.SpotLight(0xfffbf0, 2.0, 45, Math.PI / 4.8, 0.6, 0.75);
         flashlight.castShadow = true; flashlight.shadow.bias = -0.001;
         flashlight.shadow.mapSize.width = 1024; flashlight.shadow.mapSize.height = 1024;
         firstPersonRig.add(flashlight); flashlight.position.set(0.22, -0.18, -0.45);
         const flashlightTarget = new THREE.Object3D(); flashlightTarget.position.set(0.22, -0.18, -5); firstPersonRig.add(flashlightTarget); flashlight.target = flashlightTarget;
 
-        // 👾 [엔티티 상향] 기괴한 유기체 실루엣과 야간 인공 안광 시스템 추가
         let entities = []; const entityColors = [0x050505, 0x140d08]; 
         for(let i=0; i<2; i++) {
             let ent = new THREE.Group();
-            let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.15, metalness: 0.85 }); // 섬뜩하게 번들거리는 질감
+            let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.15, metalness: 0.85 }); 
             
-            // 척추 마디 형태의 기괴한 바디 레이어링
             let bodyGroup = new THREE.Group();
             let spineNodes = [];
             for(let n=0; n<5; n++) {
@@ -428,7 +414,6 @@
             }
             ent.add(bodyGroup);
             
-            // 엔티티 눈 부위 발광체 탑재 (정전 후 빨갛게 변함)
             let eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
             let eyeMat = new THREE.MeshBasicMaterial({ color: 0x110000 });
             let leftEye = new THREE.Mesh(eyeGeo, eyeMat); leftEye.position.set(-0.08, 2.05, 0.18); ent.add(leftEye);
@@ -455,7 +440,7 @@
         const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
         entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); });
 
-        // 부드러운 랙(Lag) 연출 및 물리 카메라 회전을 위한 내부 보간 타겟 계수
+        // ⚠️ 버그 유발 요소 완전 수정: 초기 카메라 앵글 값이 NaN이 되지 않도록 0으로 확실히 바인딩
         let cameraAngleX = 0, cameraAngleY = 0;
         let smoothCamAngleX = 0, smoothCamAngleY = 0;
         let targetRotationY = 0;
@@ -494,6 +479,11 @@
             } else {
                 document.body.requestPointerLock();
             }
+            
+            // ⚠️ 시점 강제 리셋 매커니즘: 게임 입장 시 카메라 뷰가 꼬여서 안 보이는 현상 차단
+            cameraAngleX = 0; cameraAngleY = 0;
+            smoothCamAngleX = 0; smoothCamAngleY = 0;
+            
             gameActive = true; actualRecordTime = 0; isSpeedBoosted = false;
             initBackroomsAudio();
         }
@@ -653,10 +643,8 @@
                 const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
                 ePos.x = safeE.x; ePos.z = safeE.z; 
                 
-                // 👾 [움직임 상향] 목표를 자연스럽고 기괴하게 바라보는 쿼터니언 회전 처리
                 const targetRot = Math.atan2(dX, dZ);
                 const currentRot = e.mesh.rotation.y;
-                // 회전 각도 차이 보간
                 let diff = targetRot - currentRot;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
@@ -750,19 +738,18 @@
             
             entities.forEach(e => {
                 e.speed = e.baseSpeed * 1.8; 
-                // 👁️ 정전 후 엔티티의 눈을 섬뜩한 핏빛으로 강제 각성 연출
                 e.eyes.forEach(eye => eye.material.color.setHex(0xff0000));
             });
         }
 
-        // 🔄 메인 프레임 렌더링 엔진 (물리 애니메이션 핵심 탑재)
         function animate() {
             requestAnimationFrame(animate);
 
+            // ⚠️ 메인 대기실 카메라 연산 수정: 게임 시작 전에도 미로가 노란 배경 속에 정상 렌더링되도록 수정
             if (!gameActive) {
-                const timer = Date.now() * 0.0002;
-                camera.position.set(Math.sin(timer)*8, 3.6, Math.cos(timer)*8);
-                camera.lookAt(0, 2.2, 0);
+                const timer = Date.now() * 0.0004;
+                camera.position.set(Math.sin(timer) * 45, 22, Math.cos(timer) * 45);
+                camera.lookAt(0, 2, 0);
                 renderer.render(scene, camera);
                 return;
             }
@@ -778,7 +765,6 @@
                 isSpeedBoosted = true; triggerBlackoutPhase();
             }
 
-            // 🎥 시점 버그 전면 해결: 카메라 각도 보간(LERP)을 주어 부드러운 고품질 고해상도 시선 회전 구현
             smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.22;
             smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.22;
             const viewDir = new THREE.Vector3(
@@ -811,7 +797,6 @@
             const runtime = Date.now() * 0.0045;
             let bobX = 0, bobY = 0, runShake = 0;
             
-            // 🏃 점프 및 이동 관성 물리 매커니즘
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
             const sinX = Math.sin(smoothCamAngleX), cosX = Math.cos(smoothCamAngleX);
             const fX = (moveX * cosX + moveZ * sinX) * currentMoveSpeed;
@@ -819,33 +804,29 @@
 
             if (isMoving) {
                 const oldP = { x: player.position.x, z: player.position.z };
-                const tenP = { x: player.position.x + fX, z: player.position.z + fZ };
-                const safeP = checkGridCollision(oldP, tenP, 0.58);
+                const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
+                const safeP = checkGridCollision(oldP, tentativeP, 0.58);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 if (viewMode === '3rd') targetRotationY = smoothCamAngleX + Math.atan2(-moveX, -moveZ);
             }
 
-            // 중력 및 착지 시 충격 보정 로직
             playerVelocityY += gravity; player.position.y += playerVelocityY;
             if (player.position.y <= 0) { 
                 player.position.y = 0; 
-                if(playerVelocityY < -0.05) { // 착지 시 쿵 하는 카메라 충격 물리 주입
+                if(playerVelocityY < -0.05) { 
                     landingImpactImpact = Math.min(0.22, Math.abs(playerVelocityY) * 1.2);
                 }
                 playerVelocityY = 0; isGrounded = true; 
             }
 
-            // 서서히 복구되는 착지 충격 연산
             landingImpactImpact *= 0.88;
 
-            // 🎥 1인칭 헤드 밥 애니메이션 고급 고도화
             if (isMoving && isGrounded) {
                 let waveFreq = isSprinting ? 2.4 : 1.5;
                 let ampMultiplier = isSprinting ? 1.8 : 1.0;
                 bobX = Math.sin(runtime * waveFreq) * 0.035 * ampMultiplier;
                 bobY = Math.cos(runtime * waveFreq * 2) * 0.028 * ampMultiplier;
                 
-                // 달릴 때 마우스를 흔드는 듯한 고주파 핸드 셰이크 추가
                 if(isSprinting) runShake = (Math.random() - 0.5) * 0.008;
 
                 const swing = Math.sin(runtime * waveFreq * 3.5) * 0.45;
@@ -874,7 +855,6 @@
                 const d = player.position.distanceTo(e.mesh.position);
                 if (d < closestDist) closestDist = d;
 
-                // 👾 [애니메이션 상향] 엔티티 척추 마디 유기적 웨이브 연출 및 다리 관절 모션 유동화
                 const wave = Math.sin(Date.now() * 0.008 + e.animOffset);
                 e.spine.forEach((node, idx) => {
                     node.position.x = Math.sin(wave + idx * 0.8) * 0.06 * (idx === 0 ? 0.3 : idx * 0.5);
@@ -913,7 +893,6 @@
                 if(platform === 'pc') document.exitPointerLock(); return;
             }
 
-            // 🎥 카메라 물리 시점 및 헤드 밥, 하강 댐핑 마운트 최종 연산
             if (viewMode === '3rd') {
                 const r = 5.4;
                 const tX = player.position.x + Math.sin(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>The Backrooms - Exploration Fixed Edition</title>
+    <title>The Backrooms - Fixed Perspective Edition</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -134,8 +134,11 @@
         }
         #joystick-stick { position: absolute; top: 37px; left: 37px; width: 46px; height: 46px; background: rgba(255,255,255,0.25); border-radius: 50%; box-shadow: inset 0 0 8px rgba(255,255,255,0.5); }
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 5; display: none; }
+        
+        #loading-text { font-size: 12px; color: #555; margin-top: 10px; font-weight: bold; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
     <div id="vhs-overlay"></div>
@@ -148,7 +151,7 @@
     <div id="start-screen">
         <h2 class="title-main">THE BACKROOMS</h2>
         <h1 class="title-sub">EXPLORATION</h1>
-        <div class="title-level">LEVEL 0 - CINEMATIC</div>
+        <div class="title-level">LEVEL 0 - ANIMATED</div>
         
         <div class="platform-select-box">
             <button id="pc-select-btn" class="platform-choice-btn" onclick="setPlatformType('pc')">💻 PC CONTROL</button>
@@ -161,6 +164,7 @@
             <div class="circle-ring ring-3"></div>
             <span class="start-label">ENTER</span>
         </div>
+        <div id="loading-text">인터넷 연결 상태에 따라 최초 로딩에 2~3초가 걸릴 수 있습니다.</div>
     </div>
 
     <div id="top-controls">
@@ -219,6 +223,9 @@
 
         let safeSpawnPosition = new THREE.Vector3();
 
+        let mixer, clock = new THREE.Clock();
+        let animActions = {}, activeAction;
+
         const scene = new THREE.Scene();
         const backroomsYellow = 0xbaa761; 
         scene.background = new THREE.Color(backroomsYellow); 
@@ -234,10 +241,14 @@
         renderer.toneMappingExposure = 1.0;
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.7); 
+        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.9); 
         scene.add(ambientLight);
 
-        // 맵 크기를 더 쾌적하게 키우고 조절
+        // 🔦 손전등 스폿라이트 생성 (1인칭/3인칭 공용으로 플레이어 그룹에 종속시킴)
+        const flashlight = new THREE.SpotLight(0xfffbf0, 3.5, 45, Math.PI / 4.5, 0.5, 0.5);
+        const flashlightTarget = new THREE.Object3D();
+        flashlight.target = flashlightTarget;
+
         const mapRows = 30, mapCols = 30, unitSize = 5, wallHeight = 6.0;
         let mapData = [], instancedWalls = null, lamps = [];
 
@@ -270,13 +281,10 @@
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x9e925c, roughness: 0.9 }); 
         const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd9cfab, roughness: 0.9 });
 
-        // ✨ 고침: 백룸 감성을 살려 군데군데 넓은 평지(광장 방)들이 뚫리도록 생성 로직 변경
         function generateRandomMaze() {
-            // 전체를 벽(1)으로 채우기
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
             let visited = Array(mapRows).fill().map(() => Array(mapCols).fill(false));
             
-            // 미로 기본 길 파기 (DFS 알고리즘)
             function carve(r, c) {
                 visited[r][c] = true; mapData[r][c] = 0;
                 const dirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(() => Math.random() - 0.5);
@@ -289,27 +297,22 @@
             }
             carve(1, 1);
             
-            // 🌟 넓은 평지 공간(Large Rooms) 무작위 배치 연산 추가
-            // 맵 중간 중간에 벽을 시원하게 밀어버려 탁 트인 평지를 생성합니다.
-            const roomCount = 8; // 생성할 넓은 방 개수
+            const roomCount = 8; 
             for(let k=0; k < roomCount; k++) {
                 let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3;
                 let centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
-                
-                // 가로세로 3~4칸 단위 크기로 넓게 평지를 뚫어줌 (실제 크기는 유닛 사이즈 곱한 수십미터 평지)
                 let roomSizeR = Math.floor(Math.random() * 2) + 2; 
                 let roomSizeC = Math.floor(Math.random() * 2) + 2; 
                 
                 for(let r = centerR - roomSizeR; r <= centerR + roomSizeR; r++) {
                     for(let c = centerC - roomSizeC; c <= centerC + roomSizeC; c++) {
                         if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) {
-                            mapData[r][c] = 0; // 평지화
+                            mapData[r][c] = 0; 
                         }
                     }
                 }
             }
             
-            // 외곽 테두리는 무조건 거대한 벽으로 감싸기
             for(let r=0; r<mapRows; r++) { mapData[r][0] = 1; mapData[r][mapCols-1] = 1; }
             for(let c=0; c<mapCols; c++) { mapData[0][c] = 1; mapData[mapRows-1][c] = 1; }
         }
@@ -331,7 +334,7 @@
                     if(mapData[r][c] === 1) {
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
-                    } else if(Math.random() < 0.08) { // 평지가 늘어난 만큼 등 조밀도 최적화
+                    } else if(Math.random() < 0.08) { 
                         const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffee }));
                         lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
                         
@@ -356,7 +359,7 @@
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
                     if(avoidPlayerPos) {
                         let dist = Math.sqrt(Math.pow(spawnX - avoidPlayerPos.x, 2) + Math.pow(spawnZ - avoidPlayerPos.z, 2));
-                        if(dist < 15) continue; // 괴물은 좀 더 먼 평지에서 스폰되게 거리 상향
+                        if(dist < 15) continue; 
                     }
                     return { x: spawnX, z: spawnZ };
                 }
@@ -367,60 +370,70 @@
         generateRandomMaze(); buildMazeGraphics();
 
         let player = new THREE.Group(); scene.add(player);
-        let playerParts = []; const hazmatColor = 0xcc9a14;
-        const pMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.6 });
+        
+        // 플레이어 내부에 손전등 세팅 조립
+        player.add(flashlight);
+        player.add(flashlightTarget);
+        flashlight.position.set(0, 1.4, 0); // 캐릭터 눈/손 높이 근처
 
-        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.8, 8), pMat); torso.position.y = 0.85; player.add(torso); playerParts.push(torso);
-        const headGroup = new THREE.Group(); headGroup.position.set(0, 1.4, 0); player.add(headGroup); playerParts.push(headGroup);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 10), pMat); headGroup.add(head);
-        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.1), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2 })); visor.position.set(0, 0.02, 0.14); headGroup.add(visor);
+        const gltfLoader = new THREE.GLTFLoader();
+        gltfLoader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', function(gltf) {
+            const model = gltf.scene;
+            model.scale.set(0.28, 0.28, 0.28); 
+            model.rotation.y = Math.PI; // 모델 기본 앞뒤 정렬
+            player.add(model);
 
-        let leftArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.5), pMat); leftArm3rd.position.set(-0.32, 0.8, 0); player.add(leftArm3rd); playerParts.push(leftArm3rd);
-        let rightArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.5), pMat); rightArm3rd.position.set(0.32, 0.8, 0); player.add(rightArm3rd); playerParts.push(rightArm3rd);
-        let leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.55), pMat); leftLeg.position.set(-0.12, 0.28, 0); player.add(leftLeg); playerParts.push(leftLeg);
-        let rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.55), pMat); rightLeg.position.set(0.12, 0.28, 0); player.add(rightLeg); playerParts.push(rightLeg);
+            mixer = new THREE.AnimationMixer(model);
+            gltf.animations.forEach((clip) => {
+                animActions[clip.name.toLowerCase()] = mixer.clipAction(clip);
+            });
 
-        let firstPersonRig = new THREE.Group(); scene.add(firstPersonRig);
-        const armMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.6 });
-        const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.45), armMat); leftArm.rotation.x = Math.PI / 2; leftArm.position.set(-0.22, -0.22, -0.3); firstPersonRig.add(leftArm);
-        const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.45), armMat); rightArm.rotation.x = Math.PI / 2; rightArm.position.set(0.22, -0.22, -0.3); firstPersonRig.add(rightArm);
+            if(animActions['idle']) {
+                activeAction = animActions['idle'];
+                activeAction.play();
+            }
+        }, undefined, function(e) {
+            console.error("3D 캐릭터 로드 실패.", e);
+            const fallback = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color:0xcc0000}));
+            fallback.position.y = 0.5; player.add(fallback);
+        });
 
-        const flashlightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.28), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.5 }));
-        flashlightMesh.rotation.x = Math.PI / 2; flashlightMesh.position.set(0.22, -0.18, -0.45); firstPersonRig.add(flashlightMesh);
+        function changePlayerAnimation(name) {
+            if (!mixer || !animActions[name]) return;
+            const targetAction = animActions[name];
+            if (targetAction === activeAction) return;
 
-        const flashlight = new THREE.SpotLight(0xfffbf0, 2.5, 45, Math.PI / 4.5, 0.6, 0.8);
-        firstPersonRig.add(flashlight); flashlight.position.set(0.22, -0.18, -0.45);
-        const flashlightTarget = new THREE.Object3D(); flashlightTarget.position.set(0.22, -0.18, -5); firstPersonRig.add(flashlightTarget); flashlight.target = flashlightTarget;
+            targetAction.reset();
+            targetAction.setEffectiveTimeScale(1);
+            targetAction.setEffectiveWeight(1);
+            
+            if (activeAction) {
+                activeAction.crossFadeTo(targetAction, 0.15, true);
+            }
+            targetAction.play();
+            activeAction = targetAction;
+        }
 
         let entities = []; const entityColors = [0x050505]; 
         for(let i=0; i<1; i++) { 
             let ent = new THREE.Group();
             let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.3 }); 
-            
-            let bodyGroup = new THREE.Group();
-            let spineNodes = [];
+            let bodyGroup = new THREE.Group(); let spineNodes = [];
             for(let n=0; n<4; n++) {
                 let node = new THREE.Mesh(new THREE.SphereGeometry(0.22 - (n*0.03), 6, 6), eMat);
                 node.position.y = 1.8 - (n*0.35); node.scale.set(1, 0.7, 1);
                 bodyGroup.add(node); spineNodes.push(node);
             }
             ent.add(bodyGroup);
-            
-            let eyeGeo = new THREE.SphereGeometry(0.04, 6, 6);
-            let eyeMat = new THREE.MeshBasicMaterial({ color: 0x220000 });
-            let leftEye = new THREE.Mesh(eyeGeo, eyeMat); leftEye.position.set(-0.08, 1.85, 0.18); ent.add(leftEye);
-            let rightEye = new THREE.Mesh(eyeGeo, eyeMat); rightEye.position.set(0.08, 1.85, 0.18); ent.add(rightEye);
-            
+            let leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), new THREE.MeshBasicMaterial({ color: 0x220000 })); leftEye.position.set(-0.08, 1.85, 0.18); ent.add(leftEye);
+            let rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), new THREE.MeshBasicMaterial({ color: 0x220000 })); rightEye.position.set(0.08, 1.85, 0.18); ent.add(rightEye);
             let legParts = [];
             for(let j=0; j<4; j++) {
-                let legRoot = new THREE.Group();
-                legRoot.position.set((j%2===0?0.25:-0.25), 0.8, -0.1 + (j*0.2));
-                let upper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.015, 0.8), eMat);
-                upper.position.y = -0.4; upper.rotation.z = (j%2===0?0.3:-0.3); legRoot.add(upper);
+                let legRoot = new THREE.Group(); legRoot.position.set((j%2===0?0.25:-0.25), 0.8, -0.1 + (j*0.2));
+                let upper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.015, 0.8), eMat); upper.position.y = -0.4; upper.rotation.z = (j%2===0?0.3:-0.3); legRoot.add(upper);
                 ent.add(legRoot); legParts.push(legRoot);
             }
             scene.add(ent);
-            
             let baseSpeed = 0.055;
             entities.push({ 
                 mesh: ent, legs: legParts, spine: spineNodes, eyes: [leftEye, rightEye],
@@ -432,6 +445,7 @@
         const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
         entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); });
 
+        // 🔄 마우스 카메라 회전 값 초기 설정 유지
         let cameraAngleX = 0.0, cameraAngleY = 0.0;
         let smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
         let targetRotationY = 0.0;
@@ -476,7 +490,6 @@
             cameraAngleX = 0.0; cameraAngleY = 0.0;
             smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
             
-            // 시작 시 넓은 방 영역에서 쾌적하게 생성되게 보장
             generateRandomMaze(); buildMazeGraphics();
             const pSp2 = getSafeSpawn();
             player.position.set(pSp2.x, 0, pSp2.z);
@@ -506,9 +519,7 @@
             isFlashlightOn = !isFlashlightOn;
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
-            
-            let normalIntensity = 2.5;
-            if(flashlight) flashlight.intensity = isFlashlightOn ? normalIntensity : 0;
+            if(flashlight) flashlight.intensity = isFlashlightOn ? 3.5 : 0;
         }
 
         function handleMobileFlash(e) {
@@ -526,10 +537,10 @@
             const btn = document.getElementById('btn-view'), ch = document.getElementById('crosshair');
             if (viewMode === '3rd') {
                 viewMode = '1st'; btn.textContent = "🎥 3인칭 시점"; btn.classList.add('active'); if(platform === 'pc') ch.style.display = 'block';
-                playerParts.forEach(p => p.visible = false); firstPersonRig.visible = true;
+                if(player.children[2]) player.children[2].visible = false; // 내 mesh 캐릭터 가리기
             } else {
                 viewMode = '3rd'; btn.textContent = "🎥 1인칭 시점"; btn.classList.remove('active'); ch.style.display = 'none';
-                playerParts.forEach(p => p.visible = true); firstPersonRig.visible = false;
+                if(player.children[2]) player.children[2].visible = true; // 내 mesh 캐릭터 보이기
             }
         }
 
@@ -546,7 +557,9 @@
         window.addEventListener('mousemove', (e) => {
             if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
             if (document.pointerLockElement === document.body) {
-                const multi = 0.002 * globalSensitivity; cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi;
+                const multi = 0.002 * globalSensitivity; 
+                cameraAngleX -= e.movementX * multi; // 마우스 이동 방향과 시선 일치
+                cameraAngleY -= e.movementY * multi;
                 cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
             }
         });
@@ -656,7 +669,7 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 mainGain = audioCtx.createGain(); mainGain.gain.setValueAtTime(0.01, audioCtx.currentTime); 
                 buzzOsc = audioCtx.createOscillator(); buzzOsc.type = 'sawtooth'; buzzOsc.frequency.setValueAtTime(60, audioCtx.currentTime); 
-                buzzFilter = audioCtx.createBiquadFilter(); buzzFilter.type = 'lowpass'; buzzFilter.frequency.setValueAtTime(120, audioCtx.currentTime);
+                buzzFilter = document.createElement('div') ? audioCtx.createBiquadFilter() : null; buzzFilter.type = 'lowpass'; buzzFilter.frequency.setValueAtTime(120, audioCtx.currentTime);
                 buzzOsc.connect(buzzFilter); buzzFilter.connect(mainGain); mainGain.connect(audioCtx.destination); buzzOsc.start();
             } catch(e){}
         }
@@ -699,7 +712,9 @@
             document.getElementById('start-screen').style.display = 'flex';
             document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
             document.getElementById('glitch-overlay').style.opacity = 0;
-            scene.fog.density = 0.05; ambientLight.intensity = 0.7;
+            scene.background.setHex(backroomsYellow);
+            scene.fog.color.setHex(backroomsYellow);
+            scene.fog.density = 0.05; ambientLight.intensity = 0.9;
         }
 
         function rollback30SecondsSafe() {
@@ -716,22 +731,32 @@
             if(platform === 'pc') document.body.requestPointerLock();
         }
 
+        // 🔦 [수정] 1분 30초 작동 함수 변경: 완전 암흑 차단 ➔ 적당히 윤곽 식별 가능한 '심야 붉은 경보' 무드
         function triggerBlackoutPhase() {
             const glitchOverlay = document.getElementById('glitch-overlay');
-            glitchOverlay.style.background = 'rgba(3, 1, 1, 0.97)'; glitchOverlay.style.opacity = 1;
-            scene.fog.density = 0.35; 
-            ambientLight.intensity = 0.0; 
-            if (buzzOsc) { try { buzzOsc.frequency.setValueAtTime(0, audioCtx.currentTime); } catch(e){} }
+            glitchOverlay.style.background = 'rgba(25, 4, 4, 0.65)'; // 지나친 검은색 필터 제거, 65% 반투명 핏빛 무드
+            glitchOverlay.style.opacity = 1;
+            
+            // 전역 배경과 안개를 아주 어두운 적갈색으로 수정해 실루엣 유도
+            scene.background.setHex(0x1a0a0a);
+            scene.fog.color.setHex(0x1a0a0a);
+            scene.fog.density = 0.12; 
+            
+            ambientLight.intensity = 0.04; // 0이 아닌 최소 불빛을 주어 맵 구조 식별 가능
+            if (buzzOsc) { try { buzzOsc.frequency.setValueAtTime(30, audioCtx.currentTime); } catch(e){} }
             entities.forEach(e => {
                 e.speed = e.baseSpeed * 1.5; 
                 e.eyes.forEach(eye => eye.material.color.setHex(0xff0000));
             });
-            
-            if(isFlashlightOn && flashlight) flashlight.intensity = 2.5;
         }
 
         function animate() {
             requestAnimationFrame(animate);
+
+            if (mixer) {
+                const delta = clock.getDelta();
+                mixer.update(delta);
+            }
 
             if (!gameActive) {
                 camera.position.set(0, 15, 20);
@@ -754,9 +779,10 @@
             smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.3;
             smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.3;
             
+            // 🔄 [수정] 정면을 제대로 정의하기 위해 마이너스(-) 부호 전면 동기화
             const viewDir = new THREE.Vector3(
-                Math.sin(smoothCamAngleX) * Math.cos(smoothCamAngleY), 
-                Math.sin(smoothCamAngleY), 
+                -Math.sin(smoothCamAngleX) * Math.cos(smoothCamAngleY), 
+                Math.sin(cameraAngleY), 
                 -Math.cos(smoothCamAngleX) * Math.cos(smoothCamAngleY)
             ).normalize();
 
@@ -783,9 +809,11 @@
             
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
             
+            // 🔄 [수정] 1인칭 조작 및 카메라 반전 연산 수정
+            // 삼각함수 부호 축을 똑같이 일치시켜 뒤돌거나 반대로 걷는 결함 완벽 차단
             const sinX = Math.sin(smoothCamAngleX), cosX = Math.cos(smoothCamAngleX);
-            const fX = (moveX * cosX + moveZ * sinX) * currentMoveSpeed;
-            const fZ = (-moveX * sinX + moveZ * cosX) * currentMoveSpeed;
+            const fX = (-moveX * cosX + moveZ * sinX) * currentMoveSpeed;
+            const fZ = (moveX * sinX + moveZ * cosX) * currentMoveSpeed;
 
             if (isMoving) {
                 const oldP = { x: player.position.x, z: player.position.z };
@@ -793,38 +821,42 @@
                 const safeP = checkGridCollision(oldP, tentativeP, 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 
-                if (viewMode === '3rd') {
-                    targetRotationY = smoothCamAngleX + Math.atan2(-moveX, -moveZ);
+                // 3인칭 시 캐릭터가 이동하는 진행 방향을 바라보게 처리
+                targetRotationY = smoothCamAngleX + Math.atan2(moveX, moveZ);
+
+                if (isSprinting) {
+                    changePlayerAnimation('running'); 
+                } else {
+                    changePlayerAnimation('walking');
                 }
+                
+                if (isGrounded) {
+                    let waveFreq = isSprinting ? 2.2 : 1.4;
+                    bobX = Math.sin(runtime * waveFreq) * 0.03;
+                    bobY = Math.cos(runtime * waveFreq * 2) * 0.02;
+                    let footstepInterval = isSprinting ? 240 : 390;
+                    let now = Date.now();
+                    if(now - lastFootstepTime > footstepInterval) {
+                        playFootstepSound(isSprinting ? 0.8 : 0.4); lastFootstepTime = now;
+                    }
+                }
+            } else {
+                changePlayerAnimation('idle');
             }
 
             playerVelocityY += gravity; player.position.y += playerVelocityY;
             if (player.position.y <= 0) { player.position.y = 0; playerVelocityY = 0; isGrounded = true; }
 
-            if (isMoving && isGrounded) {
-                let waveFreq = isSprinting ? 2.2 : 1.4;
-                bobX = Math.sin(runtime * waveFreq) * 0.03;
-                bobY = Math.cos(runtime * waveFreq * 2) * 0.02;
-                
-                const swing = Math.sin(runtime * waveFreq * 3) * 0.4;
-                leftArm3rd.rotation.x = swing; rightArm3rd.rotation.x = -swing;
-                leftLeg.rotation.x = -swing; rightLeg.rotation.x = swing;
-
-                let footstepInterval = isSprinting ? 240 : 390;
-                let now = Date.now();
-                if(now - lastFootstepTime > footstepInterval) {
-                    playFootstepSound(isSprinting ? 0.8 : 0.4); lastFootstepTime = now;
-                }
-            } else if (!isMoving) {
-                leftArm3rd.rotation.x = 0; rightArm3rd.rotation.x = 0;
-                leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
-            }
-
+            // 🔄 [수정] 시점별 플레이어 본체 회전 제어 일치화
             if (viewMode === '3rd') {
                 player.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY), 0.2);
             } else {
+                // 1인칭일 때는 마우스 조작 각도(카메라 회전)에 플레이어 정면을 완벽히 동기화
                 player.rotation.y = smoothCamAngleX;
             }
+
+            // 🔦 손전등 상하 고정 각도 갱신 (마우스 위아래 각도 viewDir 추적)
+            flashlight.lookAt(player.position.x + viewDir.x * 10, player.position.y + 1.4 + viewDir.y * 10, player.position.z + viewDir.z * 10);
 
             let closestDist = 999;
             entities.forEach(e => {
@@ -833,12 +865,8 @@
                 if (d < closestDist) closestDist = d;
 
                 const wave = Math.sin(Date.now() * 0.008 + e.animOffset);
-                e.spine.forEach((node, idx) => {
-                    node.position.x = Math.sin(wave + idx * 0.8) * 0.05;
-                });
-                e.legs.forEach((leg, idx) => {
-                    leg.rotation.x = Math.sin(Date.now() * 0.02 + idx * 1.5) * 0.4;
-                });
+                e.spine.forEach((node, idx) => { node.position.x = Math.sin(wave + idx * 0.8) * 0.05; });
+                e.legs.forEach((leg, idx) => { leg.rotation.x = Math.sin(Date.now() * 0.02 + idx * 1.5) * 0.4; });
             });
 
             const heartUI = document.getElementById('heartbeat-ui');
@@ -851,27 +879,25 @@
                     heartUI.style.transform = `translateX(-50%) scale(${1.2 + proximityFactor * 0.5})`;
                     setTimeout(() => { heartUI.style.transform = `translateX(-50%) scale(${0.9 + proximityFactor * 0.2})`; }, 120);
                 }
-            } else {
-                heartUI.style.transform = 'translateX(-50%) scale(0)';
-            }
+            } else { heartUI.style.transform = 'translateX(-50%) scale(0)'; }
 
             if (closestDist < 1.2) {
                 isGameOver = true; document.getElementById('gameover-screen').style.display = 'flex';
                 if(platform === 'pc') document.exitPointerLock(); return;
             }
 
+            // 🎥 시점 카메라 포지션 업데이트
             if (viewMode === '3rd') {
                 const r = 5.0;
                 const tX = player.position.x + Math.sin(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
-                const tY = player.position.y + 2.0 + Math.sin(smoothCamAngleY)*r;
+                const tY = player.position.y + 2.4 + Math.sin(smoothCamAngleY)*r; 
                 const tZ = player.position.z + Math.cos(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
                 camera.position.set(tX, tY, tZ);
                 camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
             } else {
+                // 🔄 [수정] 1인칭 카메라 배치: 플레이어 눈높이(1.6) 정위치, 시선 정방향 정렬
                 camera.position.set(player.position.x + bobX, player.position.y + 1.6 + bobY, player.position.z);
                 camera.lookAt(new THREE.Vector3().copy(camera.position).add(viewDir));
-                firstPersonRig.position.copy(camera.position);
-                firstPersonRig.rotation.copy(camera.rotation);
             }
 
             renderer.render(scene, camera);

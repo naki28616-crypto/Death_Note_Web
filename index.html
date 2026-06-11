@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>The Backrooms - Fixed Perspective Edition</title>
+    <title>The Backrooms - Fixed 1st Person Controls</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -225,6 +225,7 @@
 
         let mixer, clock = new THREE.Clock();
         let animActions = {}, activeAction;
+        let characterMesh = null; 
 
         const scene = new THREE.Scene();
         const backroomsYellow = 0xbaa761; 
@@ -244,10 +245,53 @@
         const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.9); 
         scene.add(ambientLight);
 
-        // 🔦 손전등 스폿라이트 생성 (1인칭/3인칭 공용으로 플레이어 그룹에 종속시킴)
-        const flashlight = new THREE.SpotLight(0xfffbf0, 3.5, 45, Math.PI / 4.5, 0.5, 0.5);
+        // 🔦 1인칭 전용 카메라 종속 리그(Rig) 오브젝트 생성 (팔, 손전등 메쉬 조립용)
+        const fpsRig = new THREE.Group();
+        scene.add(fpsRig);
+
+        // 스폿라이트 생성 후 리그에 장착
+        const flashlight = new THREE.SpotLight(0xfffbf0, 4.0, 50, Math.PI / 4.2, 0.5, 0.5);
         const flashlightTarget = new THREE.Object3D();
+        flashlightTarget.position.set(0, 0, -10);
+        fpsRig.add(flashlight);
+        fpsRig.add(flashlightTarget);
         flashlight.target = flashlightTarget;
+
+        // 🔦 손전등 외형 메쉬(실린더 모양) 제작 후 리그 오른손 위치에 부착
+        const flashBodyGeo = new THREE.CylinderGeometry(0.04, 0.03, 0.25, 8);
+        flashBodyGeo.rotateX(Math.PI / 2); // 앞을 보게 회전
+        const flashHeadGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.08, 8);
+        flashHeadGeo.rotateX(Math.PI / 2);
+        flashHeadGeo.translate(0, 0, -0.13);
+
+        const flashMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+        const flashlightMesh = new THREE.Group();
+        flashlightMesh.add(new THREE.Mesh(flashBodyGeo, flashMaterial));
+        flashlightMesh.add(new THREE.Mesh(flashHeadGeo, new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.9 })));
+        
+        // 유리 렌즈 부분 표현
+        const lensMesh = new THREE.Mesh(new THREE.CircleGeometry(0.05, 8), new THREE.MeshBasicMaterial({ color: 0xffffee }));
+        lensMesh.position.set(0, 0, -0.17);
+        lensMesh.rotation.y = Math.PI;
+        flashlightMesh.add(lensMesh);
+
+        // 리그 내부 오른손 가상 오프셋에 손전등 탑재
+        flashlightMesh.position.set(0.28, -0.22, -0.4); 
+        fpsRig.add(flashlightMesh);
+
+        // 🦾 1인칭 연출용 가상 로봇 양팔 메쉬 생성
+        const armMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.5, roughness: 0.4 });
+        const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat);
+        leftArm.rotateX(Math.PI / 2.3); 
+        leftArm.position.set(-0.25, -0.25, -0.3);
+        fpsRig.add(leftArm);
+
+        const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat);
+        rightArm.rotateX(Math.PI / 2.3);
+        rightArm.position.set(0.25, -0.25, -0.3);
+        fpsRig.add(rightArm);
+
+        fpsRig.visible = false; // 기본 3인칭 시작이므로 처음엔 숨김
 
         const mapRows = 30, mapCols = 30, unitSize = 5, wallHeight = 6.0;
         let mapData = [], instancedWalls = null, lamps = [];
@@ -256,35 +300,22 @@
             const size = 256; 
             const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            
             ctx.fillStyle = '#dfd5a0'; ctx.fillRect(0, 0, size, size);
             ctx.fillStyle = '#d0c68f';
-            for(let i=0; i<3000; i++) {
-                ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2);
-            }
+            for(let i=0; i<3000; i++) { ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2); }
             ctx.strokeStyle = '#c2b77e'; ctx.lineWidth = 3;
-            for (let x = 0; x < size; x += 32) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
-            }
-            const diffuseTex = new THREE.CanvasTexture(canvas);
-            diffuseTex.wrapS = THREE.RepeatWrapping; diffuseTex.wrapT = THREE.RepeatWrapping;
-            return { diffuse: diffuseTex };
+            for (let x = 0; x < size; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke(); }
+            return { diffuse: new THREE.CanvasTexture(canvas) };
         }
 
         const wallTextures = generateHighQualityWallTextures();
-        const wallMat = new THREE.MeshStandardMaterial({ 
-            map: wallTextures.diffuse, 
-            roughness: 0.8, 
-            metalness: 0.0 
-        });
-        
+        const wallMat = new THREE.MeshStandardMaterial({ map: wallTextures.diffuse, roughness: 0.8, metalness: 0.0 });
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x9e925c, roughness: 0.9 }); 
         const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd9cfab, roughness: 0.9 });
 
         function generateRandomMaze() {
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
             let visited = Array(mapRows).fill().map(() => Array(mapCols).fill(false));
-            
             function carve(r, c) {
                 visited[r][c] = true; mapData[r][c] = 0;
                 const dirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(() => Math.random() - 0.5);
@@ -296,23 +327,15 @@
                 }
             }
             carve(1, 1);
-            
-            const roomCount = 8; 
-            for(let k=0; k < roomCount; k++) {
-                let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3;
-                let centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
-                let roomSizeR = Math.floor(Math.random() * 2) + 2; 
-                let roomSizeC = Math.floor(Math.random() * 2) + 2; 
-                
+            for(let k=0; k < 8; k++) {
+                let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3, centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
+                let roomSizeR = Math.floor(Math.random() * 2) + 2, roomSizeC = Math.floor(Math.random() * 2) + 2; 
                 for(let r = centerR - roomSizeR; r <= centerR + roomSizeR; r++) {
                     for(let c = centerC - roomSizeC; c <= centerC + roomSizeC; c++) {
-                        if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) {
-                            mapData[r][c] = 0; 
-                        }
+                        if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) mapData[r][c] = 0;
                     }
                 }
             }
-            
             for(let r=0; r<mapRows; r++) { mapData[r][0] = 1; mapData[r][mapCols-1] = 1; }
             for(let c=0; c<mapCols; c++) { mapData[0][c] = 1; mapData[mapRows-1][c] = 1; }
         }
@@ -337,10 +360,7 @@
                     } else if(Math.random() < 0.08) { 
                         const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffee }));
                         lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
-                        
-                        const pl = new THREE.PointLight(0xfff5cc, 0.7, 14); 
-                        pl.position.set(x, wallHeight - 0.2, z);
-                        lamp.add(pl);
+                        const pl = new THREE.PointLight(0xfff5cc, 0.7, 14); pl.position.set(x, wallHeight - 0.2, z); lamp.add(pl);
                     }
                 }
             }
@@ -352,8 +372,7 @@
 
         function getSafeSpawn(avoidPlayerPos = null) {
             for(let i=0; i<300; i++) {
-                let r = Math.floor(Math.random()*mapRows);
-                let c = Math.floor(Math.random()*mapCols);
+                let r = Math.floor(Math.random()*mapRows), c = Math.floor(Math.random()*mapCols);
                 if(mapData[r][c] === 0) {
                     let spawnX = (c - mapCols/2)*unitSize + unitSize/2;
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
@@ -369,55 +388,35 @@
 
         generateRandomMaze(); buildMazeGraphics();
 
-        let player = new THREE.Group(); scene.add(player);
-        
-        // 플레이어 내부에 손전등 세팅 조립
-        player.add(flashlight);
-        player.add(flashlightTarget);
-        flashlight.position.set(0, 1.4, 0); // 캐릭터 눈/손 높이 근처
+        let player = new THREE.Group(); 
+        scene.add(player);
 
         const gltfLoader = new THREE.GLTFLoader();
         gltfLoader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', function(gltf) {
-            const model = gltf.scene;
-            model.scale.set(0.28, 0.28, 0.28); 
-            model.rotation.y = Math.PI; // 모델 기본 앞뒤 정렬
-            player.add(model);
+            characterMesh = gltf.scene;
+            characterMesh.scale.set(0.28, 0.28, 0.28); 
+            characterMesh.rotation.y = Math.PI; 
+            player.add(characterMesh);
 
-            mixer = new THREE.AnimationMixer(model);
-            gltf.animations.forEach((clip) => {
-                animActions[clip.name.toLowerCase()] = mixer.clipAction(clip);
-            });
-
-            if(animActions['idle']) {
-                activeAction = animActions['idle'];
-                activeAction.play();
-            }
-        }, undefined, function(e) {
-            console.error("3D 캐릭터 로드 실패.", e);
-            const fallback = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color:0xcc0000}));
-            fallback.position.y = 0.5; player.add(fallback);
+            mixer = new THREE.AnimationMixer(characterMesh);
+            gltf.animations.forEach((clip) => { animActions[clip.name.toLowerCase()] = mixer.clipAction(clip); });
+            if(animActions['idle']) { activeAction = animActions['idle']; activeAction.play(); }
         });
 
         function changePlayerAnimation(name) {
-            if (!mixer || !animActions[name]) return;
+            if (!mixer || !animActions[name] || viewMode === '1st') return;
             const targetAction = animActions[name];
             if (targetAction === activeAction) return;
-
             targetAction.reset();
-            targetAction.setEffectiveTimeScale(1);
-            targetAction.setEffectiveWeight(1);
-            
-            if (activeAction) {
-                activeAction.crossFadeTo(targetAction, 0.15, true);
-            }
-            targetAction.play();
-            activeAction = targetAction;
+            targetAction.setEffectiveTimeScale(1); targetAction.setEffectiveWeight(1);
+            if (activeAction) activeAction.crossFadeTo(targetAction, 0.15, true);
+            targetAction.play(); activeAction = targetAction;
         }
 
-        let entities = []; const entityColors = [0x050505]; 
+        let entities = [];
         for(let i=0; i<1; i++) { 
             let ent = new THREE.Group();
-            let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.3 }); 
+            let eMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.3 }); 
             let bodyGroup = new THREE.Group(); let spineNodes = [];
             for(let n=0; n<4; n++) {
                 let node = new THREE.Mesh(new THREE.SphereGeometry(0.22 - (n*0.03), 6, 6), eMat);
@@ -434,10 +433,9 @@
                 ent.add(legRoot); legParts.push(legRoot);
             }
             scene.add(ent);
-            let baseSpeed = 0.055;
             entities.push({ 
                 mesh: ent, legs: legParts, spine: spineNodes, eyes: [leftEye, rightEye],
-                state: 'patrol', patrolTarget: getSafeSpawn(), baseSpeed: baseSpeed, speed: baseSpeed, 
+                state: 'patrol', patrolTarget: getSafeSpawn(), baseSpeed: 0.055, speed: 0.055, 
                 stuckCheckTimer: 0, lastPos: new THREE.Vector3(), animOffset: Math.random()*100 
             });
         }
@@ -445,7 +443,6 @@
         const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
         entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); });
 
-        // 🔄 마우스 카메라 회전 값 초기 설정 유지
         let cameraAngleX = 0.0, cameraAngleY = 0.0;
         let smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
         let targetRotationY = 0.0;
@@ -453,14 +450,11 @@
         const keys = { w: false, a: false, s: false, d: false, shift: false };
 
         const sensitivityInput = document.getElementById('cfg-sensitivity');
-        if(sensitivityInput) {
-            sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value) || 1.0; });
-        }
+        if(sensitivityInput) { sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value) || 1.0; }); }
 
         function toggleSettingsPanel() {
             isPanelExpanded = !isPanelExpanded;
-            const panel = document.getElementById('ui-container');
-            const toggleBtn = document.getElementById('btn-toggle-panel');
+            const panel = document.getElementById('ui-container'), toggleBtn = document.getElementById('btn-toggle-panel');
             if (isPanelExpanded) { panel.classList.remove('collapsed'); toggleBtn.textContent = "◢"; } 
             else { panel.classList.add('collapsed'); toggleBtn.textContent = "◣"; }
         }
@@ -487,14 +481,9 @@
                 document.body.requestPointerLock();
             }
             
-            cameraAngleX = 0.0; cameraAngleY = 0.0;
-            smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
-            
+            cameraAngleX = 0.0; cameraAngleY = 0.0; smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
             generateRandomMaze(); buildMazeGraphics();
-            const pSp2 = getSafeSpawn();
-            player.position.set(pSp2.x, 0, pSp2.z);
-            safeSpawnPosition.copy(player.position);
-            
+            const pSp2 = getSafeSpawn(); player.position.set(pSp2.x, 0, pSp2.z); safeSpawnPosition.copy(player.position);
             entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = esp; });
             
             gameActive = true; actualRecordTime = 0; isSpeedBoosted = false;
@@ -519,7 +508,9 @@
             isFlashlightOn = !isFlashlightOn;
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
-            if(flashlight) flashlight.intensity = isFlashlightOn ? 3.5 : 0;
+            
+            flashlight.intensity = isFlashlightOn ? 4.0 : 0;
+            lensMesh.material.color.setHex(isFlashlightOn ? 0xffffee : 0x222222);
         }
 
         function handleMobileFlash(e) {
@@ -537,10 +528,12 @@
             const btn = document.getElementById('btn-view'), ch = document.getElementById('crosshair');
             if (viewMode === '3rd') {
                 viewMode = '1st'; btn.textContent = "🎥 3인칭 시점"; btn.classList.add('active'); if(platform === 'pc') ch.style.display = 'block';
-                if(player.children[2]) player.children[2].visible = false; // 내 mesh 캐릭터 가리기
+                if(characterMesh) characterMesh.visible = false; 
+                fpsRig.visible = true; 
             } else {
                 viewMode = '3rd'; btn.textContent = "🎥 1인칭 시점"; btn.classList.remove('active'); ch.style.display = 'none';
-                if(player.children[2]) player.children[2].visible = true; // 내 mesh 캐릭터 보이기
+                if(characterMesh) characterMesh.visible = true; 
+                fpsRig.visible = false; 
             }
         }
 
@@ -558,7 +551,7 @@
             if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
             if (document.pointerLockElement === document.body) {
                 const multi = 0.002 * globalSensitivity; 
-                cameraAngleX -= e.movementX * multi; // 마우스 이동 방향과 시선 일치
+                cameraAngleX -= e.movementX * multi; 
                 cameraAngleY -= e.movementY * multi;
                 cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
             }
@@ -595,7 +588,7 @@
                 const t = e.touches[i];
                 if (t.identifier === joystickTouchId) calculateJoystick(t.clientX, t.clientY);
                 if (t.identifier === rotationTouchId) {
-                    const multi = 0.005 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
+                    const multi = 0.004 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
                     prevX = t.clientX; prevY = t.clientY; cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
                 }
             }
@@ -644,10 +637,8 @@
                 }
                 e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
             }
-            
             if (dist < 22 && !isGameOver) { e.state = 'chase'; } 
             else if (e.state === 'chase' && dist > 28) { e.state = 'patrol'; e.patrolTarget = getSafeSpawn(playerPos); }
-            
             let dest = (e.state === 'chase') ? playerPos : e.patrolTarget;
             if(e.state === 'patrol' && Math.abs(ePos.x - dest.x) < 1.2 && Math.abs(ePos.z - dest.z) < 1.2) { e.patrolTarget = getSafeSpawn(playerPos); }
             const dX = dest.x - ePos.x, dZ = dest.z - ePos.z; const len = Math.sqrt(dX*dX + dZ*dZ);
@@ -669,7 +660,7 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 mainGain = audioCtx.createGain(); mainGain.gain.setValueAtTime(0.01, audioCtx.currentTime); 
                 buzzOsc = audioCtx.createOscillator(); buzzOsc.type = 'sawtooth'; buzzOsc.frequency.setValueAtTime(60, audioCtx.currentTime); 
-                buzzFilter = document.createElement('div') ? audioCtx.createBiquadFilter() : null; buzzFilter.type = 'lowpass'; buzzFilter.frequency.setValueAtTime(120, audioCtx.currentTime);
+                buzzFilter = audioCtx.createBiquadFilter(); buzzFilter.type = 'lowpass'; buzzFilter.frequency.setValueAtTime(120, audioCtx.currentTime);
                 buzzOsc.connect(buzzFilter); buzzFilter.connect(mainGain); mainGain.connect(audioCtx.destination); buzzOsc.start();
             } catch(e){}
         }
@@ -677,24 +668,22 @@
         function playFootstepSound(volume) {
             if (!audioCtx || isPaused || isGameOver) return;
             try {
-                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'triangle'; osc.frequency.setValueAtTime(70, audioCtx.currentTime); 
                 gain.gain.setValueAtTime(volume * 0.12, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.11);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.11);
             } catch(e){}
         }
 
         function playHeartbeatSound(volume, isDouble) {
             if (!audioCtx || isPaused || isGameOver) return;
             try {
-                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'sine'; osc.frequency.setValueAtTime(50, audioCtx.currentTime); 
                 gain.gain.setValueAtTime(volume * 0.7, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.13);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.13);
             } catch(e){}
         }
 
@@ -712,8 +701,7 @@
             document.getElementById('start-screen').style.display = 'flex';
             document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
             document.getElementById('glitch-overlay').style.opacity = 0;
-            scene.background.setHex(backroomsYellow);
-            scene.fog.color.setHex(backroomsYellow);
+            scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow);
             scene.fog.density = 0.05; ambientLight.intensity = 0.9;
         }
 
@@ -731,89 +719,63 @@
             if(platform === 'pc') document.body.requestPointerLock();
         }
 
-        // 🔦 [수정] 1분 30초 작동 함수 변경: 완전 암흑 차단 ➔ 적당히 윤곽 식별 가능한 '심야 붉은 경보' 무드
         function triggerBlackoutPhase() {
             const glitchOverlay = document.getElementById('glitch-overlay');
-            glitchOverlay.style.background = 'rgba(25, 4, 4, 0.65)'; // 지나친 검은색 필터 제거, 65% 반투명 핏빛 무드
+            glitchOverlay.style.background = 'rgba(25, 5, 5, 0.7)'; 
             glitchOverlay.style.opacity = 1;
-            
-            // 전역 배경과 안개를 아주 어두운 적갈색으로 수정해 실루엣 유도
-            scene.background.setHex(0x1a0a0a);
-            scene.fog.color.setHex(0x1a0a0a);
-            scene.fog.density = 0.12; 
-            
-            ambientLight.intensity = 0.04; // 0이 아닌 최소 불빛을 주어 맵 구조 식별 가능
-            if (buzzOsc) { try { buzzOsc.frequency.setValueAtTime(30, audioCtx.currentTime); } catch(e){} }
-            entities.forEach(e => {
-                e.speed = e.baseSpeed * 1.5; 
-                e.eyes.forEach(eye => eye.material.color.setHex(0xff0000));
-            });
+            scene.background.setHex(0x140a0a); scene.fog.color.setHex(0x140a0a); scene.fog.density = 0.14; 
+            ambientLight.intensity = 0.05; 
+            entities.forEach(e => { e.speed = e.baseSpeed * 1.5; e.eyes.forEach(eye => eye.material.color.setHex(0xff0000)); });
         }
 
         function animate() {
             requestAnimationFrame(animate);
-
-            if (mixer) {
-                const delta = clock.getDelta();
-                mixer.update(delta);
-            }
+            const delta = clock.getDelta();
+            if (mixer && viewMode === '3rd') mixer.update(delta);
 
             if (!gameActive) {
-                camera.position.set(0, 15, 20);
-                camera.lookAt(0, 0, 0);
-                renderer.render(scene, camera);
-                return;
+                camera.position.set(0, 15, 20); camera.lookAt(0, 0, 0);
+                renderer.render(scene, camera); return;
             }
-
             if (isGameOver || isPaused) return;
 
             actualRecordTime += 1 / 60; 
-            const displayMin = Math.floor(actualRecordTime / 60);
-            const displaySec = Math.floor(actualRecordTime % 60);
-            document.getElementById('cctv-time').textContent = `${displayMin.toString().padStart(2, '0')}:${displaySec.toString().padStart(2, '0')}`;
+            document.getElementById('cctv-time').textContent = `${Math.floor(actualRecordTime / 60).toString().padStart(2, '0')}:${Math.floor(actualRecordTime % 60).toString().padStart(2, '0')}`;
 
-            if (actualRecordTime >= blackoutTriggerTime && !isSpeedBoosted) {
-                isSpeedBoosted = true; triggerBlackoutPhase();
-            }
+            if (actualRecordTime >= blackoutTriggerTime && !isSpeedBoosted) { isSpeedBoosted = true; triggerBlackoutPhase(); }
 
-            smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.3;
-            smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.3;
+            smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.25;
+            smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.25;
             
-            // 🔄 [수정] 정면을 제대로 정의하기 위해 마이너스(-) 부호 전면 동기화
-            const viewDir = new THREE.Vector3(
-                -Math.sin(smoothCamAngleX) * Math.cos(smoothCamAngleY), 
-                Math.sin(cameraAngleY), 
-                -Math.cos(smoothCamAngleX) * Math.cos(smoothCamAngleY)
-            ).normalize();
+            // 🔄 [수정] 1인칭 조작 반전 연산 수정 핵심 (Z축과 X축 기준 방향 벡터 생성)
+            const forwardX = -Math.sin(smoothCamAngleX);
+            const forwardZ = -Math.cos(smoothCamAngleX);
+            const rightX = Math.cos(smoothCamAngleX);
+            const rightZ = -Math.sin(smoothCamAngleX);
 
             let moveX = 0, moveZ = 0;
             if (platform === 'pc') {
-                if (keys.w) moveZ -= 1; if (keys.s) moveZ += 1; if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
+                if (keys.w) moveZ += 1; if (keys.s) moveZ -= 1; if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
                 isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted);
             } else {
-                if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = joystickInput.y; }
+                if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = -joystickInput.y; }
                 isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.75 && !isExhausted);
             }
 
-            if (isSprinting) { 
-                stamina -= 0.4; if (stamina <= 0) { stamina = 0; isExhausted = true; } 
-            } else { 
-                stamina += isMoving ? 0.3 : 1.2; if (stamina >= 100) { stamina = 100; isExhausted = false; } 
-            }
+            if (isSprinting) { stamina -= 0.4; if (stamina <= 0) { stamina = 0; isExhausted = true; } } 
+            else { stamina += isMoving ? 0.3 : 1.2; if (stamina >= 100) { stamina = 100; isExhausted = false; } }
 
             const sBar = document.getElementById('stamina-bar');
             if(sBar) { sBar.style.width = `${stamina}%`; sBar.style.background = isExhausted ? '#d62828' : '#bfae6f'; }
 
-            const runtime = Date.now() * 0.005;
-            let bobX = 0, bobY = 0;
-            
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
             
-            // 🔄 [수정] 1인칭 조작 및 카메라 반전 연산 수정
-            // 삼각함수 부호 축을 똑같이 일치시켜 뒤돌거나 반대로 걷는 결함 완벽 차단
-            const sinX = Math.sin(smoothCamAngleX), cosX = Math.cos(smoothCamAngleX);
-            const fX = (-moveX * cosX + moveZ * sinX) * currentMoveSpeed;
-            const fZ = (moveX * sinX + moveZ * cosX) * currentMoveSpeed;
+            // 🔄 [수정] 바라보는 방향 벡터 조작 결합 계산 (반전 완전 해제)
+            const fX = (forwardX * moveZ + rightX * moveX) * currentMoveSpeed;
+            const fZ = (forwardZ * moveZ + rightZ * moveX) * currentMoveSpeed;
+
+            const runtime = Date.now() * 0.005;
+            let bobX = 0, bobY = 0;
 
             if (isMoving) {
                 const oldP = { x: player.position.x, z: player.position.z };
@@ -821,49 +783,57 @@
                 const safeP = checkGridCollision(oldP, tentativeP, 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 
-                // 3인칭 시 캐릭터가 이동하는 진행 방향을 바라보게 처리
                 targetRotationY = smoothCamAngleX + Math.atan2(moveX, moveZ);
-
-                if (isSprinting) {
-                    changePlayerAnimation('running'); 
-                } else {
-                    changePlayerAnimation('walking');
-                }
+                changePlayerAnimation(isSprinting ? 'running' : 'walking');
                 
                 if (isGrounded) {
-                    let waveFreq = isSprinting ? 2.2 : 1.4;
-                    bobX = Math.sin(runtime * waveFreq) * 0.03;
-                    bobY = Math.cos(runtime * waveFreq * 2) * 0.02;
-                    let footstepInterval = isSprinting ? 240 : 390;
+                    let waveFreq = isSprinting ? 2.5 : 1.5;
+                    bobX = Math.sin(runtime * waveFreq) * 0.035;
+                    bobY = Math.cos(runtime * waveFreq * 2) * 0.025;
                     let now = Date.now();
-                    if(now - lastFootstepTime > footstepInterval) {
+                    if(now - lastFootstepTime > (isSprinting ? 230 : 380)) {
                         playFootstepSound(isSprinting ? 0.8 : 0.4); lastFootstepTime = now;
                     }
                 }
-            } else {
-                changePlayerAnimation('idle');
-            }
+            } else { changePlayerAnimation('idle'); }
 
             playerVelocityY += gravity; player.position.y += playerVelocityY;
             if (player.position.y <= 0) { player.position.y = 0; playerVelocityY = 0; isGrounded = true; }
 
-            // 🔄 [수정] 시점별 플레이어 본체 회전 제어 일치화
+            // 🔄 3인칭 본체 회전 제어
             if (viewMode === '3rd') {
                 player.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY), 0.2);
+                // 3인칭일 땐 스폿라이트를 플레이어 모델 위치 기준으로 고정 전방 배치
+                const dir3rd = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
+                flashlight.position.set(player.position.x, player.position.y + 1.4, player.position.z);
+                flashlightTarget.position.set(player.position.x + dir3rd.x * 10, player.position.y + 1.4 + dir3rd.y * 10, player.position.z + dir3rd.z * 10);
             } else {
-                // 1인칭일 때는 마우스 조작 각도(카메라 회전)에 플레이어 정면을 완벽히 동기화
+                // 🔄 1인칭일 때는 플레이어 메쉬를 고정 회전하고 카메라 리그(fpsRig)를 마우스 회전에 고정
                 player.rotation.y = smoothCamAngleX;
-            }
+                fpsRig.position.set(player.position.x, player.position.y + 1.5, player.position.z);
+                fpsRig.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
+                
+                // 🦾 [추가] 1인칭일 때 걷기 동작 시 앞뒤/위아래로 팔 흔들림 애니메이션 수식 적용
+                let armWave = isMoving ? Math.sin(runtime * (isSprinting ? 2.5 : 1.5)) * 0.08 : 0;
+                let armIdle = Math.sin(Date.now() * 0.001) * 0.01; // 대기 숨쉬기 
+                
+                leftArm.position.z = -0.3 + armWave + armIdle;
+                leftArm.position.y = -0.25 + Math.abs(armWave)*0.3;
+                
+                rightArm.position.z = -0.3 - armWave + armIdle;
+                rightArm.position.y = -0.25 + Math.abs(armWave)*0.3;
+                flashlightMesh.position.z = -0.4 - armWave + armIdle; // 손전등도 오른손 연동 흔들림
+                flashlightMesh.position.y = -0.22 + Math.abs(armWave)*0.3;
 
-            // 🔦 손전등 상하 고정 각도 갱신 (마우스 위아래 각도 viewDir 추적)
-            flashlight.lookAt(player.position.x + viewDir.x * 10, player.position.y + 1.4 + viewDir.y * 10, player.position.z + viewDir.z * 10);
+                // 1인칭 전용 리그 오프셋에 맞춰 조명 위치 최적화 정렬
+                flashlight.position.set(0.28, -0.22, -0.4);
+                flashlightTarget.position.set(0.28, -0.22, -15);
+            }
 
             let closestDist = 999;
             entities.forEach(e => {
                 processEntityAI(e, player.position);
-                const d = player.position.distanceTo(e.mesh.position);
-                if (d < closestDist) closestDist = d;
-
+                const d = player.position.distanceTo(e.mesh.position); if (d < closestDist) closestDist = d;
                 const wave = Math.sin(Date.now() * 0.008 + e.animOffset);
                 e.spine.forEach((node, idx) => { node.position.x = Math.sin(wave + idx * 0.8) * 0.05; });
                 e.legs.forEach((leg, idx) => { leg.rotation.x = Math.sin(Date.now() * 0.02 + idx * 1.5) * 0.4; });
@@ -886,18 +856,17 @@
                 if(platform === 'pc') document.exitPointerLock(); return;
             }
 
-            // 🎥 시점 카메라 포지션 업데이트
+            // 🎥 시점 카메라 렌더링 갱신
             if (viewMode === '3rd') {
                 const r = 5.0;
                 const tX = player.position.x + Math.sin(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
                 const tY = player.position.y + 2.4 + Math.sin(smoothCamAngleY)*r; 
                 const tZ = player.position.z + Math.cos(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
-                camera.position.set(tX, tY, tZ);
-                camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+                camera.position.set(tX, tY, tZ); camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
             } else {
-                // 🔄 [수정] 1인칭 카메라 배치: 플레이어 눈높이(1.6) 정위치, 시선 정방향 정렬
-                camera.position.set(player.position.x + bobX, player.position.y + 1.6 + bobY, player.position.z);
-                camera.lookAt(new THREE.Vector3().copy(camera.position).add(viewDir));
+                // 🔄 [수정] 리그 오프셋 헤드 위치와 카메라 동기화
+                camera.position.set(player.position.x + bobX, player.position.y + 1.5 + bobY, player.position.z);
+                camera.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
             }
 
             renderer.render(scene, camera);

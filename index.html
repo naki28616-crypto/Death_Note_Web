@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Escape Room</title>
+    <title>The Backrooms - Escape Room Fixed</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -20,6 +20,14 @@
             pointer-events: none; z-index: 2;
         }
         
+        #glitch-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0); opacity: 0; pointer-events: none; z-index: 3;
+            transition: background-color 0.6s ease, opacity 0.6s ease;
+        }
+
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 5; display: none; }
+
         #cctv-ui {
             position: absolute; top: 25px; left: 25px; color: rgba(220, 40, 40, 0.9); font-weight: bold;
             font-size: 15px; z-index: 210; letter-spacing: 1.5px; pointer-events: none; font-family: monospace; display: none;
@@ -45,9 +53,7 @@
             max-height: 450px; opacity: 1; overflow: hidden; transform-origin: top right;
             box-shadow: 0 10px 25px rgba(0,0,0,0.7); display: flex; flex-direction: column; gap: 12px;
         }
-        #ui-container.collapsed {
-            max-height: 0px; padding: 0px 14px; opacity: 0; border: 0px solid transparent; pointer-events: none;
-        }
+        #ui-container.collapsed { max-height: 0px; padding: 0px 14px; opacity: 0; border: 0px solid transparent; pointer-events: none; }
         
         .btn {
             background: #1c1b17; color: #bfae6f; border: 1px solid #3a382e; padding: 8px 14px; 
@@ -60,9 +66,7 @@
         .setting-row div { display: flex; justify-content: space-between; color: #d4cfb4; font-weight: normal; }
         .setting-row input { width: 100%; accent-color: #bfae6f; margin-top: 2px; }
 
-        #mobile-controls-right {
-            position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 20;
-        }
+        #mobile-controls-right { position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 20; }
         .circle-btn {
             width: 64px; height: 64px; background: rgba(22, 21, 18, 0.92); border: 2px solid #4a4537; 
             border-radius: 50%; color: #d4cfb4; font-size: 24px; display: flex; justify-content: center; 
@@ -76,12 +80,6 @@
         }
         .stamina-bg { background: rgba(0,0,0,0.7); height: 5px; overflow: hidden; border-radius: 2px; }
         #stamina-bar { width: 100%; height: 100%; background: #bfae6f; }
-
-        #glitch-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0); opacity: 0; pointer-events: none; z-index: 3;
-            transition: background-color 0.6s ease, opacity 0.6s ease;
-        }
 
         #heartbeat-ui {
             position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%) scale(0);
@@ -110,13 +108,9 @@
             background: #1c1b17; color: #dfd59e; border: 1px solid #4a4537;
             padding: 12px 24px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; letter-spacing: 1.5px;
         }
-        .platform-choice-btn.selected {
-            background: #dfd59e; color: #1c1b17; border-color: #fff; box-shadow: 0 6px 20px rgba(223,213,158,0.4);
-        }
+        .platform-choice-btn.selected { background: #dfd59e; color: #1c1b17; border-color: #fff; box-shadow: 0 6px 20px rgba(223,213,158,0.4); }
 
-        .start-btn-container {
-            position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; cursor: pointer; opacity: 0.3; pointer-events: none;
-        }
+        .start-btn-container { position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; cursor: pointer; opacity: 0.3; pointer-events: none; }
         .start-btn-container.ready { opacity: 1; pointer-events: auto; }
         .circle-ring { position: absolute; border: 2px solid rgba(22,21,17,0.5); border-radius: 50%; }
         .ring-1 { width: 110px; height: 110px; }
@@ -143,7 +137,6 @@
             background: rgba(255,255,255,0.02); border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; z-index: 10; touch-action: none; display: none;
         }
         #joystick-stick { position: absolute; top: 37px; left: 37px; width: 46px; height: 46px; background: rgba(255,255,255,0.25); border-radius: 50%; }
-        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 5; display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -242,7 +235,9 @@
         let safeSpawnPosition = new THREE.Vector3();
 
         let hasKey = false, isDoorOpened = false;
-        let keyMesh = null, doorGroup = null, doorPivot = null, escapeSensorMesh = null;
+        let keyMesh = null, doorGroup = null, doorPivot = null;
+        let globalEscapeSensorPos = new THREE.Vector3(); // 📌 탈출 확정 구역 월드 좌표 연동 변수
+        
         const mapRows = 22, mapCols = 22, unitSize = 5, wallHeight = 5.5;
         let mapData = [], instancedWalls = null, lamps = [];
 
@@ -371,81 +366,74 @@
             return { x: unitSize, z: unitSize, row: 1, col: 1 };
         }
 
-        // 🚪 벽면에 딱 붙도록 문과 탈출공간을 생성하는 함수
         function spawnWallAttachedDoor() {
             if(doorGroup) scene.remove(doorGroup);
 
             doorGroup = new THREE.Group();
-            let foundWall = false, doorRow = 1, doorCol = 1, attachDir = {x:0, z:1}, angle = 0;
+            let foundWall = false, doorRow = 1, doorCol = 1, angle = 0;
+            let offsetOffsetX = 0, offsetOffsetZ = 0;
 
-            // 빈 통로 주변 4방향을 검사하여 문이 벽을 등지고 생성되도록 좌표 수집
             for(let i=0; i<500; i++) {
                 let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
                 if(mapData[r][c] === 0) {
-                    if(mapData[r-1][c] === 1) { attachDir={x:0, z:-1}; angle=0; doorRow=r; doorCol=c; foundWall=true; break; }
-                    if(mapData[r+1][c] === 1) { attachDir={x:0, z:1}; angle=Math.PI; doorRow=r; doorCol=c; foundWall=true; break; }
-                    if(mapData[r][c-1] === 1) { attachDir={x:-1, z:0}; angle=Math.PI/2; doorRow=r; doorCol=c; foundWall=true; break; }
-                    if(mapData[r][c+1] === 1) { attachDir={x:1, z:0}; angle=-Math.PI/2; doorRow=r; doorCol=c; foundWall=true; break; }
+                    if(mapData[r-1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = -2.45; angle = 0; doorRow = r; doorCol = c; foundWall = true; break; }
+                    if(mapData[r+1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = 2.45; angle = Math.PI; doorRow = r; doorCol = c; foundWall = true; break; }
+                    if(mapData[r][c-1] === 1) { offsetOffsetX = -2.45; offsetOffsetZ = 0; angle = Math.PI / 2; doorRow = r; doorCol = c; foundWall = true; break; }
+                    if(mapData[r][c+1] === 1) { offsetOffsetX = 2.45; offsetOffsetZ = 0; angle = -Math.PI / 2; doorRow = r; doorCol = c; foundWall = true; break; }
                 }
             }
 
-            const x = (doorCol - mapCols/2) * unitSize + unitSize/2;
-            const z = (doorRow - mapRows/2) * unitSize + unitSize/2;
+            const targetCenterX = (doorCol - mapCols/2) * unitSize + unitSize/2;
+            const targetCenterZ = (doorRow - mapRows/2) * unitSize + unitSize/2;
 
-            // 미로 벽면에 딱 정렬시키기 위해 중심 오프셋 가중치 조절 (벽 모서리에 정렬)
-            doorGroup.position.set(x + attachDir.x * 2.38, 0, z + attachDir.z * 2.38);
+            doorGroup.position.set(targetCenterX + offsetOffsetX, 0, targetCenterZ + offsetOffsetZ);
             doorGroup.rotation.y = angle;
 
-            // 문 프레임 (벽면 구멍 경계선 디자인)
             const frameMat = new THREE.MeshStandardMaterial({ color: 0x1d140e, roughness: 0.9 });
             const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.8, 0.2), frameMat); leftPost.position.set(-0.85, 1.4, 0);
             const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.8, 0.2), frameMat); rightPost.position.set(0.85, 1.4, 0);
             const topPost = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.15, 0.2), frameMat); topPost.position.set(0, 2.8, 0);
             doorGroup.add(leftPost, rightPost, topPost);
 
-            // 문 회전 구현용 피벗 오브젝트 생성
             doorPivot = new THREE.Group();
             doorPivot.position.set(-0.78, 1.4, 0); 
             
             const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.56, 2.65, 0.12), new THREE.MeshStandardMaterial({ color: 0x3d2516, roughness: 0.75 }));
             doorPanel.position.set(0.78, 0, 0); 
+            doorPivot.add(doorPanel);
             
-            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8 }));
-            knob.position.set(1.4, 0, 0.1);
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8, roughness: 0.1 }));
+            knob.position.set(0.65, 0, 0.09); 
             doorPanel.add(knob);
             
-            doorPivot.add(doorPanel);
             doorGroup.add(doorPivot);
 
-            // 🕳️ 문 뒤편의 완전히 어두운 가상 탈출 통로 공간 (클리어 센서)
-            const corridorGeo = new THREE.BoxGeometry(1.6, 2.8, 2.5);
-            const corridorMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }); // 빛이 들어가지 않는 순수 블랙 홀
+            const corridorGeo = new THREE.BoxGeometry(1.6, 2.8, 3.0);
+            const corridorMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
             const escapeCorridor = new THREE.Mesh(corridorGeo, corridorMat);
-            escapeCorridor.position.set(0, 1.4, -1.25);
+            escapeCorridor.position.set(0, 1.4, -1.5); 
             doorGroup.add(escapeCorridor);
 
-            // 실제 몸이 닿으면 이벤트를 터트릴 투명 센서 매쉬
-            escapeSensorMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.0, 1.0), new THREE.MeshBasicMaterial({ visible: false }));
-            escapeSensorMesh.position.set(0, 1.0, -1.5);
-            doorGroup.add(escapeSensorMesh);
+            scene.add(doorGroup);
+            doorGroup.updateMatrixWorld(true);
 
-            // 탈출을 암시하는 녹색 문틈 포인트 라이트
+            // 📌 뼈대 수정: 로컬 매트릭스를 월드 쿼터니언 기반 절대 위치로 파싱하여 내부 센서 좌표 산출
+            let sensorOffset = new THREE.Vector3(0, 1.0, -1.35); 
+            sensorOffset.applyQuaternion(doorGroup.quaternion);
+            globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
+
             const greenLight = new THREE.PointLight(0x00ff55, 0, 6);
             greenLight.position.set(0, 1.4, -0.2);
             doorGroup.add(greenLight);
             doorGroup.greenLight = greenLight;
 
-            scene.add(doorGroup);
             return { x: doorGroup.position.x, z: doorGroup.position.z };
         }
 
         function spawnQuestItems(playerPos) {
             isDoorOpened = false;
-            
-            // 1. 벽에 정렬된 문 먼저 배치
             const doorLoc = spawnWallAttachedDoor();
 
-            // 2. 밸런스 패치: 시작하자마자 쉽게 찾지 못하도록 최소 15m 이상 떨어진 방에만 생성되도록 강제
             if(keyMesh) scene.remove(keyMesh);
             keyMesh = new THREE.Group();
             const keyRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.04, 8, 16), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9, roughness: 0.05 }));
@@ -457,7 +445,6 @@
             keyLight.position.y = 0.2;
             keyMesh.add(keyLight);
 
-            // 플레이어 출발 지점으로부터 최소 반경 15m 안전 거리 밖에서 스폰 연산 실행
             const keyLoc = getSafeSpawn(playerPos, 15);
             keyMesh.position.set(keyLoc.x, 0.6, keyLoc.z);
             scene.add(keyMesh);
@@ -511,26 +498,10 @@
 
         function toggleFullScreen() {
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen();
-                } else if (document.documentElement.msRequestFullscreen) {
-                    document.documentElement.msRequestFullscreen();
-                } else if (document.documentElement.mozRequestFullScreen) {
-                    document.documentElement.mozRequestFullScreen();
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                    document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-                }
+                if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
                 showToast("📺 전체 화면 모드가 활성화되었습니다.");
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                }
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
@@ -557,8 +528,6 @@
             document.getElementById('quest-ui').style.display = 'block';
             
             hasKey = false;
-            document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>열쇠를 찾아 탈출하십시오.";
-
             if(platform === 'mobile') {
                 document.getElementById('joystick-zone').style.display = 'block';
                 document.getElementById('mobile-controls-right').style.display = 'flex';
@@ -615,15 +584,6 @@
         });
         window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (k in keys) keys[k] = false; });
 
-        window.addEventListener('mousemove', (e) => {
-            if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
-            if (document.pointerLockElement === document.body) {
-                const multi = 0.0018 * globalSensitivity; 
-                cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi;
-                cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
-            }
-        });
-
         let joystickInput = { x: 0, y: 0 }, joystickDistanceRatio = 0, joystickTouchId = null, rotationTouchId = null, prevX = 0, prevY = 0, joystickStartPos = { x: 0, y: 0 };
         const joystickZone = document.getElementById('joystick-zone'), joystickStick = document.getElementById('joystick-stick');
 
@@ -673,7 +633,24 @@
             }
         });
 
+        window.addEventListener('mousemove', (e) => {
+            if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
+            if (document.pointerLockElement === document.body) {
+                const multi = 0.0018 * globalSensitivity; 
+                cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi;
+                cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
+            }
+        });
+
+        // 📌 중요 수정: 문이 열렸을 때는 벽면 충돌 체크를 우회시켜 검은 공간으로 자유 진입 가능케 유도
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
+            if(isDoorOpened && doorGroup) {
+                let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
+                if(distToDoorPivot < 2.5) {
+                    return { x: tentativePos.x, z: tentativePos.z };
+                }
+            }
+            
             let res = { x: tentativePos.x, z: tentativePos.z };
             const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
             const pRow = Math.floor((oldPos.z - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
@@ -721,7 +698,6 @@
                 ePos.x = safeE.x; ePos.z = safeE.z; 
                 e.mesh.rotation.y = Math.atan2(dX, dZ);
             }
-
             if(e.state === 'chase') updateScreamVolume(dist);
         }
 
@@ -733,32 +709,18 @@
             try {
                 if (audioCtx) return;
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                
-                mainAmbientGain = audioCtx.createGain(); 
-                syncBgmNodeVolume();
-                
+                mainAmbientGain = audioCtx.createGain(); syncBgmNodeVolume();
                 let lowPass = audioCtx.createBiquadFilter(); lowPass.type = 'lowpass'; lowPass.frequency.setValueAtTime(85, audioCtx.currentTime);
-
                 ambientOsc1 = audioCtx.createOscillator(); ambientOsc1.type = 'sine'; ambientOsc1.frequency.setValueAtTime(55, audioCtx.currentTime);
                 ambientOsc2 = audioCtx.createOscillator(); ambientOsc2.type = 'triangle'; ambientOsc2.frequency.setValueAtTime(57.5, audioCtx.currentTime);
-
-                ambientOsc1.connect(lowPass); ambientOsc2.connect(lowPass);
-                lowPass.connect(mainAmbientGain); mainAmbientGain.connect(audioCtx.destination);
+                ambientOsc1.connect(lowPass); ambientOsc2.connect(lowPass); lowPass.connect(mainAmbientGain); mainAmbientGain.connect(audioCtx.destination);
                 ambientOsc1.start(); ambientOsc2.start();
-
-                sfxMasterGain = audioCtx.createGain();
-                sfxMasterGain.connect(audioCtx.destination);
-
-                screamGain = audioCtx.createGain(); screamGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                screamGain.connect(sfxMasterGain);
-
+                sfxMasterGain = audioCtx.createGain(); sfxMasterGain.connect(audioCtx.destination);
+                screamGain = audioCtx.createGain(); screamGain.gain.setValueAtTime(0.001, audioCtx.currentTime); screamGain.connect(sfxMasterGain);
                 keyHintGain = audioCtx.createGain(); keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                keyHintOsc = audioCtx.createOscillator(); keyHintOsc.type = 'sine';
-                keyHintOsc.frequency.setValueAtTime(140, audioCtx.currentTime);
-                
+                keyHintOsc = audioCtx.createOscillator(); keyHintOsc.type = 'sine'; keyHintOsc.frequency.setValueAtTime(140, audioCtx.currentTime);
                 let keyFilter = audioCtx.createBiquadFilter(); keyFilter.type = 'bandpass'; keyFilter.frequency.setValueAtTime(250, audioCtx.currentTime);
-                keyHintOsc.connect(keyFilter); keyFilter.connect(keyHintGain); keyHintGain.connect(sfxMasterGain);
-                keyHintOsc.start();
+                keyHintOsc.connect(keyFilter); keyFilter.connect(keyHintGain); keyHintGain.connect(sfxMasterGain); keyHintOsc.start();
             } catch(e){}
         }
 
@@ -771,9 +733,7 @@
                 let targetVol = Math.max(0.001, (16 - dist) / 16) * 0.45 * volumeSfxRatio;
                 keyHintGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.15);
                 keyHintOsc.frequency.setValueAtTime(140 + Math.sin(Date.now()*0.004)*25, audioCtx.currentTime);
-            } else {
-                keyHintGain.gain.setTargetAtTime(0.001, audioCtx.currentTime, 0.2);
-            }
+            } else { keyHintGain.gain.setTargetAtTime(0.001, audioCtx.currentTime, 0.2); }
         }
 
         function playHorrorScream(start) {
@@ -782,15 +742,11 @@
                 try {
                     screamOsc1 = audioCtx.createOscillator(); screamOsc1.type = 'sawtooth';
                     screamOsc2 = audioCtx.createOscillator(); screamOsc2.type = 'square';
-                    screamOsc1.frequency.setValueAtTime(280, audioCtx.currentTime);
-                    screamOsc2.frequency.setValueAtTime(450, audioCtx.currentTime);
+                    screamOsc1.frequency.setValueAtTime(280, audioCtx.currentTime); screamOsc2.frequency.setValueAtTime(450, audioCtx.currentTime);
                     let now = audioCtx.currentTime;
-                    screamOsc1.frequency.linearRampToValueAtTime(700, now + 0.3);
-                    screamOsc1.frequency.linearRampToValueAtTime(150, now + 0.7);
+                    screamOsc1.frequency.linearRampToValueAtTime(700, now + 0.3); screamOsc1.frequency.linearRampToValueAtTime(150, now + 0.7);
                     screamOsc2.frequency.linearRampToValueAtTime(900, now + 0.4);
-
-                    screamOsc1.connect(screamGain); screamOsc2.connect(screamGain);
-                    screamOsc1.start(); screamOsc2.start();
+                    screamOsc1.connect(screamGain); screamOsc2.connect(screamGain); screamOsc1.start(); screamOsc2.start();
                 } catch(e){}
             } else {
                 try {
@@ -811,8 +767,7 @@
             try {
                 let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'triangle'; osc.frequency.setValueAtTime(65, audioCtx.currentTime); 
-                gain.gain.setValueAtTime(volume * 0.12 * volumeSfxRatio, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(volume * 0.12 * volumeSfxRatio, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
                 osc.connect(gain); gain.connect(sfxMasterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.11);
             } catch(e){}
         }
@@ -822,15 +777,13 @@
             try {
                 let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'sine'; osc.frequency.setValueAtTime(48, audioCtx.currentTime); 
-                gain.gain.setValueAtTime(volume * 0.65 * volumeSfxRatio, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(volume * 0.65 * volumeSfxRatio, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
                 osc.connect(gain); gain.connect(sfxMasterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.13);
             } catch(e){}
         }
 
         function backToMainMenu() {
-            isGameOver = false; gameActive = false; isPaused = false; platform = null;
-            playHorrorScream(false);
+            isGameOver = false; gameActive = false; isPaused = false; platform = null; playHorrorScream(false);
             document.getElementById('pause-screen').style.display = 'none';
             document.getElementById('gameover-screen').style.display = 'none';
             document.getElementById('clear-screen').style.display = 'none';
@@ -846,32 +799,23 @@
             document.getElementById('start-screen').style.display = 'flex';
             document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
             document.getElementById('glitch-overlay').style.opacity = 0;
-            
-            scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow);
-            scene.fog.density = 0.05; ambientLight.intensity = 0.85;
+            scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow); scene.fog.density = 0.05; ambientLight.intensity = 0.85;
             flashlight.intensity = isFlashlightOn ? 1.8 : 0;
-
             try {
                 if(ambientOsc1) { ambientOsc1.stop(); ambientOsc1 = null; }
                 if(ambientOsc2) { ambientOsc2.stop(); ambientOsc2 = null; }
                 if(keyHintOsc) { keyHintOsc.stop(); keyHintOsc = null; }
                 audioCtx = null;
             } catch(e){}
-
-            if (document.pointerLockElement === document.body) { document.exitPointerLock(); }
+            if (document.pointerLockElement === document.body) document.exitPointerLock();
         }
 
         function rollback30SecondsSafe() {
-            isGameOver = false;
-            playHorrorScream(false);
+            isGameOver = false; playHorrorScream(false);
             let respawnPos = getSafeSpawn(player.position, 10);
-            player.position.set(respawnPos.x, 0, respawnPos.z);
-            safeSpawnPosition.copy(player.position);
+            player.position.set(respawnPos.x, 0, respawnPos.z); safeSpawnPosition.copy(player.position);
             playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
-            entities.forEach(e => {
-                const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z);
-                e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false;
-            });
+            entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; });
             document.getElementById('gameover-screen').style.display = 'none';
             if(platform === 'pc') document.body.requestPointerLock();
         }
@@ -890,25 +834,21 @@
             if (isGameOver || isPaused) return;
 
             actualRecordTime += 1 / 60; 
-            const calcMin = Math.floor(actualRecordTime / 60);
-            const calcSec = Math.floor(actualRecordTime % 60);
+            const calcMin = Math.floor(actualRecordTime / 60); const calcSec = Math.floor(actualRecordTime % 60);
             document.getElementById('cctv-time').textContent = `${calcMin.toString().padStart(2, '0')}:${calcSec.toString().padStart(2, '0')}`;
 
             if (actualRecordTime >= blackoutTriggerTime && !isSpeedBoosted) { isSpeedBoosted = true; triggerBlackoutPhase(); }
-
-            if(keyMesh && !hasKey) { keyMesh.rotation.y += 0.025; }
+            if(keyMesh && !hasKey) keyMesh.rotation.y += 0.025;
 
             processKeyAudioHint(player.position);
 
-            // 🔑 열쇠 획득 체크
             if(!hasKey && keyMesh && player.position.distanceTo(keyMesh.position) < 1.3) {
                 hasKey = true; scene.remove(keyMesh);
                 if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
-                showToast("🔑 황금 열쇠를 획득했습니다!<br><span style='color:#00ff66;'>탈출구 실시간 거리 측정 레이더가 가동됩니다.</span>");
+                showToast("🔑 황금 열쇠를 획득했습니다!<br><span style='color:#00ff66;'>탈출구 레이더가 연동됩니다.</span>");
             }
 
-            // 📋 퀘스트 및 실시간 레이더 정보 업데이트
             if(!hasKey) {
                 document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>어딘가 숨겨진 열쇠를 찾으십시오.";
             } else if(doorGroup) {
@@ -916,46 +856,37 @@
                 if(!isDoorOpened) {
                     document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>문을 찾아 탈출하십시오.<br><span style='color:#00ff66; font-size:15px;'>📍 남은 거리: ${currentDoorDist}m</span>`;
                 } else {
-                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#00ff66;'>문이 열렸습니다! 어둠 속으로 들어가세요!</span>`;
+                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>문이 열렸습니다! 어둠 속 센서로 돌진하세요!</span>`;
                 }
             }
 
-            // 🚪 문과의 인터랙션 로직
+            // 📌 중요 수정: 문이 열려 내부 터널 안으로 완전히 걸어 들어갈 때의 클리어 판정 정밀 강화
             if(doorGroup) {
-                let distToDoor = player.position.distanceTo(doorGroup.position);
+                let distToDoorFrame = player.position.distanceTo(doorGroup.position);
                 
-                // 열쇠가 있고 문 앞에 도달하면 문 개방 애니메이션 활성화
-                if(hasKey && distToDoor < 3.2 && !isDoorOpened) {
+                if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
                     isDoorOpened = true;
-                    showToast("🔓 문이 열렸습니다! 내부 통로로 진입하십시오!");
+                    showToast("🔓 문이 열렸습니다! 내부의 검은 통로 안으로 걸어 들어가세요!");
                 }
 
-                // 문 개방 축(Pivot) 회전 연출 (Y축 -1.6라디안만큼 부드럽게 스르륵 열림)
                 if(isDoorOpened && doorPivot && doorPivot.rotation.y > -1.6) {
-                    doorPivot.rotation.y -= 0.04;
+                    doorPivot.rotation.y -= 0.05; // 부드럽고 신속하게 열리도록 회전 가속화
                 }
 
-                // 🕳️ 완전히 문 안쪽 공간(검은 영역)으로 걸어 들어가 센서에 도달하면 탈출 성공!
-                if(isDoorOpened && escapeSensorMesh) {
-                    // 월드 스페이스 좌표계를 계산하여 센서 박스 내부 충돌 판정
-                    let sensorWorldPos = new THREE.Vector3();
-                    escapeSensorMesh.getWorldPosition(sensorWorldPos);
-                    let distToSensor = player.position.distanceTo(sensorWorldPos);
-
-                    if(distToSensor < 1.1) {
-                        gameActive = false; 
-                        playHorrorScream(false);
-                        
-                        // ⏱️ 몇 분 몇 초 기록을 정확히 계산하여 텍스트 주입
+                // 🏃 핵심 버그 수정: 월드 기준 센서 좌표인 'globalEscapeSensorPos'와의 3차원 직선 거리 실시간 계산
+                if(isDoorOpened) {
+                    let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
+                    
+                    // 판정 임계치를 1.7m로 늘려 문을 통과하여 한 발짝만 들어가도 100% 탈출이 확정 처리됩니다.
+                    if(distanceToEscapeSensor < 1.7) {
+                        gameActive = false; playHorrorScream(false);
                         document.getElementById('clear-time-record').textContent = `⏱️ 탈출 소요 시간: ${calcMin}분 ${calcSec}초`;
                         document.getElementById('clear-screen').style.display = 'flex';
-                        
                         if(platform === 'pc') document.exitPointerLock(); 
                         return;
                     }
-                } else if(!hasKey && distToDoor < 1.5) {
-                    // 열쇠 없이 문에 직접 닿으려고 하면 알림
-                    showToast("🔒 문이 굳게 잠겨있습니다.<br>먼저 황금 열쇠를 찾아야 합니다.");
+                } else if(!hasKey && distToDoorFrame < 1.4) {
+                    showToast("🔒 문이 완고하게 잠겨있습니다.<br>황금 열쇠를 먼곳에서 찾아오십시오.");
                 }
             }
 
@@ -990,7 +921,7 @@
             if (isMoving) {
                 const oldP = { x: player.position.x, z: player.position.z };
                 const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
-                const safeP = checkGridCollision(oldP, tentativeP, 0.55);
+                const safeP = checkGridCollision(player.position, new THREE.Vector3(tentativeP.x, 0, tentativeP.z), 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 
                 if (isGrounded) {

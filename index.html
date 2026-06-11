@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Escape Room Interactive</title>
+    <title>The Backrooms - Escape</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -42,7 +42,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        /* 🚪 상호작용 PC 프롬프트 UI */
         #interact-prompt {
             position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
             color: #fff; background: rgba(0, 0, 0, 0.8); border: 1px solid #bfae6f;
@@ -75,7 +74,7 @@
         .setting-row div { display: flex; justify-content: space-between; color: #d4cfb4; font-weight: normal; }
         .setting-row input { width: 100%; accent-color: #bfae6f; margin-top: 2px; }
 
-        #mobile-controls-right { position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 20; }
+        #mobile-controls-right { position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; gap: 15px; z-index: 220; }
         .circle-btn {
             width: 64px; height: 64px; background: rgba(22, 21, 18, 0.92); border: 2px solid #4a4537; 
             border-radius: 50%; color: #d4cfb4; font-size: 24px; display: flex; justify-content: center; 
@@ -83,15 +82,14 @@
         }
         .circle-btn.active { background: #bfae6f; color: #111; border-color: #fff; }
 
-        /* 🚪 모바일 전용 문 터치 버튼 */
         #btn-mobile-interact {
-            background: #bfae6f !important; color: #111 !important; border-color: #fff !important;
-            display: none; animation: pulse 1.5s infinite;
+            background: #e2cc76 !important; color: #111 !important; border-color: #fff !important;
+            display: none; font-size: 28px; animation: pulse 1.2s infinite; z-index: 230;
         }
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); box-shadow: 0 0 15px #bfae6f; }
-            100% { transform: scale(1); }
+            0% { transform: scale(1); box-shadow: 0 0 0px rgba(226,204,118,0.6); }
+            50% { transform: scale(1.15); box-shadow: 0 0 20px rgba(226,204,118,0.9); }
+            100% { transform: scale(1); box-shadow: 0 0 0px rgba(226,204,118,0.6); }
         }
 
         #stamina-container {
@@ -172,8 +170,8 @@
 
     <div id="start-screen">
         <h2 class="title-main">THE BACKROOMS</h2>
-        <h1 class="title-sub">EXPLORATION</h1>
-        <div class="title-level">LEVEL 0 - HORROR ESCAPE</div>
+        <h1 class="title-sub">BACKROOM</h1>
+        <div class="title-level">LEVEL 0 - ESCAPE</div>
         
         <div class="platform-select-box">
             <button id="pc-select-btn" class="platform-choice-btn" onclick="setPlatformType('pc')">💻 PC CONTROL</button>
@@ -212,7 +210,7 @@
     </div>
 
     <div id="mobile-controls-right">
-        <div id="btn-mobile-interact" class="circle-btn" ontouchstart="handleDoorInteractButton(event)">🚪</div>
+        <div id="btn-mobile-interact" class="circle-btn">🚪</div>
         <div id="btn-mobile-flash" class="circle-btn active" ontouchstart="handleMobileFlash(event)">🔦</div>
         <div id="btn-mobile-jump" class="circle-btn" style="font-size:20px; font-weight:bold;" ontouchstart="handleMobileJump(event)">▲</div>
     </div>
@@ -269,7 +267,7 @@
         scene.fog = new THREE.FogExp2(backroomsYellow, 0.05); 
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         document.body.appendChild(renderer.domElement);
@@ -302,19 +300,124 @@
         const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); leftArm.rotateX(Math.PI / 2.3); leftArm.position.set(-0.25, -0.25, -0.3); fpsRig.add(leftArm);
         const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); rightArm.rotateX(Math.PI / 2.3); rightArm.position.set(0.25, -0.25, -0.3); fpsRig.add(rightArm);
 
+        /* ⚡ [최적화 & 비주얼 고도화] 절차적 고해상도 벽면 노이즈 텍스처 */
         function generateHighQualityWallTextures() {
-            const size = 256; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
-            const ctx = canvas.getContext('2d'); ctx.fillStyle = '#dfd5a0'; ctx.fillRect(0, 0, size, size);
-            ctx.fillStyle = '#d0c68f'; for(let i=0; i<2000; i++) { ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2); }
-            ctx.strokeStyle = '#c2b77e'; ctx.lineWidth = 2;
-            for (let x = 0; x < size; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke(); }
-            return { diffuse: new THREE.CanvasTexture(canvas) };
+            const size = 256; 
+            const canvas = document.createElement('canvas'); 
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d'); 
+            ctx.fillStyle = '#dfd5a0'; ctx.fillRect(0, 0, size, size);
+            
+            const imgData = ctx.getImageData(0, 0, size, size);
+            const data = imgData.data;
+            for(let i = 0; i < data.length; i += 4) {
+                if(Math.random() < 0.12) {
+                    const noise = (Math.random() - 0.5) * 16;
+                    data[i] = Math.max(0, Math.min(255, data[i] + noise - 6));
+                    data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise - 6));
+                    data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise - 8));
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            ctx.strokeStyle = 'rgba(194, 183, 126, 0.45)'; ctx.lineWidth = 1.5;
+            for (let x = 0; x < size; x += 32) { 
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke(); 
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+            tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
+            return tex;
         }
 
-        const wallTextures = generateHighQualityWallTextures();
-        const wallMat = new THREE.MeshStandardMaterial({ map: wallTextures.diffuse, roughness: 0.8 });
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x938752, roughness: 0.9 }); 
-        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd3c79b, roughness: 0.9 });
+        /* 🆕 [추가] 눅눅한 백룸 특유의 갈색조 카펫 바닥 텍스처 생성기 */
+        function generateFloorTexture() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // 기본 카펫 베이스 색상 (눅눅한 황갈색)
+            ctx.fillStyle = '#837543'; 
+            ctx.fillRect(0, 0, size, size);
+            
+            // 고밀도 직물 노이즈 레이어 생성
+            const imgData = ctx.getImageData(0, 0, size, size);
+            const data = imgData.data;
+            for(let i = 0; i < data.length; i += 4) {
+                const carpetGrain = (Math.random() - 0.5) * 24;
+                data[i] = Math.max(0, Math.min(255, data[i] + carpetGrain));
+                data[i+1] = Math.max(0, Math.min(255, data[i+1] + carpetGrain));
+                data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.8));
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            // 특유의 눅눅한 얼룩 및 이염 효과 드로잉
+            for (let i = 0; i < 8; i++) {
+                let x = Math.random() * size, y = Math.random() * size, r = 40 + Math.random() * 60;
+                let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+                grad.addColorStop(0, 'rgba(56, 48, 22, 0.45)');
+                grad.addColorStop(1, 'rgba(56, 48, 22, 0)');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
+            }
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(16, 16); // 맵 크기에 맞게 조밀하게 반복 배치
+            const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+            tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
+            return tex;
+        }
+
+        /* 🆕 [추가] 리얼한 핀홀 구멍이 가득한 석고보드 천장 타일 텍스처 생성기 */
+        function generateCeilTexture() {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // 기본 천장 색상
+            ctx.fillStyle = '#d3c79b'; 
+            ctx.fillRect(0, 0, size, size);
+            
+            // 석고보드 질감 노이즈
+            const imgData = ctx.getImageData(0, 0, size, size);
+            const data = imgData.data;
+            for(let i = 0; i < data.length; i += 4) {
+                const noise = (Math.random() - 0.5) * 8;
+                data[i] = Math.max(0, Math.min(255, data[i] + noise));
+                data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
+                data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            // 텍스천 특유의 검고 작은 핀홀(미세 구멍 및 벌레무늬) 각인
+            ctx.fillStyle = 'rgba(70, 65, 48, 0.55)';
+            for (let i = 0; i < 450; i++) {
+                let rx = Math.random() * size, ry = Math.random() * size;
+                let rw = 1 + Math.random() * 2, rh = 1 + Math.random() * 1.5;
+                ctx.fillRect(rx, ry, rw, rh);
+            }
+            
+            // 사무실 조립식 천장 격자 무늬 라인 추가
+            ctx.strokeStyle = 'rgba(120, 112, 85, 0.5)'; ctx.lineWidth = 1.5;
+            ctx.strokeRect(0, 0, size, size);
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(22, 22);
+            const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+            tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
+            return tex;
+        }
+
+        const wallTexture = generateHighQualityWallTextures();
+        const floorTexture = generateFloorTexture();
+        const ceilTexture = generateCeilTexture();
+
+        const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.85 });
+        const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.95 }); 
+        const ceilMat = new THREE.MeshStandardMaterial({ map: ceilTexture, roughness: 0.88 });
 
         function generateRandomMaze() {
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
@@ -362,7 +465,7 @@
                     } else if(Math.random() < 0.08) { 
                         const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.02, 0.4), new THREE.MeshBasicMaterial({ color: 0xfffebb }));
                         lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
-                        const pl = new THREE.PointLight(0xfff5cc, 0.6, 12); pl.position.set(x, wallHeight - 0.2, z); lamp.add(pl);
+                        const pl = new THREE.PointLight(0xfff5cc, 0.5, 11); pl.position.set(x, wallHeight - 0.2, z); lamp.add(pl);
                     }
                 }
             }
@@ -517,6 +620,7 @@
             else { panel.classList.add('collapsed'); toggleBtn.textContent = "◢"; }
         }
 
+        // 전체 화면 설정 기능 구현
         function toggleFullScreen() {
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
                 if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
@@ -598,7 +702,6 @@
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
-        /* 🚪 상호작용 트리거 실행 함수 */
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true;
@@ -607,14 +710,19 @@
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
 
-        function handleDoorInteractButton(e) { e.preventDefault(); e.stopPropagation(); openTheEscapeDoor(); }
+        document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            if(gameActive && !isPaused && hasKey && !isDoorOpened) {
+                openTheEscapeDoor();
+            }
+        });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
             if (k === 'e' && gameActive && !isPaused) {
-                // 문 근처에 있고 열쇠가 있을 때 E키 입력 처리
                 if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) {
                     openTheEscapeDoor();
                 }
@@ -680,6 +788,7 @@
             }
         });
 
+        /* ⚡ 공간 분할기반 실시간 주변 9칸 타일 충돌 판정 */
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if(isDoorOpened && doorGroup) {
                 let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
@@ -689,11 +798,17 @@
             }
             
             let res = { x: tentativePos.x, z: tentativePos.z };
-            const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
-            const pRow = Math.floor((oldPos.z - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
-            for (let r = pRow - 1; r <= pRow + 1; r++) {
-                for (let c = pCol - 1; c <= pCol + 1; c++) {
-                    if (r < 0 || r >= mapRows || c < 0 || c >= mapCols) continue;
+            
+            const pCol = Math.floor((oldPos.x + (mapCols * unitSize) / 2) / unitSize);
+            const pRow = Math.floor((oldPos.z + (mapRows * unitSize) / 2) / unitSize);
+            
+            const startRow = Math.max(0, pRow - 1);
+            const endRow = Math.min(mapRows - 1, pRow + 1);
+            const startCol = Math.max(0, pCol - 1);
+            const endCol = Math.min(mapCols - 1, pCol + 1);
+
+            for (let r = startRow; r <= endRow; r++) {
+                for (let c = startCol; c <= endCol; c++) {
                     if (mapData[r][c] === 1) {
                         const wX = (c - mapCols/2) * unitSize + unitSize/2;
                         const wZ = (r - mapRows/2) * unitSize + unitSize/2;
@@ -902,17 +1017,15 @@
             if(doorGroup) {
                 let distToDoorFrame = player.position.distanceTo(doorGroup.position);
                 
-                /* 🚪 핀포인트 수정: 자동 오프닝을 막고 UI/버튼 활성화 처리 */
                 if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
                     if(platform === 'pc') {
                         document.getElementById('interact-prompt').style.display = 'block';
-                    } else {
+                    } else if(platform === 'mobile') {
                         document.getElementById('btn-mobile-interact').style.display = 'flex';
                     }
                 } else {
-                    // 범위를 벗어나면 상호작용 UI 숨기기
                     document.getElementById('interact-prompt').style.display = 'none';
-                    if(!isDoorOpened) document.getElementById('btn-mobile-interact').style.display = 'none';
+                    document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
 
                 if(isDoorOpened && doorPivot && doorPivot.rotation.y > -1.6) {

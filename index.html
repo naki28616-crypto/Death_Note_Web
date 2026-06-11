@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>The Backrooms - Fixed 1st Person Controls</title>
+    <title>The Backrooms - Balanced Edition</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -76,7 +76,7 @@
         #glitch-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0); opacity: 0; pointer-events: none; z-index: 3;
-            transition: background-color 0.4s ease, opacity 0.4s ease;
+            transition: background-color 0.6s ease, opacity 0.6s ease;
         }
 
         #heartbeat-ui {
@@ -118,8 +118,9 @@
         #gameover-screen, #pause-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(4,4,3,0.96); z-index: 150; display: none; flex-direction: column;
-            justify-content: center; align-items: center; color: #b82323;
+            justify-content: center; align-items: center;
         }
+        #gameover-screen { color: #b82323; }
         .go-btn-box { display: flex; gap: 15px; margin-top: 30px; }
         .go-btn {
             background: #240e0e; color: #ff7777; border: 1px solid #5c1d1d; padding: 14px 28px;
@@ -193,7 +194,10 @@
 
     <div id="pause-screen">
         <h1 style="font-size: 26px; color:#bfae6f; margin-bottom:20px; letter-spacing: 2px;">PAUSED</h1>
-        <button class="btn" style="color:#fff; border-color:#bfae6f; padding:10px 24px; font-size:14px;" onclick="triggerPause(false)">RESUME</button>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn" style="color:#fff; border-color:#bfae6f; padding:10px 24px; font-size:14px;" onclick="triggerPause(false)">RESUME</button>
+            <button class="btn" style="background:#222; color:#ff7777; border-color:#555; padding:10px 24px; font-size:14px;" onclick="backToMainMenu()">↩️ MAIN MENU</button>
+        </div>
     </div>
 
     <div id="gameover-screen">
@@ -227,8 +231,8 @@
         let animActions = {}, activeAction;
         let characterMesh = null; 
 
-        const scene = new THREE.Scene();
         const backroomsYellow = 0xbaa761; 
+        const scene = new THREE.Scene();
         scene.background = new THREE.Color(backroomsYellow); 
         scene.fog = new THREE.FogExp2(backroomsYellow, 0.05); 
 
@@ -245,21 +249,19 @@
         const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.9); 
         scene.add(ambientLight);
 
-        // 🔦 1인칭 전용 카메라 종속 리그(Rig) 오브젝트 생성 (팔, 손전등 메쉬 조립용)
         const fpsRig = new THREE.Group();
         scene.add(fpsRig);
 
-        // 스폿라이트 생성 후 리그에 장착
-        const flashlight = new THREE.SpotLight(0xfffbf0, 4.0, 50, Math.PI / 4.2, 0.5, 0.5);
+        // 🔦 [수정] 지나치게 타오르던 광량 조정 (Intensity 4.0 -> 1.8)
+        const flashlight = new THREE.SpotLight(0xfffbf0, 1.8, 45, Math.PI / 4.5, 0.6, 0.6);
         const flashlightTarget = new THREE.Object3D();
         flashlightTarget.position.set(0, 0, -10);
         fpsRig.add(flashlight);
         fpsRig.add(flashlightTarget);
         flashlight.target = flashlightTarget;
 
-        // 🔦 손전등 외형 메쉬(실린더 모양) 제작 후 리그 오른손 위치에 부착
         const flashBodyGeo = new THREE.CylinderGeometry(0.04, 0.03, 0.25, 8);
-        flashBodyGeo.rotateX(Math.PI / 2); // 앞을 보게 회전
+        flashBodyGeo.rotateX(Math.PI / 2); 
         const flashHeadGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.08, 8);
         flashHeadGeo.rotateX(Math.PI / 2);
         flashHeadGeo.translate(0, 0, -0.13);
@@ -269,17 +271,14 @@
         flashlightMesh.add(new THREE.Mesh(flashBodyGeo, flashMaterial));
         flashlightMesh.add(new THREE.Mesh(flashHeadGeo, new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.9 })));
         
-        // 유리 렌즈 부분 표현
         const lensMesh = new THREE.Mesh(new THREE.CircleGeometry(0.05, 8), new THREE.MeshBasicMaterial({ color: 0xffffee }));
         lensMesh.position.set(0, 0, -0.17);
         lensMesh.rotation.y = Math.PI;
         flashlightMesh.add(lensMesh);
 
-        // 리그 내부 오른손 가상 오프셋에 손전등 탑재
         flashlightMesh.position.set(0.28, -0.22, -0.4); 
         fpsRig.add(flashlightMesh);
 
-        // 🦾 1인칭 연출용 가상 로봇 양팔 메쉬 생성
         const armMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.5, roughness: 0.4 });
         const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat);
         leftArm.rotateX(Math.PI / 2.3); 
@@ -291,7 +290,7 @@
         rightArm.position.set(0.25, -0.25, -0.3);
         fpsRig.add(rightArm);
 
-        fpsRig.visible = false; // 기본 3인칭 시작이므로 처음엔 숨김
+        fpsRig.visible = false; 
 
         const mapRows = 30, mapCols = 30, unitSize = 5, wallHeight = 6.0;
         let mapData = [], instancedWalls = null, lamps = [];
@@ -494,6 +493,7 @@
             if(!gameActive || isGameOver) return;
             isPaused = pState;
             document.getElementById('pause-screen').style.display = isPaused ? 'flex' : 'none';
+            if(!isPaused && platform === 'pc') { document.body.requestPointerLock(); }
         }
 
         window.addEventListener('click', () => {
@@ -501,7 +501,10 @@
         });
 
         document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement !== document.body && gameActive && !isGameOver && platform === 'pc') triggerPause(true); 
+            if (document.pointerLockElement !== document.body && gameActive && !isGameOver && platform === 'pc' && !isPaused) {
+                // 일시정지 화면 유도하되, 메뉴로 강제 이동 상태가 아닐 때만 작동
+                if(document.getElementById('pause-screen').style.display !== 'flex') triggerPause(true); 
+            }
         });
 
         function toggleFlashlight() {
@@ -509,7 +512,8 @@
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
             
-            flashlight.intensity = isFlashlightOn ? 4.0 : 0;
+            // [수정] 조정한 밸런스 강도에 맞춤
+            flashlight.intensity = isFlashlightOn ? 1.8 : 0;
             lensMesh.material.color.setHex(isFlashlightOn ? 0xffffee : 0x222222);
         }
 
@@ -572,7 +576,7 @@
             if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
-                if (t.target.closest('#top-controls') || t.target.closest('#mobile-controls-right')) continue;
+                if (t.target.closest('#top-controls') || t.target.closest('#mobile-controls-right') || t.target.closest('#pause-screen')) continue;
                 if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                     joystickTouchId = t.identifier; joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`;
                     joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY);
@@ -689,6 +693,7 @@
 
         function backToMainMenu() {
             isGameOver = false; gameActive = false; isPaused = false; platform = null;
+            document.getElementById('pause-screen').style.display = 'none';
             document.getElementById('gameover-screen').style.display = 'none';
             document.getElementById('top-controls').style.display = 'none';
             document.getElementById('cctv-ui').style.display = 'none';
@@ -701,8 +706,13 @@
             document.getElementById('start-screen').style.display = 'flex';
             document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
             document.getElementById('glitch-overlay').style.opacity = 0;
+            
+            // 시각 리셋
             scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow);
             scene.fog.density = 0.05; ambientLight.intensity = 0.9;
+            flashlight.intensity = isFlashlightOn ? 1.8 : 0;
+
+            if (document.pointerLockElement === document.body) { document.exitPointerLock(); }
         }
 
         function rollback30SecondsSafe() {
@@ -719,12 +729,19 @@
             if(platform === 'pc') document.body.requestPointerLock();
         }
 
+        // 👁️ [수정] 암전 발생 시 시각 밸런스 패치
         function triggerBlackoutPhase() {
             const glitchOverlay = document.getElementById('glitch-overlay');
-            glitchOverlay.style.background = 'rgba(25, 5, 5, 0.7)'; 
+            // 빨간색 가득한 화면 대신 분위기 있는 반투명 검정 필터 레이어 배치
+            glitchOverlay.style.background = 'rgba(10, 9, 7, 0.65)'; 
             glitchOverlay.style.opacity = 1;
-            scene.background.setHex(0x140a0a); scene.fog.color.setHex(0x140a0a); scene.fog.density = 0.14; 
-            ambientLight.intensity = 0.05; 
+            
+            // 맵 전체가 완전 검정이 아닌, 어스름하게 실루엣은 식별 가능한 정도의 어둠 세팅
+            scene.background.setHex(0x1a1914); 
+            scene.fog.color.setHex(0x1a1914); 
+            scene.fog.density = 0.12; 
+            ambientLight.intensity = 0.15; // 완전 암흑 방지용 최소 수치 설정
+            
             entities.forEach(e => { e.speed = e.baseSpeed * 1.5; e.eyes.forEach(eye => eye.material.color.setHex(0xff0000)); });
         }
 
@@ -747,7 +764,6 @@
             smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.25;
             smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.25;
             
-            // 🔄 [수정] 1인칭 조작 반전 연산 수정 핵심 (Z축과 X축 기준 방향 벡터 생성)
             const forwardX = -Math.sin(smoothCamAngleX);
             const forwardZ = -Math.cos(smoothCamAngleX);
             const rightX = Math.cos(smoothCamAngleX);
@@ -770,7 +786,6 @@
 
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
             
-            // 🔄 [수정] 바라보는 방향 벡터 조작 결합 계산 (반전 완전 해제)
             const fX = (forwardX * moveZ + rightX * moveX) * currentMoveSpeed;
             const fZ = (forwardZ * moveZ + rightZ * moveX) * currentMoveSpeed;
 
@@ -800,32 +815,27 @@
             playerVelocityY += gravity; player.position.y += playerVelocityY;
             if (player.position.y <= 0) { player.position.y = 0; playerVelocityY = 0; isGrounded = true; }
 
-            // 🔄 3인칭 본체 회전 제어
             if (viewMode === '3rd') {
                 player.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY), 0.2);
-                // 3인칭일 땐 스폿라이트를 플레이어 모델 위치 기준으로 고정 전방 배치
                 const dir3rd = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
                 flashlight.position.set(player.position.x, player.position.y + 1.4, player.position.z);
                 flashlightTarget.position.set(player.position.x + dir3rd.x * 10, player.position.y + 1.4 + dir3rd.y * 10, player.position.z + dir3rd.z * 10);
             } else {
-                // 🔄 1인칭일 때는 플레이어 메쉬를 고정 회전하고 카메라 리그(fpsRig)를 마우스 회전에 고정
                 player.rotation.y = smoothCamAngleX;
                 fpsRig.position.set(player.position.x, player.position.y + 1.5, player.position.z);
                 fpsRig.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
                 
-                // 🦾 [추가] 1인칭일 때 걷기 동작 시 앞뒤/위아래로 팔 흔들림 애니메이션 수식 적용
                 let armWave = isMoving ? Math.sin(runtime * (isSprinting ? 2.5 : 1.5)) * 0.08 : 0;
-                let armIdle = Math.sin(Date.now() * 0.001) * 0.01; // 대기 숨쉬기 
+                let armIdle = Math.sin(Date.now() * 0.001) * 0.01; 
                 
                 leftArm.position.z = -0.3 + armWave + armIdle;
                 leftArm.position.y = -0.25 + Math.abs(armWave)*0.3;
                 
                 rightArm.position.z = -0.3 - armWave + armIdle;
                 rightArm.position.y = -0.25 + Math.abs(armWave)*0.3;
-                flashlightMesh.position.z = -0.4 - armWave + armIdle; // 손전등도 오른손 연동 흔들림
+                flashlightMesh.position.z = -0.4 - armWave + armIdle; 
                 flashlightMesh.position.y = -0.22 + Math.abs(armWave)*0.3;
 
-                // 1인칭 전용 리그 오프셋에 맞춰 조명 위치 최적화 정렬
                 flashlight.position.set(0.28, -0.22, -0.4);
                 flashlightTarget.position.set(0.28, -0.22, -15);
             }
@@ -856,7 +866,6 @@
                 if(platform === 'pc') document.exitPointerLock(); return;
             }
 
-            // 🎥 시점 카메라 렌더링 갱신
             if (viewMode === '3rd') {
                 const r = 5.0;
                 const tX = player.position.x + Math.sin(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
@@ -864,7 +873,6 @@
                 const tZ = player.position.z + Math.cos(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
                 camera.position.set(tX, tY, tZ); camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
             } else {
-                // 🔄 [수정] 리그 오프셋 헤드 위치와 카메라 동기화
                 camera.position.set(player.position.x + bobX, player.position.y + 1.5 + bobY, player.position.z);
                 camera.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
             }

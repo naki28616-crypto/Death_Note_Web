@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Textured & Fixed Escape</title>
+    <title>The Backrooms - Escape Fixed</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -335,25 +335,24 @@
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            ctx.fillStyle = '#837543'; // 갈색조 카펫 베이스
+            ctx.fillStyle = '#837543'; 
             ctx.fillRect(0, 0, size, size);
             
             const imgData = ctx.getImageData(0, 0, size, size);
             const data = imgData.data;
             for(let i = 0; i < data.length; i += 4) {
-                const carpetGrain = (Math.random() - 0.5) * 24; // 거친 직물 질감
+                const carpetGrain = (Math.random() - 0.5) * 24; 
                 data[i] = Math.max(0, Math.min(255, data[i] + carpetGrain));
                 data[i+1] = Math.max(0, Math.min(255, data[i+1] + carpetGrain));
                 data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.8));
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 🆕 어두운 얼룩 듬성듬성 추가
-            for (let i = 0; i < 8; i++) {
-                let x = Math.random() * size, y = Math.random() * size, r = 30 + Math.random() * 50;
+            for (let i = 0; i < 12; i++) {
+                let x = Math.random() * size, y = Math.random() * size, r = 35 + Math.random() * 55;
                 let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(56, 48, 22, 0.5)'); // 어두운 갈색 얼룩
-                grad.addColorStop(1, 'rgba(56, 48, 22, 0)');
+                grad.addColorStop(0, 'rgba(52, 44, 18, 0.65)'); 
+                grad.addColorStop(1, 'rgba(52, 44, 18, 0)');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
             }
             
@@ -384,7 +383,6 @@
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 텍스천 미세 구멍 및 벌레무늬
             ctx.fillStyle = 'rgba(70, 65, 48, 0.6)';
             for (let i = 0; i < 400; i++) {
                 let rx = Math.random() * size, ry = Math.random() * size;
@@ -392,12 +390,10 @@
                 ctx.fillRect(rx, ry, rw, rh);
             }
             
-            // 사무실 격자 무늬 라인
             ctx.strokeStyle = 'rgba(120, 112, 85, 0.6)'; ctx.lineWidth = 1.5;
             ctx.strokeRect(0, 0, size, size);
             
             const tex = new THREE.CanvasTexture(canvas);
-            // ⚠️ 반복 설정 추가 (중요!)
             tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
             tex.repeat.set(22, 22);
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -428,7 +424,6 @@
             }
             carve(1, 1);
             
-            // 🆕 평지(방) 3개 추가
             for(let k=0; k < 3; k++) {
                 let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3, centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
                 for(let r = centerR - 2; r <= centerR + 2; r++) {
@@ -698,16 +693,16 @@
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
-        /* 🚪 [최적화 & 버그 픽스] 문 열기 판정 수정 */
+        /* 🚪 [애니메이션 전면 버그 픽스] 문 열기 트리거 및 판정 확실화 */
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
-            isDoorOpened = true;
-            showToast("🔓 문이 열렸습니다! 내부의 검은 통로 안으로 걸어 들어가세요!");
+            isDoorOpened = true; 
+            showToast("🔓 문이 열렸습니다! 내부의 어두운 센서 구역으로 들어가세요!");
             document.getElementById('interact-prompt').style.display = 'none';
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
 
-        // 모바일 터치 이벤트 오작동 전면 수정
+        // 모바일 터치 상호작용 확실하게 수정
         document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
             e.preventDefault(); 
             e.stopPropagation(); 
@@ -743,7 +738,7 @@
             if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
-                if (t.target.closest('#top-controls') || t.target.closest('#mobile-controls-right') || t.target.closest('#pause-screen')) continue;
+                if (t.target.closest('#top-controls') || t.target.closest('#mobile-controls-right') || t.target.closest('#pause-screen') || t.target.closest('#btn-mobile-interact')) continue;
                 if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                     joystickTouchId = t.identifier; joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`;
                     joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY);
@@ -759,7 +754,7 @@
                 const t = e.touches[i];
                 if (t.identifier === joystickTouchId) calculateJoystick(t.clientX, t.clientY);
                 if (t.identifier === rotationTouchId) {
-                    const multi = 0.0035 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
+                    const multi = 0.004 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
                     prevX = t.clientX; prevY = t.clientY; cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
                 }
             }
@@ -1001,7 +996,7 @@
                 if(!isDoorOpened) {
                     document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>문을 찾아 탈출하십시오.<br><span style='color:#00ff66; font-size:15px;'>📍 남은 거리: ${currentDoorDist}m</span>`;
                 } else {
-                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>문이 열렸습니다! 어둠 속 센서로 진입하세요!</span>`;
+                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>문이 열렸습니다! 내부 센서로 진입하세요!</span>`;
                 }
             }
 
@@ -1019,8 +1014,12 @@
                     document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
 
-                if(isDoorOpened && doorPivot && doorPivot.rotation.y > -1.6) {
-                    doorPivot.rotation.y -= 0.08; 
+                /* 🚪 [애니메이션 안정화 로직 수치 보정] */
+                if(isDoorOpened && doorPivot) {
+                    const targetRotation = -Math.PI / 2; // 확실히 90도 회전
+                    if(doorPivot.rotation.y > targetRotation) {
+                        doorPivot.rotation.y -= 0.05; // 프레임당 안정적으로 보간 회전
+                    }
                 }
 
                 if(isDoorOpened) {

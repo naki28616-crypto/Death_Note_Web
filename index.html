@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>The Backrooms - Cinematic Ultra Quality Edition</title>
+    <title>The Backrooms - Exploration Fixed Edition</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -212,7 +212,6 @@
         let playerVelocityY = 0, isGrounded = true;
         const gravity = -0.014, jumpStrength = 0.165; 
         let lastHeartbeatSoundTime = 0;
-        let landingImpactImpact = 0;
 
         const basePlayerSpeed = 0.12;
         const sprintPlayerSpeed = 0.18;
@@ -227,24 +226,23 @@
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
         
-        // ✨ 모바일 버그 1위 탈출: 하드웨어 렉을 유발하는 무거운 옵션 해제 및 최적화
         const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // 과도한 해상도 제한하여 렉 방지
-        renderer.shadowMap.enabled = false; // ✨ 모바일 렉의 주범인 실시간 하드웨어 그림자 연산 OFF
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+        renderer.shadowMap.enabled = false; 
         renderer.toneMapping = THREE.LinearToneMapping; 
         renderer.toneMappingExposure = 1.0;
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.7); // 그림자를 끈 대신 전체 밝기를 확보
+        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.7); 
         scene.add(ambientLight);
 
-        // ✨ 맵 사이즈 최적화: 39x39에서 25x25로 축소하여 모바일 연산 과부하 완전 방지
-        const mapRows = 25, mapCols = 25, unitSize = 5, wallHeight = 6.0;
+        // 맵 크기를 더 쾌적하게 키우고 조절
+        const mapRows = 30, mapCols = 30, unitSize = 5, wallHeight = 6.0;
         let mapData = [], instancedWalls = null, lamps = [];
 
         function generateHighQualityWallTextures() {
-            const size = 256; // 텍스처 맵 축소로 메모리 절약
+            const size = 256; 
             const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
@@ -272,9 +270,13 @@
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x9e925c, roughness: 0.9 }); 
         const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd9cfab, roughness: 0.9 });
 
+        // ✨ 고침: 백룸 감성을 살려 군데군데 넓은 평지(광장 방)들이 뚫리도록 생성 로직 변경
         function generateRandomMaze() {
+            // 전체를 벽(1)으로 채우기
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
             let visited = Array(mapRows).fill().map(() => Array(mapCols).fill(false));
+            
+            // 미로 기본 길 파기 (DFS 알고리즘)
             function carve(r, c) {
                 visited[r][c] = true; mapData[r][c] = 0;
                 const dirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(() => Math.random() - 0.5);
@@ -287,16 +289,29 @@
             }
             carve(1, 1);
             
-            for(let k=0; k<5; k++) {
-                let centerR = Math.floor(Math.random()*(mapRows-4))+2;
-                let centerC = Math.floor(Math.random()*(mapCols-4))+2;
-                let size = 1; 
-                for(let r = centerR-size; r<=centerR+size; r++) {
-                    for(let c = centerC-size; c<=centerC+size; c++) {
-                        if(r>0 && r<mapRows-1 && c>0 && c<mapCols-1) mapData[r][c] = 0; 
+            // 🌟 넓은 평지 공간(Large Rooms) 무작위 배치 연산 추가
+            // 맵 중간 중간에 벽을 시원하게 밀어버려 탁 트인 평지를 생성합니다.
+            const roomCount = 8; // 생성할 넓은 방 개수
+            for(let k=0; k < roomCount; k++) {
+                let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3;
+                let centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
+                
+                // 가로세로 3~4칸 단위 크기로 넓게 평지를 뚫어줌 (실제 크기는 유닛 사이즈 곱한 수십미터 평지)
+                let roomSizeR = Math.floor(Math.random() * 2) + 2; 
+                let roomSizeC = Math.floor(Math.random() * 2) + 2; 
+                
+                for(let r = centerR - roomSizeR; r <= centerR + roomSizeR; r++) {
+                    for(let c = centerC - roomSizeC; c <= centerC + roomSizeC; c++) {
+                        if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) {
+                            mapData[r][c] = 0; // 평지화
+                        }
                     }
                 }
             }
+            
+            // 외곽 테두리는 무조건 거대한 벽으로 감싸기
+            for(let r=0; r<mapRows; r++) { mapData[r][0] = 1; mapData[r][mapCols-1] = 1; }
+            for(let c=0; c<mapCols; c++) { mapData[0][c] = 1; mapData[mapRows-1][c] = 1; }
         }
 
         function buildMazeGraphics() {
@@ -316,11 +331,11 @@
                     if(mapData[r][c] === 1) {
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
-                    } else if(Math.random() < 0.12) {
+                    } else if(Math.random() < 0.08) { // 평지가 늘어난 만큼 등 조밀도 최적화
                         const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffee }));
                         lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
                         
-                        const pl = new THREE.PointLight(0xfff5cc, 0.7, 12); 
+                        const pl = new THREE.PointLight(0xfff5cc, 0.7, 14); 
                         pl.position.set(x, wallHeight - 0.2, z);
                         lamp.add(pl);
                     }
@@ -333,7 +348,7 @@
         }
 
         function getSafeSpawn(avoidPlayerPos = null) {
-            for(let i=0; i<200; i++) {
+            for(let i=0; i<300; i++) {
                 let r = Math.floor(Math.random()*mapRows);
                 let c = Math.floor(Math.random()*mapCols);
                 if(mapData[r][c] === 0) {
@@ -341,7 +356,7 @@
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
                     if(avoidPlayerPos) {
                         let dist = Math.sqrt(Math.pow(spawnX - avoidPlayerPos.x, 2) + Math.pow(spawnZ - avoidPlayerPos.z, 2));
-                        if(dist < 10) continue;
+                        if(dist < 15) continue; // 괴물은 좀 더 먼 평지에서 스폰되게 거리 상향
                     }
                     return { x: spawnX, z: spawnZ };
                 }
@@ -373,12 +388,12 @@
         const flashlightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.28), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.5 }));
         flashlightMesh.rotation.x = Math.PI / 2; flashlightMesh.position.set(0.22, -0.18, -0.45); firstPersonRig.add(flashlightMesh);
 
-        const flashlight = new THREE.SpotLight(0xfffbf0, 1.8, 35, Math.PI / 5, 0.5, 0.8);
+        const flashlight = new THREE.SpotLight(0xfffbf0, 2.5, 45, Math.PI / 4.5, 0.6, 0.8);
         firstPersonRig.add(flashlight); flashlight.position.set(0.22, -0.18, -0.45);
         const flashlightTarget = new THREE.Object3D(); flashlightTarget.position.set(0.22, -0.18, -5); firstPersonRig.add(flashlightTarget); flashlight.target = flashlightTarget;
 
         let entities = []; const entityColors = [0x050505]; 
-        for(let i=0; i<1; i++) { // 모바일 리소스 절약을 위해 개체수 1개로 제한
+        for(let i=0; i<1; i++) { 
             let ent = new THREE.Group();
             let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.3 }); 
             
@@ -417,7 +432,6 @@
         const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
         entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); });
 
-        // ✨ 핵심 안전 장치: 절대 NaN이 발생하지 않도록 숫자 완전 강제 바인딩
         let cameraAngleX = 0.0, cameraAngleY = 0.0;
         let smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
         let targetRotationY = 0.0;
@@ -459,11 +473,16 @@
                 document.body.requestPointerLock();
             }
             
-            // 시점 및 위치 강제 초기화
             cameraAngleX = 0.0; cameraAngleY = 0.0;
             smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
+            
+            // 시작 시 넓은 방 영역에서 쾌적하게 생성되게 보장
+            generateRandomMaze(); buildMazeGraphics();
             const pSp2 = getSafeSpawn();
             player.position.set(pSp2.x, 0, pSp2.z);
+            safeSpawnPosition.copy(player.position);
+            
+            entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = esp; });
             
             gameActive = true; actualRecordTime = 0; isSpeedBoosted = false;
             initBackroomsAudio();
@@ -487,7 +506,8 @@
             isFlashlightOn = !isFlashlightOn;
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
-            let normalIntensity = actualRecordTime >= blackoutTriggerTime ? 0.35 : 1.8;
+            
+            let normalIntensity = 2.5;
             if(flashlight) flashlight.intensity = isFlashlightOn ? normalIntensity : 0;
         }
 
@@ -698,19 +718,21 @@
 
         function triggerBlackoutPhase() {
             const glitchOverlay = document.getElementById('glitch-overlay');
-            glitchOverlay.style.background = 'rgba(3, 1, 1, 0.95)'; glitchOverlay.style.opacity = 1;
-            scene.fog.density = 0.25; ambientLight.intensity = 0.05;
+            glitchOverlay.style.background = 'rgba(3, 1, 1, 0.97)'; glitchOverlay.style.opacity = 1;
+            scene.fog.density = 0.35; 
+            ambientLight.intensity = 0.0; 
             if (buzzOsc) { try { buzzOsc.frequency.setValueAtTime(0, audioCtx.currentTime); } catch(e){} }
             entities.forEach(e => {
                 e.speed = e.baseSpeed * 1.5; 
                 e.eyes.forEach(eye => eye.material.color.setHex(0xff0000));
             });
+            
+            if(isFlashlightOn && flashlight) flashlight.intensity = 2.5;
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
-            // ✨ 메인 대기 로비 카메라 위치 절대 고정 (안 보이는 현상 완벽 방지)
             if (!gameActive) {
                 camera.position.set(0, 15, 20);
                 camera.lookAt(0, 0, 0);
@@ -729,7 +751,6 @@
                 isSpeedBoosted = true; triggerBlackoutPhase();
             }
 
-            // 카메라 선형 보간 안정화
             smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.3;
             smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.3;
             
@@ -737,7 +758,7 @@
                 Math.sin(smoothCamAngleX) * Math.cos(smoothCamAngleY), 
                 Math.sin(smoothCamAngleY), 
                 -Math.cos(smoothCamAngleX) * Math.cos(smoothCamAngleY)
-            );
+            ).normalize();
 
             let moveX = 0, moveZ = 0;
             if (platform === 'pc') {
@@ -761,6 +782,7 @@
             let bobX = 0, bobY = 0;
             
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
+            
             const sinX = Math.sin(smoothCamAngleX), cosX = Math.cos(smoothCamAngleX);
             const fX = (moveX * cosX + moveZ * sinX) * currentMoveSpeed;
             const fZ = (-moveX * sinX + moveZ * cosX) * currentMoveSpeed;
@@ -770,7 +792,10 @@
                 const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
                 const safeP = checkGridCollision(oldP, tentativeP, 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
-                if (viewMode === '3rd') targetRotationY = smoothCamAngleX + Math.atan2(-moveX, -moveZ);
+                
+                if (viewMode === '3rd') {
+                    targetRotationY = smoothCamAngleX + Math.atan2(-moveX, -moveZ);
+                }
             }
 
             playerVelocityY += gravity; player.position.y += playerVelocityY;
@@ -835,7 +860,6 @@
                 if(platform === 'pc') document.exitPointerLock(); return;
             }
 
-            // 시점 연산 안정화 및 렌더링 피드백 피킹 차단
             if (viewMode === '3rd') {
                 const r = 5.0;
                 const tX = player.position.x + Math.sin(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;

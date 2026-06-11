@@ -26,7 +26,6 @@
             text-shadow: 0 0 6px rgba(220,40,40,0.6);
         }
 
-        /* 📋 왼쪽 퀘스트 및 거리 레이더 UI */
         #quest-ui {
             position: absolute; top: 60px; left: 25px; color: #dfd29e; font-weight: bold;
             font-size: 14px; z-index: 210; letter-spacing: 1px; pointer-events: none;
@@ -35,7 +34,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        /* ⚙️ 컨트롤 및 메뉴 일시정지 통합 패널 */
         #top-controls { 
             position: absolute; top: 16px; right: 16px; z-index: 220; display: none; 
             flex-direction: column; align-items: flex-end; gap: 6px;
@@ -224,7 +222,8 @@
     </div>
 
     <div id="clear-screen">
-        <h1 style="font-size: 36px; margin-bottom: 10px; letter-spacing: 5px; color:#ffdd66; text-shadow: 0 0 15px rgba(255,221,102,0.4)">NOCLIP SUCCESS</h1>
+        <h1 style="font-size: 36px; margin-bottom: 5px; letter-spacing: 5px; color:#ffdd66; text-shadow: 0 0 15px rgba(255,221,102,0.4)">NOCLIP SUCCESS</h1>
+        <p id="clear-time-record" style="color:#ffdd66; font-size:18px; font-weight:bold; margin: 0 0 15px 0; letter-spacing:1px;"></p>
         <p style="color:#aaa; font-size:14px; margin-bottom:30px;">무사히 백룸 Level 0을 탈출하여 현실로 노클립했습니다.</p>
         <button class="go-btn" style="background:#bfae6f; color:#111; border-color:#fff;" onclick="backToMainMenu()">↩️ MAIN MENU</button>
     </div>
@@ -242,8 +241,8 @@
         const basePlayerSpeed = 0.11, sprintPlayerSpeed = 0.17, exhaustedPlayerSpeed = 0.06;
         let safeSpawnPosition = new THREE.Vector3();
 
-        let hasKey = false;
-        let keyMesh = null, doorMesh = null, doorLight = null;
+        let hasKey = false, isDoorOpened = false;
+        let keyMesh = null, doorGroup = null, doorPivot = null, escapeSensorMesh = null;
         const mapRows = 22, mapCols = 22, unitSize = 5, wallHeight = 5.5;
         let mapData = [], instancedWalls = null, lamps = [];
 
@@ -356,26 +355,98 @@
             const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl);
         }
 
-        function getSafeSpawn(avoidPlayerPos = null) {
-            for(let i=0; i<300; i++) {
+        function getSafeSpawn(avoidPos = null, minPlayerDist = 0) {
+            for(let i=0; i<400; i++) {
                 let r = Math.floor(Math.random()*mapRows), c = Math.floor(Math.random()*mapCols);
                 if(mapData[r][c] === 0) {
                     let spawnX = (c - mapCols/2)*unitSize + unitSize/2;
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
-                    if(avoidPlayerPos) {
-                        let dist = Math.sqrt(Math.pow(spawnX - avoidPlayerPos.x, 2) + Math.pow(spawnZ - avoidPlayerPos.z, 2));
-                        if(dist < 12) continue; 
+                    if(avoidPos) {
+                        let dist = Math.sqrt(Math.pow(spawnX - avoidPos.x, 2) + Math.pow(spawnZ - avoidPos.z, 2));
+                        if(dist < minPlayerDist) continue; 
                     }
-                    return { x: spawnX, z: spawnZ };
+                    return { x: spawnX, z: spawnZ, row: r, col: c };
                 }
             }
-            return { x: unitSize, z: unitSize };
+            return { x: unitSize, z: unitSize, row: 1, col: 1 };
         }
 
-        function spawnQuestItems() {
-            if(keyMesh) scene.remove(keyMesh);
-            if(doorMesh) scene.remove(doorMesh);
+        // 🚪 벽면에 딱 붙도록 문과 탈출공간을 생성하는 함수
+        function spawnWallAttachedDoor() {
+            if(doorGroup) scene.remove(doorGroup);
 
+            doorGroup = new THREE.Group();
+            let foundWall = false, doorRow = 1, doorCol = 1, attachDir = {x:0, z:1}, angle = 0;
+
+            // 빈 통로 주변 4방향을 검사하여 문이 벽을 등지고 생성되도록 좌표 수집
+            for(let i=0; i<500; i++) {
+                let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
+                if(mapData[r][c] === 0) {
+                    if(mapData[r-1][c] === 1) { attachDir={x:0, z:-1}; angle=0; doorRow=r; doorCol=c; foundWall=true; break; }
+                    if(mapData[r+1][c] === 1) { attachDir={x:0, z:1}; angle=Math.PI; doorRow=r; doorCol=c; foundWall=true; break; }
+                    if(mapData[r][c-1] === 1) { attachDir={x:-1, z:0}; angle=Math.PI/2; doorRow=r; doorCol=c; foundWall=true; break; }
+                    if(mapData[r][c+1] === 1) { attachDir={x:1, z:0}; angle=-Math.PI/2; doorRow=r; doorCol=c; foundWall=true; break; }
+                }
+            }
+
+            const x = (doorCol - mapCols/2) * unitSize + unitSize/2;
+            const z = (doorRow - mapRows/2) * unitSize + unitSize/2;
+
+            // 미로 벽면에 딱 정렬시키기 위해 중심 오프셋 가중치 조절 (벽 모서리에 정렬)
+            doorGroup.position.set(x + attachDir.x * 2.38, 0, z + attachDir.z * 2.38);
+            doorGroup.rotation.y = angle;
+
+            // 문 프레임 (벽면 구멍 경계선 디자인)
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x1d140e, roughness: 0.9 });
+            const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.8, 0.2), frameMat); leftPost.position.set(-0.85, 1.4, 0);
+            const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.8, 0.2), frameMat); rightPost.position.set(0.85, 1.4, 0);
+            const topPost = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.15, 0.2), frameMat); topPost.position.set(0, 2.8, 0);
+            doorGroup.add(leftPost, rightPost, topPost);
+
+            // 문 회전 구현용 피벗 오브젝트 생성
+            doorPivot = new THREE.Group();
+            doorPivot.position.set(-0.78, 1.4, 0); 
+            
+            const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.56, 2.65, 0.12), new THREE.MeshStandardMaterial({ color: 0x3d2516, roughness: 0.75 }));
+            doorPanel.position.set(0.78, 0, 0); 
+            
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8 }));
+            knob.position.set(1.4, 0, 0.1);
+            doorPanel.add(knob);
+            
+            doorPivot.add(doorPanel);
+            doorGroup.add(doorPivot);
+
+            // 🕳️ 문 뒤편의 완전히 어두운 가상 탈출 통로 공간 (클리어 센서)
+            const corridorGeo = new THREE.BoxGeometry(1.6, 2.8, 2.5);
+            const corridorMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }); // 빛이 들어가지 않는 순수 블랙 홀
+            const escapeCorridor = new THREE.Mesh(corridorGeo, corridorMat);
+            escapeCorridor.position.set(0, 1.4, -1.25);
+            doorGroup.add(escapeCorridor);
+
+            // 실제 몸이 닿으면 이벤트를 터트릴 투명 센서 매쉬
+            escapeSensorMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.0, 1.0), new THREE.MeshBasicMaterial({ visible: false }));
+            escapeSensorMesh.position.set(0, 1.0, -1.5);
+            doorGroup.add(escapeSensorMesh);
+
+            // 탈출을 암시하는 녹색 문틈 포인트 라이트
+            const greenLight = new THREE.PointLight(0x00ff55, 0, 6);
+            greenLight.position.set(0, 1.4, -0.2);
+            doorGroup.add(greenLight);
+            doorGroup.greenLight = greenLight;
+
+            scene.add(doorGroup);
+            return { x: doorGroup.position.x, z: doorGroup.position.z };
+        }
+
+        function spawnQuestItems(playerPos) {
+            isDoorOpened = false;
+            
+            // 1. 벽에 정렬된 문 먼저 배치
+            const doorLoc = spawnWallAttachedDoor();
+
+            // 2. 밸런스 패치: 시작하자마자 쉽게 찾지 못하도록 최소 15m 이상 떨어진 방에만 생성되도록 강제
+            if(keyMesh) scene.remove(keyMesh);
             keyMesh = new THREE.Group();
             const keyRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.04, 8, 16), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9, roughness: 0.05 }));
             const keyBar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9 }));
@@ -386,24 +457,10 @@
             keyLight.position.y = 0.2;
             keyMesh.add(keyLight);
 
-            const keyLoc = getSafeSpawn();
+            // 플레이어 출발 지점으로부터 최소 반경 15m 안전 거리 밖에서 스폰 연산 실행
+            const keyLoc = getSafeSpawn(playerPos, 15);
             keyMesh.position.set(keyLoc.x, 0.6, keyLoc.z);
             scene.add(keyMesh);
-
-            doorMesh = new THREE.Group();
-            const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.8, 0.25), new THREE.MeshStandardMaterial({ color: 0x2d190d, roughness: 0.9 }));
-            const doorKnob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8 }));
-            doorKnob.position.set(0.5, 0, 0.15);
-            doorFrame.add(doorKnob);
-            doorMesh.add(doorFrame);
-
-            doorLight = new THREE.PointLight(0x00ff66, 0, 15);
-            doorLight.position.set(0, 0, 0.3);
-            doorMesh.add(doorLight);
-
-            const doorLoc = getSafeSpawn({ x: keyLoc.x, z: keyLoc.z });
-            doorMesh.position.set(doorLoc.x, 1.4, doorLoc.z);
-            scene.add(doorMesh);
         }
 
         generateRandomMaze(); buildMazeGraphics();
@@ -452,7 +509,6 @@
             else { panel.classList.add('collapsed'); toggleBtn.textContent = "◢"; }
         }
 
-        // 📺 HTML5 Fullscreen API 제어 함수
         function toggleFullScreen() {
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
                 if (document.documentElement.requestFullscreen) {
@@ -513,10 +569,12 @@
             }
             
             cameraAngleX = 0.0; cameraAngleY = 0.0; smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
-            generateRandomMaze(); buildMazeGraphics(); spawnQuestItems();
+            generateRandomMaze(); buildMazeGraphics();
             
             const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
-            entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = esp; e.state='patrol'; e.screamActive=false; });
+            spawnQuestItems(player.position);
+            
+            entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = esp; e.state='patrol'; e.screamActive=false; });
             
             gameActive = true; actualRecordTime = 0; isSpeedBoosted = false;
             initHorrorAudio();
@@ -806,12 +864,12 @@
         function rollback30SecondsSafe() {
             isGameOver = false;
             playHorrorScream(false);
-            let respawnPos = getSafeSpawn(player.position);
+            let respawnPos = getSafeSpawn(player.position, 10);
             player.position.set(respawnPos.x, 0, respawnPos.z);
             safeSpawnPosition.copy(player.position);
             playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
             entities.forEach(e => {
-                const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z);
+                const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z);
                 e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false;
             });
             document.getElementById('gameover-screen').style.display = 'none';
@@ -832,7 +890,9 @@
             if (isGameOver || isPaused) return;
 
             actualRecordTime += 1 / 60; 
-            document.getElementById('cctv-time').textContent = `${Math.floor(actualRecordTime / 60).toString().padStart(2, '0')}:${Math.floor(actualRecordTime % 60).toString().padStart(2, '0')}`;
+            const calcMin = Math.floor(actualRecordTime / 60);
+            const calcSec = Math.floor(actualRecordTime % 60);
+            document.getElementById('cctv-time').textContent = `${calcMin.toString().padStart(2, '0')}:${calcSec.toString().padStart(2, '0')}`;
 
             if (actualRecordTime >= blackoutTriggerTime && !isSpeedBoosted) { isSpeedBoosted = true; triggerBlackoutPhase(); }
 
@@ -840,26 +900,61 @@
 
             processKeyAudioHint(player.position);
 
+            // 🔑 열쇠 획득 체크
             if(!hasKey && keyMesh && player.position.distanceTo(keyMesh.position) < 1.3) {
                 hasKey = true; scene.remove(keyMesh);
                 if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                if(doorLight) doorLight.intensity = 3.5;
+                if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
                 showToast("🔑 황금 열쇠를 획득했습니다!<br><span style='color:#00ff66;'>탈출구 실시간 거리 측정 레이더가 가동됩니다.</span>");
             }
 
+            // 📋 퀘스트 및 실시간 레이더 정보 업데이트
             if(!hasKey) {
                 document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>어딘가 숨겨진 열쇠를 찾으십시오.";
-            } else if(doorMesh) {
-                let currentDoorDist = Math.floor(player.position.distanceTo(doorMesh.position) * 1.5);
-                document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>문을 찾아 탈출하십시오.<br><span style='color:#00ff66; font-size:15px;'>📍 남은 거리: ${currentDoorDist}m</span>`;
+            } else if(doorGroup) {
+                let currentDoorDist = Math.floor(player.position.distanceTo(doorGroup.position) * 1.5);
+                if(!isDoorOpened) {
+                    document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>문을 찾아 탈출하십시오.<br><span style='color:#00ff66; font-size:15px;'>📍 남은 거리: ${currentDoorDist}m</span>`;
+                } else {
+                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#00ff66;'>문이 열렸습니다! 어둠 속으로 들어가세요!</span>`;
+                }
             }
 
-            if(doorMesh && player.position.distanceTo(doorMesh.position) < 1.4) {
-                if(hasKey) {
-                    gameActive = false; playHorrorScream(false);
-                    document.getElementById('clear-screen').style.display = 'flex';
-                    if(platform === 'pc') document.exitPointerLock(); return;
-                } else {
+            // 🚪 문과의 인터랙션 로직
+            if(doorGroup) {
+                let distToDoor = player.position.distanceTo(doorGroup.position);
+                
+                // 열쇠가 있고 문 앞에 도달하면 문 개방 애니메이션 활성화
+                if(hasKey && distToDoor < 3.2 && !isDoorOpened) {
+                    isDoorOpened = true;
+                    showToast("🔓 문이 열렸습니다! 내부 통로로 진입하십시오!");
+                }
+
+                // 문 개방 축(Pivot) 회전 연출 (Y축 -1.6라디안만큼 부드럽게 스르륵 열림)
+                if(isDoorOpened && doorPivot && doorPivot.rotation.y > -1.6) {
+                    doorPivot.rotation.y -= 0.04;
+                }
+
+                // 🕳️ 완전히 문 안쪽 공간(검은 영역)으로 걸어 들어가 센서에 도달하면 탈출 성공!
+                if(isDoorOpened && escapeSensorMesh) {
+                    // 월드 스페이스 좌표계를 계산하여 센서 박스 내부 충돌 판정
+                    let sensorWorldPos = new THREE.Vector3();
+                    escapeSensorMesh.getWorldPosition(sensorWorldPos);
+                    let distToSensor = player.position.distanceTo(sensorWorldPos);
+
+                    if(distToSensor < 1.1) {
+                        gameActive = false; 
+                        playHorrorScream(false);
+                        
+                        // ⏱️ 몇 분 몇 초 기록을 정확히 계산하여 텍스트 주입
+                        document.getElementById('clear-time-record').textContent = `⏱️ 탈출 소요 시간: ${calcMin}분 ${calcSec}초`;
+                        document.getElementById('clear-screen').style.display = 'flex';
+                        
+                        if(platform === 'pc') document.exitPointerLock(); 
+                        return;
+                    }
+                } else if(!hasKey && distToDoor < 1.5) {
+                    // 열쇠 없이 문에 직접 닿으려고 하면 알림
                     showToast("🔒 문이 굳게 잠겨있습니다.<br>먼저 황금 열쇠를 찾아야 합니다.");
                 }
             }

@@ -16,9 +16,8 @@
         
         #vhs-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(0,0,0,0) 25%, rgba(0,0,0,0.85) 100%);
+            background: radial-gradient(circle, rgba(0,0,0,0) 35%, rgba(0,0,0,0.7) 100%);
             pointer-events: none; z-index: 2;
-            backdrop-filter: contrast(115%) brightness(95%) saturate(85%);
         }
         
         #cctv-ui {
@@ -224,73 +223,54 @@
         const scene = new THREE.Scene();
         const backroomsYellow = 0xbaa761; 
         scene.background = new THREE.Color(backroomsYellow); 
-        scene.fog = new THREE.FogExp2(backroomsYellow, 0.042); 
+        scene.fog = new THREE.FogExp2(backroomsYellow, 0.05); 
 
-        const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.01, 1000);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: "high-performance" });
+        // ✨ 모바일 버그 1위 탈출: 하드웨어 렉을 유발하는 무거운 옵션 해제 및 최적화
+        const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
-        renderer.toneMapping = THREE.ReinhardToneMapping; 
-        renderer.toneMappingExposure = 1.25;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // 과도한 해상도 제한하여 렉 방지
+        renderer.shadowMap.enabled = false; // ✨ 모바일 렉의 주범인 실시간 하드웨어 그림자 연산 OFF
+        renderer.toneMapping = THREE.LinearToneMapping; 
+        renderer.toneMappingExposure = 1.0;
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.35); 
+        const ambientLight = new THREE.AmbientLight(0xfffdb8, 0.7); // 그림자를 끈 대신 전체 밝기를 확보
         scene.add(ambientLight);
 
-        const mapRows = 39, mapCols = 39, unitSize = 5, wallHeight = 6.8;
+        // ✨ 맵 사이즈 최적화: 39x39에서 25x25로 축소하여 모바일 연산 과부하 완전 방지
+        const mapRows = 25, mapCols = 25, unitSize = 5, wallHeight = 6.0;
         let mapData = [], instancedWalls = null, lamps = [];
 
         function generateHighQualityWallTextures() {
-            const size = 512;
+            const size = 256; // 텍스처 맵 축소로 메모리 절약
             const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
             ctx.fillStyle = '#dfd5a0'; ctx.fillRect(0, 0, size, size);
             ctx.fillStyle = '#d0c68f';
-            for(let i=0; i<8000; i++) {
+            for(let i=0; i<3000; i++) {
                 ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2);
             }
-            ctx.strokeStyle = '#c2b77e'; ctx.lineWidth = 5;
-            for (let x = 0; x < size; x += 40) {
+            ctx.strokeStyle = '#c2b77e'; ctx.lineWidth = 3;
+            for (let x = 0; x < size; x += 32) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
             }
             const diffuseTex = new THREE.CanvasTexture(canvas);
             diffuseTex.wrapS = THREE.RepeatWrapping; diffuseTex.wrapT = THREE.RepeatWrapping;
-
-            const bumpCanvas = document.createElement('canvas'); bumpCanvas.width = size; bumpCanvas.height = size;
-            const bCtx = bumpCanvas.getContext('2d');
-            bCtx.fillStyle = '#808080'; bCtx.fillRect(0, 0, size, size);
-            bCtx.fillStyle = '#000000';
-            for (let x = 0; x < size; x += 40) {
-                bCtx.fillRect(x-2, 0, 4, size);
-            }
-            bCtx.strokeStyle = '#222222'; bCtx.lineWidth = 1;
-            for(let i=0; i<15; i++) {
-                bCtx.beginPath();
-                bCtx.moveTo(Math.random()*size, Math.random()*size);
-                bCtx.lineTo(Math.random()*size, Math.random()*size);
-                bCtx.stroke();
-            }
-            const bumpTex = new THREE.CanvasTexture(bumpCanvas);
-            bumpTex.wrapS = THREE.RepeatWrapping; bumpTex.wrapT = THREE.RepeatWrapping;
-
-            return { diffuse: diffuseTex, bump: bumpTex };
+            return { diffuse: diffuseTex };
         }
 
         const wallTextures = generateHighQualityWallTextures();
         const wallMat = new THREE.MeshStandardMaterial({ 
             map: wallTextures.diffuse, 
-            bumpMap: wallTextures.bump,
-            bumpScale: 0.04, 
-            roughness: 0.72, 
-            metalness: 0.02 
+            roughness: 0.8, 
+            metalness: 0.0 
         });
         
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x9e925c, roughness: 0.9, metalness: 0.05 }); 
-        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd9cfab, roughness: 0.8 });
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x9e925c, roughness: 0.9 }); 
+        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd9cfab, roughness: 0.9 });
 
         function generateRandomMaze() {
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
@@ -307,10 +287,10 @@
             }
             carve(1, 1);
             
-            for(let k=0; k<10; k++) {
-                let centerR = Math.floor(Math.random()*(mapRows-6))+3;
-                let centerC = Math.floor(Math.random()*(mapCols-6))+3;
-                let size = Math.floor(Math.random()*2)+3; 
+            for(let k=0; k<5; k++) {
+                let centerR = Math.floor(Math.random()*(mapRows-4))+2;
+                let centerC = Math.floor(Math.random()*(mapCols-4))+2;
+                let size = 1; 
                 for(let r = centerR-size; r<=centerR+size; r++) {
                     for(let c = centerC-size; c<=centerC+size; c++) {
                         if(r>0 && r<mapRows-1 && c>0 && c<mapCols-1) mapData[r][c] = 0; 
@@ -327,7 +307,6 @@
 
             const wallGeo = new THREE.BoxGeometry(unitSize, wallHeight, unitSize);
             instancedWalls = new THREE.InstancedMesh(wallGeo, wallMat, wallCount);
-            instancedWalls.castShadow = true; instancedWalls.receiveShadow = true;
             let dummy = new THREE.Object3D(), idx = 0;
 
             for(let r=0; r<mapData.length; r++) {
@@ -337,25 +316,24 @@
                     if(mapData[r][c] === 1) {
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
-                    } else if(Math.random() < 0.08) {
-                        const lamp = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.02, 0.6), new THREE.MeshBasicMaterial({ color: 0xffffee }));
+                    } else if(Math.random() < 0.12) {
+                        const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffee }));
                         lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
                         
-                        const pl = new THREE.PointLight(0xfff5cc, 0.85, 16); 
+                        const pl = new THREE.PointLight(0xfff5cc, 0.7, 12); 
                         pl.position.set(x, wallHeight - 0.2, z);
-                        pl.castShadow = true; pl.shadow.bias = -0.002;
                         lamp.add(pl);
                     }
                 }
             }
             scene.add(instancedWalls);
             const mW = mapCols*unitSize, mH = mapRows*unitSize;
-            const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; f.receiveShadow = true; scene.add(f);
+            const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; scene.add(f);
             const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl);
         }
 
         function getSafeSpawn(avoidPlayerPos = null) {
-            while(true) {
+            for(let i=0; i<200; i++) {
                 let r = Math.floor(Math.random()*mapRows);
                 let c = Math.floor(Math.random()*mapCols);
                 if(mapData[r][c] === 0) {
@@ -363,73 +341,72 @@
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
                     if(avoidPlayerPos) {
                         let dist = Math.sqrt(Math.pow(spawnX - avoidPlayerPos.x, 2) + Math.pow(spawnZ - avoidPlayerPos.z, 2));
-                        if(dist < 18) continue;
+                        if(dist < 10) continue;
                     }
                     return { x: spawnX, z: spawnZ };
                 }
             }
+            return { x: unitSize, z: unitSize };
         }
 
         generateRandomMaze(); buildMazeGraphics();
 
         let player = new THREE.Group(); scene.add(player);
         let playerParts = []; const hazmatColor = 0xcc9a14;
-        const pMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.5, metalness: 0.1 });
+        const pMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.6 });
 
-        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.8, 12), pMat); torso.position.y = 0.85; torso.castShadow = true; player.add(torso); playerParts.push(torso);
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.8, 8), pMat); torso.position.y = 0.85; player.add(torso); playerParts.push(torso);
         const headGroup = new THREE.Group(); headGroup.position.set(0, 1.4, 0); player.add(headGroup); playerParts.push(headGroup);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 16), pMat); head.castShadow = true; headGroup.add(head);
-        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.1), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.05, metalness: 0.95 })); visor.position.set(0, 0.02, 0.14); headGroup.add(visor);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 10), pMat); headGroup.add(head);
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.1), new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2 })); visor.position.set(0, 0.02, 0.14); headGroup.add(visor);
 
-        let leftArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.5), pMat); leftArm3rd.position.set(-0.32, 0.8, 0); leftArm3rd.castShadow = true; player.add(leftArm3rd); playerParts.push(leftArm3rd);
-        let rightArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.5), pMat); rightArm3rd.position.set(0.32, 0.8, 0); rightArm3rd.castShadow = true; player.add(rightArm3rd); playerParts.push(rightArm3rd);
-        let leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.55), pMat); leftLeg.position.set(-0.12, 0.28, 0); leftLeg.castShadow = true; player.add(leftLeg); playerParts.push(leftLeg);
-        let rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.55), pMat); rightLeg.position.set(0.12, 0.28, 0); rightLeg.castShadow = true; player.add(rightLeg); playerParts.push(rightLeg);
+        let leftArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.5), pMat); leftArm3rd.position.set(-0.32, 0.8, 0); player.add(leftArm3rd); playerParts.push(leftArm3rd);
+        let rightArm3rd = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.5), pMat); rightArm3rd.position.set(0.32, 0.8, 0); player.add(rightArm3rd); playerParts.push(rightArm3rd);
+        let leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.55), pMat); leftLeg.position.set(-0.12, 0.28, 0); player.add(leftLeg); playerParts.push(leftLeg);
+        let rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.55), pMat); rightLeg.position.set(0.12, 0.28, 0); player.add(rightLeg); playerParts.push(rightLeg);
 
         let firstPersonRig = new THREE.Group(); scene.add(firstPersonRig);
         const armMat = new THREE.MeshStandardMaterial({ color: hazmatColor, roughness: 0.6 });
         const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.45), armMat); leftArm.rotation.x = Math.PI / 2; leftArm.position.set(-0.22, -0.22, -0.3); firstPersonRig.add(leftArm);
         const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.45), armMat); rightArm.rotation.x = Math.PI / 2; rightArm.position.set(0.22, -0.22, -0.3); firstPersonRig.add(rightArm);
 
-        const flashlightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.28), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, metalness: 0.8, roughness: 0.2 }));
+        const flashlightMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.28), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.5 }));
         flashlightMesh.rotation.x = Math.PI / 2; flashlightMesh.position.set(0.22, -0.18, -0.45); firstPersonRig.add(flashlightMesh);
 
-        const flashlight = new THREE.SpotLight(0xfffbf0, 2.0, 45, Math.PI / 4.8, 0.6, 0.75);
-        flashlight.castShadow = true; flashlight.shadow.bias = -0.001;
-        flashlight.shadow.mapSize.width = 1024; flashlight.shadow.mapSize.height = 1024;
+        const flashlight = new THREE.SpotLight(0xfffbf0, 1.8, 35, Math.PI / 5, 0.5, 0.8);
         firstPersonRig.add(flashlight); flashlight.position.set(0.22, -0.18, -0.45);
         const flashlightTarget = new THREE.Object3D(); flashlightTarget.position.set(0.22, -0.18, -5); firstPersonRig.add(flashlightTarget); flashlight.target = flashlightTarget;
 
-        let entities = []; const entityColors = [0x050505, 0x140d08]; 
-        for(let i=0; i<2; i++) {
+        let entities = []; const entityColors = [0x050505]; 
+        for(let i=0; i<1; i++) { // 모바일 리소스 절약을 위해 개체수 1개로 제한
             let ent = new THREE.Group();
-            let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.15, metalness: 0.85 }); 
+            let eMat = new THREE.MeshStandardMaterial({ color: entityColors[i], roughness: 0.3 }); 
             
             let bodyGroup = new THREE.Group();
             let spineNodes = [];
-            for(let n=0; n<5; n++) {
-                let node = new THREE.Mesh(new THREE.SphereGeometry(0.22 - (n*0.02), 8, 8), eMat);
-                node.position.y = 2.0 - (n*0.35); node.scale.set(1, 0.7, 1);
+            for(let n=0; n<4; n++) {
+                let node = new THREE.Mesh(new THREE.SphereGeometry(0.22 - (n*0.03), 6, 6), eMat);
+                node.position.y = 1.8 - (n*0.35); node.scale.set(1, 0.7, 1);
                 bodyGroup.add(node); spineNodes.push(node);
             }
             ent.add(bodyGroup);
             
-            let eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
-            let eyeMat = new THREE.MeshBasicMaterial({ color: 0x110000 });
-            let leftEye = new THREE.Mesh(eyeGeo, eyeMat); leftEye.position.set(-0.08, 2.05, 0.18); ent.add(leftEye);
-            let rightEye = new THREE.Mesh(eyeGeo, eyeMat); rightEye.position.set(0.08, 2.05, 0.18); ent.add(rightEye);
+            let eyeGeo = new THREE.SphereGeometry(0.04, 6, 6);
+            let eyeMat = new THREE.MeshBasicMaterial({ color: 0x220000 });
+            let leftEye = new THREE.Mesh(eyeGeo, eyeMat); leftEye.position.set(-0.08, 1.85, 0.18); ent.add(leftEye);
+            let rightEye = new THREE.Mesh(eyeGeo, eyeMat); rightEye.position.set(0.08, 1.85, 0.18); ent.add(rightEye);
             
             let legParts = [];
             for(let j=0; j<4; j++) {
                 let legRoot = new THREE.Group();
-                legRoot.position.set((j%2===0?0.25:-0.25), 0.9, -0.2 + (j*0.2));
-                let upper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.015, 0.9), eMat);
-                upper.position.y = -0.45; upper.rotation.z = (j%2===0?0.3:-0.3); legRoot.add(upper);
+                legRoot.position.set((j%2===0?0.25:-0.25), 0.8, -0.1 + (j*0.2));
+                let upper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.015, 0.8), eMat);
+                upper.position.y = -0.4; upper.rotation.z = (j%2===0?0.3:-0.3); legRoot.add(upper);
                 ent.add(legRoot); legParts.push(legRoot);
             }
             scene.add(ent);
             
-            let baseSpeed = 0.055 + (i * 0.012);
+            let baseSpeed = 0.055;
             entities.push({ 
                 mesh: ent, legs: legParts, spine: spineNodes, eyes: [leftEye, rightEye],
                 state: 'patrol', patrolTarget: getSafeSpawn(), baseSpeed: baseSpeed, speed: baseSpeed, 
@@ -440,15 +417,17 @@
         const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
         entities.forEach(e => { const esp = getSafeSpawn(player.position); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); });
 
-        // ⚠️ 버그 유발 요소 완전 수정: 초기 카메라 앵글 값이 NaN이 되지 않도록 0으로 확실히 바인딩
-        let cameraAngleX = 0, cameraAngleY = 0;
-        let smoothCamAngleX = 0, smoothCamAngleY = 0;
-        let targetRotationY = 0;
-        let stamina = 100, isExhausted = false, isMoving = false, isSprinting = false;
+        // ✨ 핵심 안전 장치: 절대 NaN이 발생하지 않도록 숫자 완전 강제 바인딩
+        let cameraAngleX = 0.0, cameraAngleY = 0.0;
+        let smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
+        let targetRotationY = 0.0;
+        let stamina = 100.0, isExhausted = false, isMoving = false, isSprinting = false;
         const keys = { w: false, a: false, s: false, d: false, shift: false };
 
         const sensitivityInput = document.getElementById('cfg-sensitivity');
-        sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value); });
+        if(sensitivityInput) {
+            sensitivityInput.addEventListener('input', (e) => { globalSensitivity = parseFloat(e.target.value) || 1.0; });
+        }
 
         function toggleSettingsPanel() {
             isPanelExpanded = !isPanelExpanded;
@@ -480,9 +459,11 @@
                 document.body.requestPointerLock();
             }
             
-            // ⚠️ 시점 강제 리셋 매커니즘: 게임 입장 시 카메라 뷰가 꼬여서 안 보이는 현상 차단
-            cameraAngleX = 0; cameraAngleY = 0;
-            smoothCamAngleX = 0; smoothCamAngleY = 0;
+            // 시점 및 위치 강제 초기화
+            cameraAngleX = 0.0; cameraAngleY = 0.0;
+            smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
+            const pSp2 = getSafeSpawn();
+            player.position.set(pSp2.x, 0, pSp2.z);
             
             gameActive = true; actualRecordTime = 0; isSpeedBoosted = false;
             initBackroomsAudio();
@@ -499,14 +480,14 @@
         });
 
         document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement !== document.body && gameActive && !isGameOver) triggerPause(true); 
+            if (document.pointerLockElement !== document.body && gameActive && !isGameOver && platform === 'pc') triggerPause(true); 
         });
 
         function toggleFlashlight() {
             isFlashlightOn = !isFlashlightOn;
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
-            let normalIntensity = actualRecordTime >= blackoutTriggerTime ? 0.35 : 2.0;
+            let normalIntensity = actualRecordTime >= blackoutTriggerTime ? 0.35 : 1.8;
             if(flashlight) flashlight.intensity = isFlashlightOn ? normalIntensity : 0;
         }
 
@@ -581,7 +562,7 @@
                 const t = e.touches[i];
                 if (t.identifier === joystickTouchId) calculateJoystick(t.clientX, t.clientY);
                 if (t.identifier === rotationTouchId) {
-                    const multi = 0.0045 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
+                    const multi = 0.005 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
                     prevX = t.clientX; prevY = t.clientY; cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
                 }
             }
@@ -593,13 +574,13 @@
                 if (t.identifier === joystickTouchId) {
                     joystickTouchId = null; joystickStick.style.transform = 'translate(0px, 0px)';
                     joystickInput = { x: 0, y: 0 }; joystickDistanceRatio = 0;
-                    joystickZone.style.left = '30px'; joystickZone.style.bottom = '30px';
+                    joystickZone.style.left = '35px'; joystickZone.style.bottom = '35px';
                 }
                 if (t.identifier === rotationTouchId) rotationTouchId = null;
             }
         });
 
-        function checkGridCollision(oldPos, tentativePos, radius = 0.6) {
+        function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             let res = { x: tentativePos.x, z: tentativePos.z };
             const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
             const pRow = Math.floor((oldPos.z - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
@@ -624,31 +605,25 @@
         function processEntityAI(e, playerPos) {
             const ePos = e.mesh.position; const dist = ePos.distanceTo(playerPos);
             e.stuckCheckTimer += 1;
-            if(e.stuckCheckTimer > 45) {
+            if(e.stuckCheckTimer > 50) {
                 if(ePos.distanceTo(e.lastPos) < 0.15) { 
                     const escapeSp = getSafeSpawn(playerPos); ePos.set(escapeSp.x, 0, escapeSp.z); e.patrolTarget = getSafeSpawn(playerPos);
                 }
                 e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
             }
             
-            if (dist < 32 && !isGameOver) { e.state = 'chase'; } 
-            else if (e.state === 'chase' && dist > 38) { e.state = 'patrol'; e.patrolTarget = getSafeSpawn(playerPos); }
+            if (dist < 22 && !isGameOver) { e.state = 'chase'; } 
+            else if (e.state === 'chase' && dist > 28) { e.state = 'patrol'; e.patrolTarget = getSafeSpawn(playerPos); }
             
             let dest = (e.state === 'chase') ? playerPos : e.patrolTarget;
             if(e.state === 'patrol' && Math.abs(ePos.x - dest.x) < 1.2 && Math.abs(ePos.z - dest.z) < 1.2) { e.patrolTarget = getSafeSpawn(playerPos); }
             const dX = dest.x - ePos.x, dZ = dest.z - ePos.z; const len = Math.sqrt(dX*dX + dZ*dZ);
             if (len > 0.1) {
-                const sp = e.state === 'chase' ? e.speed * 1.38 : e.speed;
+                const sp = e.state === 'chase' ? e.speed * 1.3 : e.speed;
                 const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
                 const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
                 ePos.x = safeE.x; ePos.z = safeE.z; 
-                
-                const targetRot = Math.atan2(dX, dZ);
-                const currentRot = e.mesh.rotation.y;
-                let diff = targetRot - currentRot;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                e.mesh.rotation.y += diff * 0.08;
+                e.mesh.rotation.y = Math.atan2(dX, dZ);
             }
         }
 
@@ -659,43 +634,35 @@
             try {
                 if (audioCtx) return;
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                mainGain = audioCtx.createGain(); mainGain.gain.setValueAtTime(0.02, audioCtx.currentTime); 
+                mainGain = audioCtx.createGain(); mainGain.gain.setValueAtTime(0.01, audioCtx.currentTime); 
                 buzzOsc = audioCtx.createOscillator(); buzzOsc.type = 'sawtooth'; buzzOsc.frequency.setValueAtTime(60, audioCtx.currentTime); 
-                buzzFilter = audioCtx.createBiquadFilter(); buzzFilter.type = 'lowpass'; buzzFilter.frequency.setValueAtTime(140, audioCtx.currentTime);
+                buzzFilter = audioCtx.createBiquadFilter(); buzzFilter.type = 'lowpass'; buzzFilter.frequency.setValueAtTime(120, audioCtx.currentTime);
                 buzzOsc.connect(buzzFilter); buzzFilter.connect(mainGain); mainGain.connect(audioCtx.destination); buzzOsc.start();
             } catch(e){}
         }
 
         function playFootstepSound(volume) {
             if (!audioCtx || isPaused || isGameOver) return;
-            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(70, audioCtx.currentTime); 
-            gain.gain.setValueAtTime(volume * 0.16, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.13);
+            try {
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(70, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(volume * 0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.11);
+            } catch(e){}
         }
 
         function playHeartbeatSound(volume, isDouble) {
             if (!audioCtx || isPaused || isGameOver) return;
-            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-            osc.type = 'sine'; osc.frequency.setValueAtTime(50, audioCtx.currentTime); 
-            gain.gain.setValueAtTime(volume * 0.85, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.14);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-
-            if (isDouble) {
-                setTimeout(() => {
-                    if (isPaused || isGameOver) return;
-                    let osc2 = audioCtx.createOscillator(); let gain2 = audioCtx.createGain();
-                    osc2.type = 'sine'; osc2.frequency.setValueAtTime(45, audioCtx.currentTime);
-                    gain2.gain.setValueAtTime(volume * 0.45, audioCtx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-                    osc2.connect(gain2); gain2.connect(audioCtx.destination);
-                    osc2.start(); osc2.stop(audioCtx.currentTime + 0.13);
-                }, 130);
-            }
+            try {
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(50, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(volume * 0.7, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.13);
+            } catch(e){}
         }
 
         function backToMainMenu() {
@@ -712,7 +679,7 @@
             document.getElementById('start-screen').style.display = 'flex';
             document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
             document.getElementById('glitch-overlay').style.opacity = 0;
-            scene.fog.density = 0.042; ambientLight.intensity = 0.35;
+            scene.fog.density = 0.05; ambientLight.intensity = 0.7;
         }
 
         function rollback30SecondsSafe() {
@@ -731,13 +698,11 @@
 
         function triggerBlackoutPhase() {
             const glitchOverlay = document.getElementById('glitch-overlay');
-            glitchOverlay.style.background = 'rgba(3, 1, 1, 0.94)'; glitchOverlay.style.opacity = 1;
-            scene.fog.density = 0.22; ambientLight.intensity = 0.005;
-
+            glitchOverlay.style.background = 'rgba(3, 1, 1, 0.95)'; glitchOverlay.style.opacity = 1;
+            scene.fog.density = 0.25; ambientLight.intensity = 0.05;
             if (buzzOsc) { try { buzzOsc.frequency.setValueAtTime(0, audioCtx.currentTime); } catch(e){} }
-            
             entities.forEach(e => {
-                e.speed = e.baseSpeed * 1.8; 
+                e.speed = e.baseSpeed * 1.5; 
                 e.eyes.forEach(eye => eye.material.color.setHex(0xff0000));
             });
         }
@@ -745,11 +710,10 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // ⚠️ 메인 대기실 카메라 연산 수정: 게임 시작 전에도 미로가 노란 배경 속에 정상 렌더링되도록 수정
+            // ✨ 메인 대기 로비 카메라 위치 절대 고정 (안 보이는 현상 완벽 방지)
             if (!gameActive) {
-                const timer = Date.now() * 0.0004;
-                camera.position.set(Math.sin(timer) * 45, 22, Math.cos(timer) * 45);
-                camera.lookAt(0, 2, 0);
+                camera.position.set(0, 15, 20);
+                camera.lookAt(0, 0, 0);
                 renderer.render(scene, camera);
                 return;
             }
@@ -765,16 +729,15 @@
                 isSpeedBoosted = true; triggerBlackoutPhase();
             }
 
-            smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.22;
-            smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.22;
+            // 카메라 선형 보간 안정화
+            smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.3;
+            smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.3;
+            
             const viewDir = new THREE.Vector3(
                 Math.sin(smoothCamAngleX) * Math.cos(smoothCamAngleY), 
                 Math.sin(smoothCamAngleY), 
                 -Math.cos(smoothCamAngleX) * Math.cos(smoothCamAngleY)
             );
-
-            let finalFlashlightIntensity = actualRecordTime >= blackoutTriggerTime ? 0.4 : 2.2;
-            flashlight.intensity = isFlashlightOn ? finalFlashlightIntensity : 0;
 
             let moveX = 0, moveZ = 0;
             if (platform === 'pc') {
@@ -782,20 +745,20 @@
                 isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted);
             } else {
                 if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = joystickInput.y; }
-                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.76 && !isExhausted);
+                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.75 && !isExhausted);
             }
 
             if (isSprinting) { 
-                stamina -= 0.35; if (stamina <= 0) { stamina = 0; isExhausted = true; } 
+                stamina -= 0.4; if (stamina <= 0) { stamina = 0; isExhausted = true; } 
             } else { 
-                stamina += isMoving ? 0.35 : 1.45; if (stamina >= 100) { stamina = 100; isExhausted = false; } 
+                stamina += isMoving ? 0.3 : 1.2; if (stamina >= 100) { stamina = 100; isExhausted = false; } 
             }
 
             const sBar = document.getElementById('stamina-bar');
             if(sBar) { sBar.style.width = `${stamina}%`; sBar.style.background = isExhausted ? '#d62828' : '#bfae6f'; }
 
-            const runtime = Date.now() * 0.0045;
-            let bobX = 0, bobY = 0, runShake = 0;
+            const runtime = Date.now() * 0.005;
+            let bobX = 0, bobY = 0;
             
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
             const sinX = Math.sin(smoothCamAngleX), cosX = Math.cos(smoothCamAngleX);
@@ -805,38 +768,27 @@
             if (isMoving) {
                 const oldP = { x: player.position.x, z: player.position.z };
                 const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
-                const safeP = checkGridCollision(oldP, tentativeP, 0.58);
+                const safeP = checkGridCollision(oldP, tentativeP, 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 if (viewMode === '3rd') targetRotationY = smoothCamAngleX + Math.atan2(-moveX, -moveZ);
             }
 
             playerVelocityY += gravity; player.position.y += playerVelocityY;
-            if (player.position.y <= 0) { 
-                player.position.y = 0; 
-                if(playerVelocityY < -0.05) { 
-                    landingImpactImpact = Math.min(0.22, Math.abs(playerVelocityY) * 1.2);
-                }
-                playerVelocityY = 0; isGrounded = true; 
-            }
-
-            landingImpactImpact *= 0.88;
+            if (player.position.y <= 0) { player.position.y = 0; playerVelocityY = 0; isGrounded = true; }
 
             if (isMoving && isGrounded) {
-                let waveFreq = isSprinting ? 2.4 : 1.5;
-                let ampMultiplier = isSprinting ? 1.8 : 1.0;
-                bobX = Math.sin(runtime * waveFreq) * 0.035 * ampMultiplier;
-                bobY = Math.cos(runtime * waveFreq * 2) * 0.028 * ampMultiplier;
+                let waveFreq = isSprinting ? 2.2 : 1.4;
+                bobX = Math.sin(runtime * waveFreq) * 0.03;
+                bobY = Math.cos(runtime * waveFreq * 2) * 0.02;
                 
-                if(isSprinting) runShake = (Math.random() - 0.5) * 0.008;
-
-                const swing = Math.sin(runtime * waveFreq * 3.5) * 0.45;
+                const swing = Math.sin(runtime * waveFreq * 3) * 0.4;
                 leftArm3rd.rotation.x = swing; rightArm3rd.rotation.x = -swing;
-                leftLeg.rotation.x = -swing * 1.1; rightLeg.rotation.x = swing * 1.1;
+                leftLeg.rotation.x = -swing; rightLeg.rotation.x = swing;
 
-                let footstepInterval = isSprinting ? 220 : 370;
+                let footstepInterval = isSprinting ? 240 : 390;
                 let now = Date.now();
                 if(now - lastFootstepTime > footstepInterval) {
-                    playFootstepSound(isSprinting ? 0.9 : 0.5); lastFootstepTime = now;
+                    playFootstepSound(isSprinting ? 0.8 : 0.4); lastFootstepTime = now;
                 }
             } else if (!isMoving) {
                 leftArm3rd.rotation.x = 0; rightArm3rd.rotation.x = 0;
@@ -844,7 +796,7 @@
             }
 
             if (viewMode === '3rd') {
-                player.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY), 0.16);
+                player.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY), 0.2);
             } else {
                 player.rotation.y = smoothCamAngleX;
             }
@@ -857,63 +809,45 @@
 
                 const wave = Math.sin(Date.now() * 0.008 + e.animOffset);
                 e.spine.forEach((node, idx) => {
-                    node.position.x = Math.sin(wave + idx * 0.8) * 0.06 * (idx === 0 ? 0.3 : idx * 0.5);
-                    node.position.z = Math.cos(wave + idx * 0.8) * 0.04 * (idx === 0 ? 0.3 : idx * 0.5);
+                    node.position.x = Math.sin(wave + idx * 0.8) * 0.05;
                 });
-
                 e.legs.forEach((leg, idx) => {
-                    let legSpeed = e.state === 'chase' ? 0.025 : 0.015;
-                    leg.rotation.x = Math.sin(Date.now() * legSpeed + idx * 1.5) * 0.55;
-                    leg.position.y = 0.9 + Math.max(0, Math.cos(Date.now() * legSpeed + idx * 1.5) * 0.12);
+                    leg.rotation.x = Math.sin(Date.now() * 0.02 + idx * 1.5) * 0.4;
                 });
             });
 
             const heartUI = document.getElementById('heartbeat-ui');
-            if (closestDist < 16) {
-                let proximityFactor = (16 - closestDist) / 16; 
-                let heartbeatInterval = 850 - (proximityFactor * 580); 
+            if (closestDist < 14) {
+                let proximityFactor = (14 - closestDist) / 14; 
+                let heartbeatInterval = 800 - (proximityFactor * 550); 
                 let now = Date.now();
                 if (now - lastHeartbeatSoundTime > heartbeatInterval) {
-                    playHeartbeatSound(0.35 + (proximityFactor * 0.65), true); lastHeartbeatSoundTime = now;
-                    heartUI.style.transform = `translateX(-50%) scale(${1.25 + proximityFactor * 0.65})`;
-                    setTimeout(() => { heartUI.style.transform = `translateX(-50%) scale(${0.9 + proximityFactor * 0.3})`; }, 130);
-                }
-                const glitchOverlay = document.getElementById('glitch-overlay');
-                if (actualRecordTime < blackoutTriggerTime) {
-                    glitchOverlay.style.background = `rgba(110, 12, 12, ${proximityFactor * 0.5})`;
-                    glitchOverlay.style.opacity = (Math.sin(Date.now() * 0.1) * 0.12) + proximityFactor;
+                    playHeartbeatSound(0.4 + (proximityFactor * 0.5), true); lastHeartbeatSoundTime = now;
+                    heartUI.style.transform = `translateX(-50%) scale(${1.2 + proximityFactor * 0.5})`;
+                    setTimeout(() => { heartUI.style.transform = `translateX(-50%) scale(${0.9 + proximityFactor * 0.2})`; }, 120);
                 }
             } else {
                 heartUI.style.transform = 'translateX(-50%) scale(0)';
-                if (actualRecordTime < blackoutTriggerTime) document.getElementById('glitch-overlay').style.opacity = 0;
             }
 
-            if (closestDist < 1.25) {
+            if (closestDist < 1.2) {
                 isGameOver = true; document.getElementById('gameover-screen').style.display = 'flex';
                 if(platform === 'pc') document.exitPointerLock(); return;
             }
 
+            // 시점 연산 안정화 및 렌더링 피드백 피킹 차단
             if (viewMode === '3rd') {
-                const r = 5.4;
+                const r = 5.0;
                 const tX = player.position.x + Math.sin(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
-                const tY = player.position.y + 1.8 + Math.sin(smoothCamAngleY)*r + 1.1 - landingImpactImpact;
+                const tY = player.position.y + 2.0 + Math.sin(smoothCamAngleY)*r;
                 const tZ = player.position.z + Math.cos(smoothCamAngleX)*Math.cos(smoothCamAngleY)*r;
-                camera.position.x += (tX - camera.position.x) * 0.16;
-                camera.position.y += (tY - camera.position.y) * 0.16;
-                camera.position.z += (tZ - camera.position.z) * 0.16;
-                camera.lookAt(player.position.x, player.position.y + 1.25, player.position.z);
+                camera.position.set(tX, tY, tZ);
+                camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
             } else {
-                camera.position.x = player.position.x + bobX; 
-                camera.position.y = player.position.y + 1.66 + bobY - landingImpactImpact; 
-                camera.position.z = player.position.z;
-
+                camera.position.set(player.position.x + bobX, player.position.y + 1.6 + bobY, player.position.z);
                 camera.lookAt(new THREE.Vector3().copy(camera.position).add(viewDir));
-
                 firstPersonRig.position.copy(camera.position);
-                firstPersonRig.rotation.set(camera.rotation.x + runShake, camera.rotation.y, camera.rotation.z);
-                
-                leftArm.position.x = -0.22 + bobX * 0.4; rightArm.position.x = 0.22 + bobX * 0.4;
-                flashlightMesh.position.x = 0.22 + bobX * 0.4; flashlight.position.x = 0.22 + bobX * 0.4;
+                firstPersonRig.rotation.copy(camera.rotation);
             }
 
             renderer.render(scene, camera);

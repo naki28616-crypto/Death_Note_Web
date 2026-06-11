@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Escape</title>
+    <title>The Backrooms - Fixed Escape</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -170,8 +170,8 @@
 
     <div id="start-screen">
         <h2 class="title-main">THE BACKROOMS</h2>
-        <h1 class="title-sub">BACKROOM</h1>
-        <div class="title-level">LEVEL 0 - ESCAPE</div>
+        <h1 class="title-sub">EXPLORATION</h1>
+        <div class="title-level">LEVEL 0 - HORROR ESCAPE</div>
         
         <div class="platform-select-box">
             <button id="pc-select-btn" class="platform-choice-btn" onclick="setPlatformType('pc')">💻 PC CONTROL</button>
@@ -300,7 +300,6 @@
         const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); leftArm.rotateX(Math.PI / 2.3); leftArm.position.set(-0.25, -0.25, -0.3); fpsRig.add(leftArm);
         const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); rightArm.rotateX(Math.PI / 2.3); rightArm.position.set(0.25, -0.25, -0.3); fpsRig.add(rightArm);
 
-        /* ⚡ [최적화 & 비주얼 고도화] 절차적 고해상도 벽면 노이즈 텍스처 */
         function generateHighQualityWallTextures() {
             const size = 256; 
             const canvas = document.createElement('canvas'); 
@@ -330,82 +329,80 @@
             return tex;
         }
 
-        /* 🆕 [추가] 눅눅한 백룸 특유의 갈색조 카펫 바닥 텍스처 생성기 */
+        /* 🎨 [비주얼 강화] 카펫 질감 및 어두운 얼룩 대비 대폭 상승 */
         function generateFloorTexture() {
             const size = 512;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            // 기본 카펫 베이스 색상 (눅눅한 황갈색)
-            ctx.fillStyle = '#837543'; 
+            ctx.fillStyle = '#6e5f31'; // 확연한 어두운 황갈색 카펫 베이스
             ctx.fillRect(0, 0, size, size);
             
-            // 고밀도 직물 노이즈 레이어 생성
             const imgData = ctx.getImageData(0, 0, size, size);
             const data = imgData.data;
             for(let i = 0; i < data.length; i += 4) {
-                const carpetGrain = (Math.random() - 0.5) * 24;
+                const carpetGrain = (Math.random() - 0.5) * 45; // 노이즈 강도 증가 (거친 카펫 질감)
                 data[i] = Math.max(0, Math.min(255, data[i] + carpetGrain));
                 data[i+1] = Math.max(0, Math.min(255, data[i+1] + carpetGrain));
-                data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.8));
+                data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.7));
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 특유의 눅눅한 얼룩 및 이염 효과 드로잉
-            for (let i = 0; i < 8; i++) {
-                let x = Math.random() * size, y = Math.random() * size, r = 40 + Math.random() * 60;
+            // 눅눅하고 더러운 오염 자국 시각화 대폭 강화
+            for (let i = 0; i < 12; i++) {
+                let x = Math.random() * size, y = Math.random() * size, r = 50 + Math.random() * 80;
                 let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(56, 48, 22, 0.45)');
-                grad.addColorStop(1, 'rgba(56, 48, 22, 0)');
+                grad.addColorStop(0, 'rgba(38, 31, 12, 0.7)');
+                grad.addColorStop(1, 'rgba(38, 31, 12, 0)');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
             }
             
             const tex = new THREE.CanvasTexture(canvas);
             tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(16, 16); // 맵 크기에 맞게 조밀하게 반복 배치
+            tex.repeat.set(12, 12); 
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
             tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
             return tex;
         }
 
-        /* 🆕 [추가] 리얼한 핀홀 구멍이 가득한 석고보드 천장 타일 텍스처 생성기 */
+        /* 🎨 [비주얼 강화 + 버그 픽스] 석고 천장 타일 구멍 및 조립 라인 명확화 */
         function generateCeilTexture() {
             const size = 256;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            // 기본 천장 색상
-            ctx.fillStyle = '#d3c79b'; 
+            ctx.fillStyle = '#ccc193'; 
             ctx.fillRect(0, 0, size, size);
             
-            // 석고보드 질감 노이즈
             const imgData = ctx.getImageData(0, 0, size, size);
             const data = imgData.data;
             for(let i = 0; i < data.length; i += 4) {
-                const noise = (Math.random() - 0.5) * 8;
+                const noise = (Math.random() - 0.5) * 12;
                 data[i] = Math.max(0, Math.min(255, data[i] + noise));
                 data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
                 data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 텍스천 특유의 검고 작은 핀홀(미세 구멍 및 벌레무늬) 각인
-            ctx.fillStyle = 'rgba(70, 65, 48, 0.55)';
-            for (let i = 0; i < 450; i++) {
+            // 사무실 천장 특유의 미세한 벌레무늬 구멍들 선명하게 각인
+            ctx.fillStyle = 'rgba(54, 49, 33, 0.75)';
+            for (let i = 0; i < 600; i++) {
                 let rx = Math.random() * size, ry = Math.random() * size;
-                let rw = 1 + Math.random() * 2, rh = 1 + Math.random() * 1.5;
+                let rw = 1.5 + Math.random() * 2, rh = 1.5 + Math.random() * 2;
                 ctx.fillRect(rx, ry, rw, rh);
             }
             
-            // 사무실 조립식 천장 격자 무늬 라인 추가
-            ctx.strokeStyle = 'rgba(120, 112, 85, 0.5)'; ctx.lineWidth = 1.5;
+            // 격자 테두리선 굵게 드로잉
+            ctx.strokeStyle = 'rgba(94, 87, 62, 0.75)'; ctx.lineWidth = 3;
             ctx.strokeRect(0, 0, size, size);
             
             const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(22, 22);
+            // ⚠️ [중요 버그 픽스]: 반복 적용을 위해 반드시 필요한 랩핑 설정 추가
+            tex.wrapS = THREE.RepeatWrapping; 
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(18, 18);
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
             tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
             return tex;
@@ -620,7 +617,6 @@
             else { panel.classList.add('collapsed'); toggleBtn.textContent = "◢"; }
         }
 
-        // 전체 화면 설정 기능 구현
         function toggleFullScreen() {
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
                 if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
@@ -702,6 +698,7 @@
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
+        /* 🛠️ [버그 픽스] 문 열기 판정 조건 완화 */
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true;
@@ -710,6 +707,7 @@
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
 
+        // 모바일 터치 이벤트 오작동 전면 수정
         document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
             e.preventDefault(); 
             e.stopPropagation(); 
@@ -723,7 +721,7 @@
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
             if (k === 'e' && gameActive && !isPaused) {
-                if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) {
+                if(doorGroup && player.position.distanceTo(doorGroup.position) < 3.0) {
                     openTheEscapeDoor();
                 }
             }
@@ -779,20 +777,10 @@
             }
         });
 
-        window.addEventListener('mousemove', (e) => {
-            if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
-            if (document.pointerLockElement === document.body) {
-                const multi = 0.0018 * globalSensitivity; 
-                cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi;
-                cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
-            }
-        });
-
-        /* ⚡ 공간 분할기반 실시간 주변 9칸 타일 충돌 판정 */
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if(isDoorOpened && doorGroup) {
                 let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
-                if(distToDoorPivot < 2.8) {
+                if(distToDoorPivot < 3.0) {
                     return { x: tentativePos.x, z: tentativePos.z };
                 }
             }
@@ -961,7 +949,6 @@
                 if(keyHintOsc) { keyHintOsc.stop(); keyHintOsc = null; }
                 audioCtx = null;
             } catch(e){}
-            if (document.pointerLockElement === document.body) document.exitPointerLock();
         }
 
         function rollback30SecondsSafe() {
@@ -971,7 +958,6 @@
             playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
             entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; });
             document.getElementById('gameover-screen').style.display = 'none';
-            if(platform === 'pc') document.body.requestPointerLock();
         }
 
         function triggerBlackoutPhase() {
@@ -984,7 +970,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            if (!gameActive) { camera.position.set(0, 15, 20); camera.lookAt(0, 0, 0); renderer.render(scene, camera); return; }
+            if (!gameActive) return;
             if (isGameOver || isPaused) return;
 
             actualRecordTime += 1 / 60; 
@@ -1017,7 +1003,7 @@
             if(doorGroup) {
                 let distToDoorFrame = player.position.distanceTo(doorGroup.position);
                 
-                if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
+                if(hasKey && distToDoorFrame < 3.0 && !isDoorOpened) {
                     if(platform === 'pc') {
                         document.getElementById('interact-prompt').style.display = 'block';
                     } else if(platform === 'mobile') {
@@ -1034,11 +1020,10 @@
 
                 if(isDoorOpened) {
                     let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
-                    if(distanceToEscapeSensor < 1.6) {
+                    if(distanceToEscapeSensor < 1.8) {
                         gameActive = false; playHorrorScream(false);
                         document.getElementById('clear-time-record').textContent = `⏱️ 탈출 소요 시간: ${calcMin}분 ${calcSec}초`;
                         document.getElementById('clear-screen').style.display = 'flex';
-                        if(platform === 'pc') document.exitPointerLock(); 
                         return;
                     }
                 } else if(!hasKey && distToDoorFrame < 1.4) {
@@ -1132,7 +1117,7 @@
             if (closestDist < 1.2) {
                 isGameOver = true; playHorrorScream(false);
                 document.getElementById('gameover-screen').style.display = 'flex';
-                if(platform === 'pc') document.exitPointerLock(); return;
+                return;
             }
 
             camera.position.set(player.position.x + bobX, player.position.y + 1.5 + bobY, player.position.z);

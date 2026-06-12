@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - Escape Fixed</title>
+    <title>《The Backrooms》</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -163,8 +163,8 @@
     <div id="glitch-overlay"></div>
     <div id="crosshair"></div>
     <div id="cctv-ui">🔴 REC <span id="cctv-time">00:00</span></div>
-    <div id="quest-ui">🔑 QUEST: 열쇠를 찾아 탈출하십시오.</div>
-    <div id="interact-prompt">🚪 [E] 문 열기</div>
+    <div id="quest-ui">🔑 QUEST: Find the key to escape.</div>
+    <div id="interact-prompt">🚪 [E] Open Door</div>
     <div id="game-toast"></div>
     <div id="heartbeat-ui">❤️</div>
 
@@ -193,17 +193,17 @@
             <button class="btn" style="background:#1e4666; color:#fff; border-color:#2b6f8c;" onclick="toggleFullScreen()">📺 FULL SCREEN</button>
             
             <div class="setting-row">
-               <div><span>시점 감도</span><span id="txt-sens">1.0</span></div>
+               <div><span>Look Sensitivity</span><span id="txt-sens">1.0</span></div>
                <input type="range" id="cfg-sensitivity" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSensitivity(this.value)">
             </div>
             
             <div class="setting-row">
-               <div><span>배경음 볼륨 (BGM)</span><span id="txt-vol-bgm">50%</span></div>
+               <div><span>BGM Volume</span><span id="txt-vol-bgm">50%</span></div>
                <input type="range" id="cfg-volume-bgm" min="0" max="100" step="5" value="50" oninput="updateBgmVolume(this.value)">
             </div>
 
             <div class="setting-row">
-               <div><span>효과음 볼륨 (SFX)</span><span id="txt-vol-sfx">70%</span></div>
+               <div><span>SFX Volume</span><span id="txt-vol-sfx">70%</span></div>
                <input type="range" id="cfg-volume-sfx" min="0" max="100" step="5" value="70" oninput="updateSfxVolume(this.value)">
             </div>
         </div>
@@ -227,7 +227,7 @@
 
     <div id="gameover-screen">
         <h1 style="font-size: 32px; margin-bottom: 5px; letter-spacing: 3px;">CONNECTION LOST</h1>
-        <p style="color:#555; font-size:13px; margin-bottom:25px;">포식자가 생명 신호를 완전히 차단했습니다.</p>
+        <p style="color:#555; font-size:13px; margin-bottom:25px;">The entity has completely severed your life signal.</p>
         <div class="go-btn-box">
             <button class="go-btn" onclick="backToMainMenu()">↩️ MAIN MENU</button>
             <button class="go-btn" style="background:#0e2411; color:#77ff77; border-color:#1d5c28;" onclick="rollback30SecondsSafe()">🛡️ RESPAWN</button>
@@ -237,7 +237,7 @@
     <div id="clear-screen">
         <h1 style="font-size: 36px; margin-bottom: 5px; letter-spacing: 5px; color:#ffdd66; text-shadow: 0 0 15px rgba(255,221,102,0.4)">NOCLIP SUCCESS</h1>
         <p id="clear-time-record" style="color:#ffdd66; font-size:18px; font-weight:bold; margin: 0 0 15px 0; letter-spacing:1px;"></p>
-        <p style="color:#aaa; font-size:14px; margin-bottom:30px;">무사히 백룸 Level 0을 탈출하여 현실로 노클립했습니다.</p>
+        <p style="color:#aaa; font-size:14px; margin-bottom:30px;">You successfully no-clipped out of Backrooms Level 0 into reality.</p>
         <button class="go-btn" style="background:#bfae6f; color:#111; border-color:#fff;" onclick="backToMainMenu()">↩️ MAIN MENU</button>
     </div>
 
@@ -534,7 +534,8 @@
             scene.add(doorGroup);
             doorGroup.updateMatrixWorld(true);
 
-            let sensorOffset = new THREE.Vector3(0, 1.0, -1.4); 
+            // [Clear Timing Fix] Sensor placed deeper (-2.2) to ensure the player walks inside before clearing
+            let sensorOffset = new THREE.Vector3(0, 1.0, -2.2); 
             sensorOffset.applyQuaternion(doorGroup.quaternion);
             globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
 
@@ -615,7 +616,7 @@
         function toggleFullScreen() {
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
                 if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-                showToast("📺 전체 화면 모드가 활성화되었습니다.");
+                showToast("📺 Full screen mode activated.");
             } else {
                 if (document.exitFullscreen) document.exitFullscreen();
             }
@@ -696,7 +697,7 @@
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true; 
-            showToast("🔓 문이 열렸습니다! 내부의 어두운 센서 구역으로 들어가세요!");
+            showToast("🔓 The door is open! Enter the dark sensor area inside!");
             document.getElementById('interact-prompt').style.display = 'none';
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
@@ -707,7 +708,7 @@
             if(gameActive && !isPaused && hasKey && !isDoorOpened) {
                 openTheEscapeDoor();
             }
-        }, { passive: false });
+        });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
@@ -733,7 +734,6 @@
         }
 
         window.addEventListener('touchstart', (e) => {
-            // [중요 수정] UI 터치 시 조작 로직 무시
             if (e.target.closest('#btn-mobile-interact') || 
                 e.target.closest('#top-controls') || 
                 e.target.closest('#mobile-controls-right') || 
@@ -786,7 +786,7 @@
         });
 
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
-            // [중요 수정] 수치 오류 방지
+            // [Important] Returns the previous position if NaN occurs, preventing screen collapse
             if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
 
             if(isDoorOpened && doorGroup) {
@@ -854,7 +854,7 @@
             try {
                 if (audioCtx) return;
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                mainAmbientGain = audioCtx.createGain(); syncBgmVolume();
+                mainAmbientGain = audioCtx.createGain(); syncBgmNodeVolume();
                 let lowPass = audioCtx.createBiquadFilter(); lowPass.type = 'lowpass'; lowPass.frequency.setValueAtTime(85, audioCtx.currentTime);
                 ambientOsc1 = audioCtx.createOscillator(); ambientOsc1.type = 'sine'; ambientOsc1.frequency.setValueAtTime(55, audioCtx.currentTime);
                 ambientOsc2 = audioCtx.createOscillator(); ambientOsc2.type = 'triangle'; ambientOsc2.frequency.setValueAtTime(57.5, audioCtx.currentTime);
@@ -869,7 +869,7 @@
             } catch(e){}
         }
 
-        function syncBgmVolume() { if(mainAmbientGain && audioCtx) mainAmbientGain.gain.setValueAtTime(volumeBgmRatio * 0.35, audioCtx.currentTime); }
+        function syncBgmNodeVolume() { if(mainAmbientGain && audioCtx) mainAmbientGain.gain.setValueAtTime(volumeBgmRatio * 0.35, audioCtx.currentTime); }
 
         function processKeyAudioHint(playerPos) {
             if(!keyHintGain || !keyMesh || hasKey || !audioCtx) return;
@@ -993,17 +993,17 @@
                 hasKey = true; scene.remove(keyMesh);
                 if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
-                showToast("🔑 황금 열쇠를 획득했습니다!<br><span style='color:#00ff66;'>탈출구 레이더가 연동됩니다.</span>");
+                showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Exit radar linked.</span>");
             }
 
             if(!hasKey) {
-                document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>어딘가 숨겨진 열쇠를 찾으십시오.";
+                document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.";
             } else if(doorGroup) {
                 let currentDoorDist = Math.floor(player.position.distanceTo(doorGroup.position) * 1.5);
                 if(!isDoorOpened) {
-                    document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>문을 찾아 탈출하십시오.<br><span style='color:#00ff66; font-size:15px;'>📍 남은 거리: ${currentDoorDist}m</span>`;
+                    document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Find the door to escape.<br><span style='color:#00ff66; font-size:15px;'>📍 Distance remaining: ${currentDoorDist}m</span>`;
                 } else {
-                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>문이 열렸습니다! 내부 센서로 진입하세요!</span>`;
+                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>The door is open! Step into the inner sensor!</span>`;
                 }
             }
 
@@ -1021,23 +1021,25 @@
                     document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
 
+                // [Clear Timing Fix] Start clear check only after the door is 'fully' opened (90 degrees)!
                 if(isDoorOpened && doorPivot) {
                     const targetRotation = -Math.PI / 2;
                     if(doorPivot.rotation.y > targetRotation) {
-                        doorPivot.rotation.y -= 0.05;
-                    }
-                }
-
-                if(isDoorOpened) {
-                    let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
-                    if(distanceToEscapeSensor < 1.6) {
-                        gameActive = false; playHorrorScream(false);
-                        document.getElementById('clear-time-record').textContent = `⏱️ 탈출 소요 시간: ${calcMin}분 ${calcSec}초`;
-                        document.getElementById('clear-screen').style.display = 'flex';
-                        return;
+                        doorPivot.rotation.y -= 0.06; // Rotate smoothly
+                        doorGroup.updateMatrixWorld(true);
+                    } else {
+                        // Player must walk deep into the room to succeed
+                        let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
+                        if(distanceToEscapeSensor < 1.5) { 
+                            gameActive = false; playHorrorScream(false);
+                            document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
+                            document.getElementById('clear-screen').style.display = 'flex';
+                            if(platform === 'pc') document.exitPointerLock(); 
+                            return;
+                        }
                     }
                 } else if(!hasKey && distToDoorFrame < 1.4) {
-                    showToast("🔒 문이 완고하게 잠겨있습니다.<br>황금 열쇠를 먼곳에서 찾아오십시오.");
+                    showToast("🔒 The door is firmly locked.<br>Find the golden key to open it.");
                 }
             }
 
@@ -1050,7 +1052,7 @@
             let moveX = 0, moveZ = 0;
             if (platform === 'pc') {
                 if (keys.w) moveZ += 1; if (keys.s) moveZ -= 1; if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
-                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted);
+                isMoving = (moveX !== 0 || moveZ !== 0); isSSprint = (isMoving && keys.shift && !isExhausted);
             } else {
                 if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = -joystickInput.y; }
                 isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.75 && !isExhausted);

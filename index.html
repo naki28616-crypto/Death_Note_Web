@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>{The Backrooms - Escape}</title>
+    <title>The Backrooms - Escape Fixed</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -163,7 +163,7 @@
     <div id="glitch-overlay"></div>
     <div id="crosshair"></div>
     <div id="cctv-ui">🔴 REC <span id="cctv-time">00:00</span></div>
-    <div id="quest-ui">🔑 QUEST: Find the key and leave.</div>
+    <div id="quest-ui">🔑 QUEST: 열쇠를 찾아 탈출하십시오.</div>
     <div id="interact-prompt">🚪 [E] 문 열기</div>
     <div id="game-toast"></div>
     <div id="heartbeat-ui">❤️</div>
@@ -182,7 +182,7 @@
             <div class="circle-ring ring-1"></div>
             <div class="circle-ring ring-2"></div>
             <div class="circle-ring ring-3"></div>
-            <span class="start-label">Start</span>
+            <span class="start-label">ENTER</span>
         </div>
     </div>
 
@@ -693,7 +693,6 @@
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
-        /* 🚪 [애니메이션 전면 버그 픽스] 문 열기 트리거 및 판정 확실화 */
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true; 
@@ -702,14 +701,13 @@
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
 
-        // 모바일 터치 상호작용 확실하게 수정
         document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
             e.preventDefault(); 
             e.stopPropagation(); 
             if(gameActive && !isPaused && hasKey && !isDoorOpened) {
                 openTheEscapeDoor();
             }
-        });
+        }, { passive: false });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
@@ -735,10 +733,16 @@
         }
 
         window.addEventListener('touchstart', (e) => {
+            // [중요 수정] UI 터치 시 조작 로직 무시
+            if (e.target.closest('#btn-mobile-interact') || 
+                e.target.closest('#top-controls') || 
+                e.target.closest('#mobile-controls-right') || 
+                e.target.closest('#pause-screen')) return;
+
             if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
+            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
-                if (t.target.closest('#top-controls') || t.target.closest('#mobile-controls-right') || t.target.closest('#pause-screen') || t.target.closest('#btn-mobile-interact')) continue;
                 if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                     joystickTouchId = t.identifier; joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`;
                     joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY);
@@ -746,7 +750,7 @@
                     rotationTouchId = t.identifier; prevX = t.clientX; prevY = t.clientY;
                 }
             }
-        });
+        }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
             if(platform !== 'mobile') return;
@@ -782,6 +786,9 @@
         });
 
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
+            // [중요 수정] 수치 오류 방지
+            if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
+
             if(isDoorOpened && doorGroup) {
                 let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
                 if(distToDoorPivot < 2.8) {
@@ -847,7 +854,7 @@
             try {
                 if (audioCtx) return;
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                mainAmbientGain = audioCtx.createGain(); syncBgmNodeVolume();
+                mainAmbientGain = audioCtx.createGain(); syncBgmVolume();
                 let lowPass = audioCtx.createBiquadFilter(); lowPass.type = 'lowpass'; lowPass.frequency.setValueAtTime(85, audioCtx.currentTime);
                 ambientOsc1 = audioCtx.createOscillator(); ambientOsc1.type = 'sine'; ambientOsc1.frequency.setValueAtTime(55, audioCtx.currentTime);
                 ambientOsc2 = audioCtx.createOscillator(); ambientOsc2.type = 'triangle'; ambientOsc2.frequency.setValueAtTime(57.5, audioCtx.currentTime);
@@ -862,7 +869,7 @@
             } catch(e){}
         }
 
-        function syncBgmNodeVolume() { if(mainAmbientGain && audioCtx) mainAmbientGain.gain.setValueAtTime(volumeBgmRatio * 0.35, audioCtx.currentTime); }
+        function syncBgmVolume() { if(mainAmbientGain && audioCtx) mainAmbientGain.gain.setValueAtTime(volumeBgmRatio * 0.35, audioCtx.currentTime); }
 
         function processKeyAudioHint(playerPos) {
             if(!keyHintGain || !keyMesh || hasKey || !audioCtx) return;
@@ -1014,11 +1021,10 @@
                     document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
 
-                /* 🚪 [애니메이션 안정화 로직 수치 보정] */
                 if(isDoorOpened && doorPivot) {
-                    const targetRotation = -Math.PI / 2; // 확실히 90도 회전
+                    const targetRotation = -Math.PI / 2;
                     if(doorPivot.rotation.y > targetRotation) {
-                        doorPivot.rotation.y -= 0.05; // 프레임당 안정적으로 보간 회전
+                        doorPivot.rotation.y -= 0.05;
                     }
                 }
 

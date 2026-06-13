@@ -128,7 +128,7 @@ const UG_ROWS=12,UG_COLS=12,UG_UNIT=4,UG_WALL_H=4.5;
 const UG_FLOOR_Y=-30;
 const BK_YELLOW=0xbaa761;
 const PIT_CLEAR=4; // 빙고판 주변 벽 제거 반경(타일)
-const PIT_GRID=4;  // 빙고판 격자 수 (4×4)
+const PIT_GRID=5;  // 빙고판 격자 수 (5×5)
 
 // ═══════════════════════════════════════════════
 //  STATE
@@ -292,7 +292,7 @@ function buildSurface(){
   let wc=0;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(mapData[r][c]===1) wc++;
   iWalls=new THREE.InstancedMesh(sharedWallGeo,wallMat,wc);
-  iWalls.frustumCulled=true;
+  iWalls.frustumCulled=false;
   const dum=new THREE.Object3D(); let idx=0;
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
@@ -357,7 +357,8 @@ function buildBingoPit(cx,cz){
   if(pitGridGroup){scene.remove(pitGridGroup);}
 
   pitCX=cx; pitCZ=cz;
-  const pitW=UNIT*1.85, pitD=UNIT*1.85;
+  // 빙고판 크기: 평지 전체를 채우도록 (PIT_CLEAR*2 타일 크기)
+  const pitW=UNIT*(PIT_CLEAR*2-0.15), pitD=UNIT*(PIT_CLEAR*2-0.15);
   pitMinX=cx-pitW/2; pitMaxX=cx+pitW/2;
   pitMinZ=cz-pitD/2; pitMaxZ=cz+pitD/2;
   pitActive=true;
@@ -375,21 +376,22 @@ function buildBingoPit(cx,cz){
 
   // 빙고판 격자 (고정, 꽉 찬 형태)
   pitGridGroup=new THREE.Group();
-  const lineThick=0.22;
-  const hGeo=new THREE.BoxGeometry(pitW,0.12,lineThick);
-  const vGeo=new THREE.BoxGeometry(lineThick,0.12,pitD);
-  const spacing=pitW/(PIT_GRID-1);
+  const lineThick=0.32; // 두꺼운 줄 (밟기 쉽게)
+  const hGeo=new THREE.BoxGeometry(pitW+lineThick,0.13,lineThick);
+  const vGeo=new THREE.BoxGeometry(lineThick,0.13,pitD+lineThick);
+  const spacingH=pitD/(PIT_GRID-1);
+  const spacingV=pitW/(PIT_GRID-1);
 
-  // 가로선 PIT_GRID개
+  // 가로선 PIT_GRID개 (균등 간격)
   for(let i=0;i<PIT_GRID;i++){
     const m=new THREE.Mesh(hGeo,metalMat);
-    m.position.set(cx,0.01,cz-pitD/2+i*(pitD/(PIT_GRID-1)));
+    m.position.set(cx,0.01,cz-pitD/2+i*spacingH);
     pitGridGroup.add(m);
   }
-  // 세로선 PIT_GRID개
+  // 세로선 PIT_GRID개 (균등 간격)
   for(let i=0;i<PIT_GRID;i++){
     const m=new THREE.Mesh(vGeo,metalMat);
-    m.position.set(cx-pitW/2+i*spacing,0.01,cz);
+    m.position.set(cx-pitW/2+i*spacingV,0.01,cz);
     pitGridGroup.add(m);
   }
   scene.add(pitGridGroup);
@@ -521,7 +523,7 @@ function buildUnderground(){
   const ugWGeo=new THREE.BoxGeometry(UG_UNIT,UG_WALL_H,UG_UNIT);
   const ugWMat=new THREE.MeshStandardMaterial({color:0x100c08,roughness:0.98});
   const ugWalls=new THREE.InstancedMesh(ugWGeo,ugWMat,wc);
-  ugWalls.frustumCulled=true;
+  ugWalls.frustumCulled=false;
   const dum2=new THREE.Object3D(); let uidx=0;
   for(let r=0;r<UG_ROWS;r++){
     for(let c=0;c<UG_COLS;c++){
@@ -943,8 +945,8 @@ function enterUnderground(){
   buildUnderground();
   px=ugSpawn.x; py=UG_FLOOR_Y+0.05; pz=ugSpawn.z;
   velY=0; grounded=true;
-  scene.background.setHex(0x080302); scene.fog.color.setHex(0x080302); scene.fog.density=0.2; ambient.intensity=0.04;
-  flash.intensity=flashOn?2.4:0;
+  scene.background.setHex(0x1a0e06); scene.fog.color.setHex(0x1a0e06); scene.fog.density=0.14; ambient.intensity=0.28;
+  flash.intensity=flashOn?3.0:0;
   toast('⬇ 구덩이에 빠졌습니다!<br>🪜 사다리 아이템을 찾아 탈출하세요!');
 }
 
@@ -1142,13 +1144,13 @@ function animate(){
     const inPit=px>pitMinX&&px<pitMaxX&&pz>pitMinZ&&pz<pitMaxZ;
     if(inPit){
       // 격자선 위인지 확인
-      const pitW=pitMaxX-pitMinX, pitD=pitMaxZ-pitMinZ;
-      const lineThick=0.26;
+      const lineThick=0.40; // 낙사 판정 여유 (줄 두께보다 넉넉하게)
       let onLine=false;
+      const pitW2=pitMaxX-pitMinX, pitD2=pitMaxZ-pitMinZ;
       for(let i=0;i<PIT_GRID;i++){
-        const lz=pitMinZ+i*(pitD/(PIT_GRID-1));
+        const lz=pitMinZ+i*(pitD2/(PIT_GRID-1));
         if(Math.abs(pz-lz)<lineThick){onLine=true;break;}
-        const lx=pitMinX+i*(pitW/(PIT_GRID-1));
+        const lx=pitMinX+i*(pitW2/(PIT_GRID-1));
         if(Math.abs(px-lx)<lineThick){onLine=true;break;}
       }
       if(!onLine&&grounded){
@@ -1176,8 +1178,8 @@ function animate(){
     if(Math.abs(jInput.x)>0.05||Math.abs(jInput.y)>0.05){mx=jInput.x;mz=-jInput.y;}
     moving=(mx!==0||mz!==0); sprinting=(moving&&jRatio>0.75&&!tired);
   }
-  if(sprinting){stamina-=0.45;if(stamina<=0){stamina=0;tired=true;}}
-  else{stamina+=moving?0.25:1.2;if(stamina>=100){stamina=100;tired=false;}}
+  if(sprinting){stamina-=0.18;if(stamina<=0){stamina=0;tired=true;}} // 소모 느리게
+  else{stamina+=moving?0.6:2.5;if(stamina>=100){stamina=100;tired=false;}} // 회복 빠르게
   const sb=document.getElementById('sbar');
   if(sb){sb.style.width=stamina+'%';sb.style.background=tired?'#d62828':'#bfae6f';}
 
@@ -1352,3 +1354,4 @@ window.addEventListener('resize',()=>{
 });
 </script>
 </body>
+</html>

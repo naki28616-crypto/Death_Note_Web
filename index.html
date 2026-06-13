@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - True Escape (Pit & Ladder Edition)</title>
+    <title>The Backrooms - True Escape (Bingo Pit Edition)</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -227,7 +227,7 @@
 
     <div id="gameover-screen">
         <h1 style="font-size: 32px; margin-bottom: 5px; letter-spacing: 3px;">CONNECTION LOST</h1>
-        <p style="color:#555; font-size:13px; margin-bottom:25px;">The entity has completely severed your life signal.</p>
+        <p id="gameover-cause" style="color:#555; font-size:13px; margin-bottom:25px;">The entity has completely severed your life signal.</p>
         <div class="go-btn-box">
             <button class="go-btn" onclick="backToMainMenu()">↩️ MAIN MENU</button>
             <button class="go-btn" style="background:#0e2411; color:#77ff77; border-color:#1d5c28;" onclick="rollback30SecondsSafe()">🛡️ RESPAWN</button>
@@ -261,15 +261,10 @@
         const mapRows = 22, mapCols = 22, unitSize = 5, wallHeight = 5.5;
         let mapData = [], instancedWalls = null, lamps = [];
 
-        // --- [새로 추가된 기믹용 글로벌 변수] ---
-        let isStickingToWall = false;
-        let isLadderInstalled = false;
-        const pitCenter = new THREE.Vector3(0, 0, 0); // 맵 중앙을 구덩이 영역으로 지정
-        const pitRadius = 3.8;
-        const ladderPos = new THREE.Vector3(6, -6, 6); // 지하 바닥에 배치할 사다리 구멍 위치
-        const upperLandingPos = new THREE.Vector3(4, 0, 0); // 사다리 타고 올라올 위치
-        let lowerFloor = null, holeMesh = null, ladderMesh = null, pitZoneMesh = null;
-        // ------------------------------------
+        // --- 빙고 구덩이 변수 리스트 ---
+        let bingoPits = []; // 실시간 흔들림 계산을 위한 격자 발판 배열
+        let pitBounds = { minX:0, maxX:0, minZ:0, maxZ:0, active: false }; // 낙사 감지 존 범위
+        const pathThickness = 0.28; // 격자 다리 폭 (선이 지나치게 얇으면 밟기 힘드므로 보정)
 
         const backroomsYellow = 0xbaa761; 
         const scene = new THREE.Scene();
@@ -434,12 +429,12 @@
             }
             carve(1, 1);
             
-            // 맵 중앙 확보 (구덩이 설치용 방)
-            let centerR = Math.floor(mapRows / 2);
-            let centerC = Math.floor(mapCols / 2);
-            for(let r = centerR - 2; r <= centerR + 2; r++) {
-                for(let c = centerC - 2; c <= centerC + 2; c++) {
-                    if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) mapData[r][c] = 0;
+            for(let k=0; k < 3; k++) {
+                let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3, centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
+                for(let r = centerR - 2; r <= centerR + 2; r++) {
+                    for(let c = centerC - 2; c <= centerC + 2; c++) {
+                        if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) mapData[r][c] = 0;
+                    }
                 }
             }
             
@@ -450,13 +445,6 @@
         function buildMazeGraphics() {
             if(instancedWalls) scene.remove(instancedWalls);
             lamps.forEach(l => scene.remove(l)); lamps = [];
-            
-            // 기존 기믹 오브젝트 제거 리셋
-            if(lowerFloor) scene.remove(lowerFloor);
-            if(holeMesh) scene.remove(holeMesh);
-            if(ladderMesh) scene.remove(ladderMesh);
-            if(pitZoneMesh) scene.remove(pitZoneMesh);
-
             let wallCount = 0;
             for(let r=0; r<mapRows; r++) { for(let c=0; c<mapCols; c++) { if(mapData[r][c] === 1) wallCount++; } }
 
@@ -471,7 +459,7 @@
                     if(mapData[r][c] === 1) {
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
-                    } else if(Math.random() < 0.12) { 
+                    } else if(mapData[r][c] === 0 && Math.random() < 0.12) { 
                         const lampGroup = new THREE.Group();
                         const frameGeo = new THREE.BoxGeometry(2.4, 0.05, 1.2);
                         const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
@@ -479,74 +467,36 @@
                         
                         const panelGeo = new THREE.BoxGeometry(2.2, 0.06, 1.0);
                         const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffe0 }); 
-                        panel = new THREE.Mesh(panelGeo, panelMat);
+                        const panel = new THREE.Mesh(panelGeo, panelMat);
                         panel.position.y = -0.01; 
                         
-                        lampGroup.add(frame, panel);
+                        lampGroup.add(frame);
+                        lampGroup.add(panel);
                         lampGroup.position.set(x, wallHeight - 0.02, z);
+                        
                         if (Math.random() > 0.5) lampGroup.rotation.y = Math.PI / 2;
                         
                         scene.add(lampGroup); lamps.push(lampGroup);
+                        
                         const pl = new THREE.PointLight(0xfff5cc, 0.6, 11); 
                         pl.position.set(x, wallHeight - 0.3, z); scene.add(pl);
                     }
                 }
             }
             scene.add(instancedWalls);
+
+            // 일반 바닥 평면 생성 방식 대신 구덩이가 뚫릴 수 있도록 격자 평면 처리 진행 유연화 유도 가능하나,
+            // 간단하게 기본 바닥은 그대로 두고 구덩이 구역 타일 위치만 뚫어 렌더링하기 위해 바닥 매쉬 조각화 대신,
+            // 커다란 Plane 바닥을 생성한 뒤 그 위에 구덩이 메테리얼을 덮거나 뚫는 형태를 원칙으로 함.
+            // 여기서는 구덩이 감지 시 물리 추락을 시키므로, 시각적으로 구덩이를 표현할 어두운 박스를 아래에 매립함.
             const mW = mapCols*unitSize, mH = mapRows*unitSize;
             const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; scene.add(f);
             const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl);
-
-            // --- [신규 기믹: 지하 공간 및 사다리 구멍 생성] ---
-            const lfGeo = new THREE.PlaneGeometry(mW, mH);
-            const lfMat = new THREE.MeshStandardMaterial({ color: 0x161511, roughness: 0.95 });
-            lowerFloor = new THREE.Mesh(lfGeo, lfMat);
-            lowerFloor.rotation.x = -Math.PI / 2;
-            lowerFloor.position.y = -6; // 본래 바닥에서 6단위 아래층
-            scene.add(lowerFloor);
-
-            // 캐릭터 크기보다 큰 네모난 구멍 구현
-            const holeGeo = new THREE.BoxGeometry(2.2, 0.08, 2.2);
-            const holeMat = new THREE.MeshStandardMaterial({ color: 0x030302, roughness: 1.0 });
-            holeMesh = new THREE.Mesh(holeGeo, holeMat);
-            holeMesh.position.set(ladderPos.x, -5.96, ladderPos.z);
-            scene.add(holeMesh);
-
-            // 상호작용으로 설치할 3D 사다리 오브젝트 조립
-            ladderMesh = new THREE.Group();
-            const ladBarMat = new THREE.MeshStandardMaterial({ color: 0x4a412a, roughness: 0.8 });
-            const leftPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 6.4), ladBarMat);
-            leftPole.position.set(-0.45, 3.2, 0);
-            const rightPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 6.4), ladBarMat);
-            rightPole.position.set(0.45, 3.2, 0);
-            ladderMesh.add(leftPole, rightPole);
-
-            for (let i = 0; i < 8; i++) {
-                const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.9), ladBarMat);
-                rung.rotation.z = Math.PI / 2;
-                rung.position.set(0, 0.4 + i * 0.75, 0);
-                ladderMesh.add(rung);
-            }
-            ladderMesh.position.set(ladderPos.x, -6, ladderPos.z - 0.8);
-            ladderMesh.visible = false; // 기본적으론 숨겨둠
-            scene.add(ladderMesh);
-
-            // 1층 바닥에 표시할 어두운 구덩이 영역 비주얼
-            const pitZoneGeo = new THREE.PlaneGeometry(pitRadius * 2, pitRadius * 2);
-            const pitZoneMat = new THREE.MeshBasicMaterial({ color: 0x050504 });
-            pitZoneMesh = new THREE.Mesh(pitZoneGeo, pitZoneMat);
-            pitZoneMesh.rotation.x = -Math.PI / 2;
-            pitZoneMesh.position.set(pitCenter.x, 0.01, pitCenter.z);
-            scene.add(pitZoneMesh);
-            // --------------------------------------------------
         }
 
         function getSafeSpawn(avoidPos = null, minPlayerDist = 0) {
             for(let i=0; i<400; i++) {
                 let r = Math.floor(Math.random()*mapRows), c = Math.floor(Math.random()*mapCols);
-                // 중앙 구덩이 방에는 스폰 안 되게 방지 처리
-                if (Math.abs(r - Math.floor(mapRows/2)) <= 2 && Math.abs(c - Math.floor(mapCols/2)) <= 2) continue;
-                
                 if(mapData[r][c] === 0) {
                     let spawnX = (c - mapCols/2)*unitSize + unitSize/2;
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
@@ -560,6 +510,82 @@
             return { x: unitSize, z: unitSize, row: 1, col: 1 };
         }
 
+        // --- 빙고판 구덩이 그래픽 빌드 함수 ---
+        function clearAndBuildBingoPit(centerGridX, centerGridZ, dirAngle) {
+            bingoPits.forEach(p => scene.add(p.mesh) ? scene.remove(p.mesh): null);
+            bingoPits = [];
+            pitBounds.active = false;
+
+            // 구덩이를 생성할 범위 타일 연산 (문 바로 앞 1.5타일 반경)
+            let checkR = Math.floor((centerGridZ - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
+            let checkC = Math.floor((centerGridX - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
+
+            // 문 앞의 구덩이가 될 중심 좌표 계산
+            let pitCenterX = centerGridX;
+            let pitCenterZ = centerGridZ;
+
+            if (Math.abs(dirAngle) < 0.1) { pitCenterZ += unitSize; }
+            else if (Math.abs(dirAngle - Math.PI) < 0.1) { pitCenterZ -= unitSize; }
+            else if (Math.abs(dirAngle - Math.PI/2) < 0.1) { pitCenterX += unitSize; }
+            else { pitCenterX -= unitSize; }
+
+            // 구덩이 충돌 바운더리 박스 설정 ( unitSize 크기만큼 바닥을 뚫음 )
+            const pitRadius = unitSize * 0.95;
+            pitBounds.minX = pitCenterX - pitRadius;
+            pitBounds.maxX = pitCenterX + pitRadius;
+            pitBounds.minZ = pitCenterZ - pitRadius;
+            pitBounds.maxZ = pitCenterZ + pitRadius;
+            pitBounds.active = true;
+
+            // 1. 시각적 연출: 바닥 뚫린 것처럼 보이기 위해 검은색 구덩이 구역 바닥에 밀어넣기
+            const pitVoidGeo = new THREE.BoxGeometry(unitSize * 1.9, 4.0, unitSize * 1.9);
+            const pitVoidMat = new THREE.MeshBasicMaterial({ color: 0x030302 });
+            const pitVoid = new THREE.Mesh(pitVoidGeo, pitVoidMat);
+            pitVoid.position.set(pitCenterX, -2.01, pitCenterZ); // 바닥 면 바로 밑으로 싱크 처리
+            scene.add(pitVoid);
+
+            // 2. 가로 세로 선발판 (빙고판) 생성 기믹
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x2d2b22, roughness: 0.6, metalness: 0.7 });
+            const lineCount = 4; // 격자 개수
+            const spacing = (unitSize * 1.8) / (lineCount - 1);
+
+            // 가로 다리 배치
+            for(let i=0; i<lineCount; i++) {
+                let offsetZ = -unitSize * 0.9 + (i * spacing);
+                let pGeo = new THREE.BoxGeometry(unitSize * 1.9, 0.08, pathThickness);
+                let pMesh = new THREE.Mesh(pGeo, metalMat);
+                pMesh.position.set(pitCenterX, 0.01, pitCenterZ + offsetZ);
+                scene.add(pMesh);
+                
+                bingoPits.push({
+                    mesh: pMesh,
+                    type: 'h',
+                    baseX: pMesh.position.x,
+                    baseZ: pMesh.position.z,
+                    randPhase: Math.random() * 10,
+                    speed: 2.0 + Math.random() * 1.5
+                });
+            }
+
+            // 세로 다리 배치
+            for(let i=0; i<lineCount; i++) {
+                let offsetX = -unitSize * 0.9 + (i * spacing);
+                let pGeo = new THREE.BoxGeometry(pathThickness, 0.08, unitSize * 1.9);
+                let pMesh = new THREE.Mesh(pGeo, metalMat);
+                pMesh.position.set(pitCenterX + offsetX, 0.01, pitCenterZ);
+                scene.add(pMesh);
+
+                bingoPits.push({
+                    mesh: pMesh,
+                    type: 'v',
+                    baseX: pMesh.position.x,
+                    baseZ: pMesh.position.z,
+                    randPhase: Math.random() * 10,
+                    speed: 2.0 + Math.random() * 1.5
+                });
+            }
+        }
+
         function spawnWallAttachedDoor() {
             if(doorGroup) scene.remove(doorGroup);
 
@@ -569,7 +595,6 @@
 
             for(let i=0; i<500; i++) {
                 let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
-                if (Math.abs(r - Math.floor(mapRows/2)) <= 2 && Math.abs(c - Math.floor(mapCols/2)) <= 2) continue;
                 if(mapData[r][c] === 0) {
                     if(mapData[r-1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = -2.45; angle = 0; doorRow = r; doorCol = c; foundWall = true; break; }
                     if(mapData[r+1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = 2.45; angle = Math.PI; doorRow = r; doorCol = c; foundWall = true; break; }
@@ -620,6 +645,9 @@
             greenLight.position.set(0, 1.4, -0.2);
             doorGroup.add(greenLight);
             doorGroup.greenLight = greenLight;
+
+            // [핵심 연출 연결] 탈출 지점 바로 코앞에 빙고 구덩이를 연출하여 가로막기
+            clearAndBuildBingoPit(targetCenterX, targetCenterZ, angle);
 
             return { x: doorGroup.position.x, z: doorGroup.position.z };
         }
@@ -677,7 +705,7 @@
         let cameraAngleX = 0.0, cameraAngleY = 0.0;
         let smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
         let stamina = 100.0, isExhausted = false, isMoving = false, isSprinting = false;
-        const keys = { w: false, a: false, s: false, d: false, shift: false, q: false };
+        const keys = { w: false, a: false, s: false, d: false, shift: false };
 
         function updateSensitivity(val) { globalSensitivity = parseFloat(val); document.getElementById('txt-sens').textContent = globalSensitivity.toFixed(1); }
         function updateBgmVolume(val) { volumeBgmRatio = parseInt(val) / 100; document.getElementById('txt-vol-bgm').textContent = val + '%'; syncBgmNodeVolume(); }
@@ -722,10 +750,6 @@
             document.getElementById('quest-ui').style.display = 'block';
             
             hasKey = false;
-            isLadderInstalled = false;
-            isStickingToWall = false;
-            if(ladderMesh) ladderMesh.visible = false;
-
             if(platform === 'mobile') {
                 document.getElementById('joystick-zone').style.display = 'block';
                 document.getElementById('mobile-controls-right').style.display = 'flex';
@@ -778,55 +802,22 @@
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true; 
-            showToast("🔓 The door is open! Enter the dark sensor area inside!");
+            showToast("🔓 The door is open! Cross the shifting Bingo Pit!");
             document.getElementById('interact-prompt').style.display = 'none';
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
 
-        // --- [통합 상호작용 함수: 문 열기 & 사다리 설치/사용 멀티 제어] ---
-        function executeInteraction() {
-            if (!gameActive || isPaused || isGameOver) return;
-
-            // 기믹 1: 탈출 문 개방 상호작용
-            if (doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) {
-                if (hasKey && !isDoorOpened) openTheEscapeDoor();
-            }
-
-            // 기믹 2: 지하 공간 사다리 설치 및 등반 상호작용
-            let distToLadder = Math.sqrt(Math.pow(player.position.x - ladderPos.x, 2) + Math.pow(player.position.z - ladderPos.z, 2));
-            if (player.position.y <= -5 && distToLadder < 2.5) {
-                if (!isLadderInstalled) {
-                    isLadderInstalled = true;
-                    if (ladderMesh) ladderMesh.visible = true;
-                    showToast("🪜 사다리가 구멍에 견고히 설치되었습니다! [E]를 한번 더 누르면 위로 올라갑니다.");
-                } else {
-                    // 2단계 문 열듯 위로 올라가 1층 복귀
-                    player.position.copy(upperLandingPos);
-                    player.position.y = 0;
-                    playerVelocityY = 0;
-                    isStickingToWall = false;
-                    isGrounded = true;
-                    showToast("🏃 사다리를 타고 무사히 구덩이 위로 기어올라왔습니다!");
-                }
-            }
-        }
-
         document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            executeInteraction();
+            e.preventDefault(); e.stopPropagation(); 
+            if(gameActive && !isPaused && hasKey && !isDoorOpened) openTheEscapeDoor();
         });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
-            if (k === 'e' && gameActive && !isPaused) executeInteraction();
-            
-            // [벽 붙기 토글키 Q 조작]
-            if (k === 'q' && gameActive && !isPaused) {
-                isStickingToWall = !isStickingToWall;
-                showToast(isStickingToWall ? "🧱 벽면에 납작 붙었습니다. (구덩이 안전 통과 가능)" : "🏃 벽면 밀착을 해제했습니다.");
+            if (k === 'e' && gameActive && !isPaused) {
+                if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) openTheEscapeDoor();
             }
         });
         window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (k in keys) keys[k] = false; });
@@ -843,13 +834,8 @@
         }
 
         window.addEventListener('touchstart', (e) => {
-            if (e.target.closest('#btn-mobile-interact') || 
-                e.target.closest('#top-controls') || 
-                e.target.closest('#mobile-controls-right') || 
-                e.target.closest('#pause-screen')) return;
-
+            if (e.target.closest('#btn-mobile-interact') || e.target.closest('#top-controls') || e.target.closest('#mobile-controls-right') || e.target.closest('#pause-screen')) return;
             if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
-            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
@@ -897,21 +883,16 @@
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
 
-            // 지하 아래에 떨어졌을 때는 1층 벽 충돌 연산을 예외하여 자유 낙하 및 활동 보장
-            if (oldPos.y < -2.0) {
-                let boundedRes = { x: tentativePos.x, z: tentativePos.z };
-                const maxMapW = (mapCols * unitSize) / 2 - 1;
-                const maxMapH = (mapRows * unitSize) / 2 - 1;
-                if (Math.abs(boundedRes.x) > maxMapW) boundedRes.x = oldPos.x;
-                if (Math.abs(boundedRes.z) > maxMapH) boundedRes.z = oldPos.z;
-                return boundedRes;
+            // 구덩이 내부 추락 연산 처리 중일 경우 벽 충돌을 건너뛰고 자유 추락 허용
+            if (player.position.y < -0.05) {
+                return { x: tentativePos.x, z: tentativePos.z };
             }
 
             if(isDoorOpened && doorGroup) {
                 let dX = oldPos.x - doorGroup.position.x;
                 let dZ = oldPos.z - doorGroup.position.z;
                 let distToDoorPivot = Math.sqrt(dX*dX + dZ*dZ);
-                if(distToDoorPivot < 2.8) return { x: tentativePos.x, z: tentativePos.z };
+                if(distToDoorPivot < 3.2) return { x: tentativePos.x, z: tentativePos.z };
             }
             
             let res = { x: tentativePos.x, z: tentativePos.z };
@@ -936,9 +917,6 @@
         }
 
         function processEntityAI(e, playerPos) {
-            // 귀신은 플레이어가 아래층에 있거나 벽에 매달려 있으면 탐지력을 상실하게 세팅
-            if (player.position.y < -2.0) return;
-
             const ePos = e.mesh.position; 
             const dist = Math.sqrt(Math.pow(ePos.x - playerPos.x, 2) + Math.pow(ePos.z - playerPos.z, 2));
             
@@ -949,10 +927,10 @@
                 e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
             }
             
-            if (dist < 14 && !isGameOver) { 
+            if (dist < 14 && !isGameOver && player.position.y >= -0.2) { 
                 if(!e.screamActive) { e.screamActive = true; playHorrorScream(true); }
                 e.state = 'chase'; 
-            } else if (e.state === 'chase' && dist > 20) { 
+            } else if (e.state === 'chase' && (dist > 20 || player.position.y < -0.2)) { 
                 e.state = 'patrol'; e.screamActive = false; playHorrorScream(false);
                 e.patrolTarget = getSafeSpawn(playerPos); 
             }
@@ -1051,6 +1029,13 @@
             } catch(e){}
         }
 
+        function triggerGameOver(causeText) {
+            isGameOver = true; playHorrorScream(false);
+            document.getElementById('gameover-cause').textContent = causeText;
+            document.getElementById('gameover-screen').style.display = 'flex';
+            if (document.pointerLockElement === document.body) document.exitPointerLock();
+        }
+
         function backToMainMenu() {
             isGameOver = false; gameActive = false; isPaused = false; platform = null; playHorrorScream(false);
             document.getElementById('pause-screen').style.display = 'none';
@@ -1072,6 +1057,9 @@
             document.getElementById('glitch-overlay').style.opacity = 0;
             scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow); scene.fog.density = 0.05; ambientLight.intensity = 0.85;
             flashlight.intensity = isFlashlightOn ? 1.8 : 0;
+
+            bingoPits.forEach(p => scene.remove(p.mesh)); bingoPits = []; pitBounds.active = false;
+
             try {
                 if(ambientOsc1) { ambientOsc1.stop(); ambientOsc1 = null; }
                 if(ambientOsc2) { ambientOsc2.stop(); ambientOsc2 = null; }
@@ -1086,7 +1074,6 @@
             let respawnPos = getSafeSpawn(player.position, 10);
             player.position.set(respawnPos.x, 0, respawnPos.z); safeSpawnPosition.copy(player.position);
             playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
-            isStickingToWall = false; isLadderInstalled = false; if(ladderMesh) ladderMesh.visible = false;
             entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; });
             document.getElementById('gameover-screen').style.display = 'none';
             if(platform === 'pc') document.body.requestPointerLock();
@@ -1114,73 +1101,98 @@
 
             processKeyAudioHint(player.position);
 
+            // --- 빙고판 실시간 흔들림 연출 루프 구현 ---
+            const timeSec = Date.now() * 0.001;
+            bingoPits.forEach(p => {
+                if(p.type === 'h') {
+                    // 가로 다리는 Z축 및 위아래로 미세 유동 흔들림 부여
+                    p.mesh.position.z = p.baseZ + Math.sin(timeSec * p.speed + p.randPhase) * 0.15;
+                    p.mesh.position.y = 0.01 + Math.cos(timeSec * 1.2 + p.randPhase) * 0.02;
+                } else {
+                    // 세로 다리는 X축 위주 흔들림 부여
+                    p.mesh.position.x = p.baseX + Math.cos(timeSec * p.speed + p.randPhase) * 0.15;
+                    p.mesh.position.y = 0.01 + Math.sin(timeSec * 1.1 + p.randPhase) * 0.02;
+                }
+            });
+
+            // --- 빙고판 낙사존 물리 체크 루프 ---
+            if(pitBounds.active && player.position.y >= -0.01) {
+                if(player.position.x > pitBounds.minX && player.position.x < pitBounds.maxX &&
+                   player.position.z > pitBounds.minZ && player.position.z < pitBounds.maxZ) {
+                    
+                    // 구덩이 구역에 들어왔다면 현재 모든 라인들과 충돌을 체크해 발을 걸쳤는지 판별
+                    let onPlatform = false;
+                    for(let i=0; i<bingoPits.length; i++) {
+                        let p = bingoPits[i];
+                        if(p.type === 'h') {
+                            // 가로선 탑승 체크 (플레이어 Z 좌표가 흔들리는 다리의 Z 폭 범위 내에 있는지)
+                            if(Math.abs(player.position.z - p.mesh.position.z) < (pathThickness * 1.5)) { onPlatform = true; break; }
+                        } else {
+                            // 세로선 탑승 체크 (플레이어 X 좌표가 흔들리는 다리의 X 폭 범위 내에 있는지)
+                            if(Math.abs(player.position.x - p.mesh.position.x) < (pathThickness * 1.5)) { onPlatform = true; break; }
+                        }
+                    }
+
+                    // 만약 다리를 빗겨나갔다면 낙하 시작 (Grounded 상태 강제 해제)
+                    if(!onPlatform && isGrounded) {
+                        isGrounded = false;
+                        playerVelocityY = -0.02; // 아래로 처박히는 가속도 주입
+                    }
+                }
+            }
+
+            // 구덩이 아래 깊이 떨어졌을 때 리스폰 혹은 게임오버 처리 연계
+            if(player.position.y < -3.5 && !isGameOver) {
+                triggerGameOver("You slipped off the Bingo Grid and fell into the infinite void.");
+                return;
+            }
+
             if(!hasKey && keyMesh && Math.sqrt(Math.pow(player.position.x - keyMesh.position.x, 2) + Math.pow(player.position.z - keyMesh.position.z, 2)) < 1.3) {
                 hasKey = true; scene.remove(keyMesh);
                 if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
-                showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Exit radar linked.</span>");
+                showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Bingo grid route to escape door unlocked.</span>");
             }
 
-            // --- [퀘스트 UI 텍스트 동적 분기 관리] ---
-            if (player.position.y <= -4.5) {
-                // 지하 공간 추락 시
-                let distToLadder = Math.sqrt(Math.pow(player.position.x - ladderPos.x, 2) + Math.pow(player.position.z - ladderPos.z, 2));
-                if (!isLadderInstalled) {
-                    document.getElementById('quest-ui').innerHTML = "⚠️ DETECTED:<br><span style='color:#ff5555;'>구덩이 추락! 큰 구멍을 찾아 사다리를 설치하세요 [E].</span>";
+            if(!hasKey) {
+                document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.";
+            } else if(doorGroup) {
+                let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
+                if(!isDoorOpened) {
+                    document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Cross the pit & open the door.<br><span style='color:#00ff66; font-size:15px;'>📍 Door Distance: ${currentDoorDist}m</span>`;
                 } else {
-                    document.getElementById('quest-ui').innerHTML = "🪜 READY:<br><span style='color:#55ff55;'>사다리 완료! [E]를 눌러 다시 1층으로 복귀하세요.</span>";
-                }
-            } else {
-                // 정상 1층 구역 활동 시
-                if(!hasKey) {
-                    document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.<br><span style='color:#aaaaaa;font-size:11px;'>[Q]: 벽 밀착 토글 (구덩이 회피용)</span>";
-                } else if(doorGroup) {
-                    let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
-                    if(!isDoorOpened) {
-                        document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Find the door to escape.<br><span style='color:#00ff66; font-size:15px;'>📍 Distance: ${currentDoorDist}m</span>`;
-                    } else {
-                        document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>The door is open! Step into the inner sensor!</span>`;
-                    }
+                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>Step carefully into the pitch black escape portal!</span>`;
                 }
             }
 
-            // 프롬프트 및 상호작용 버튼 가시성 업데이트 (탈출문 및 사다리 공용)
-            let distToDoorFrame = doorGroup ? Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) : 999;
-            let distToLadderHole = Math.sqrt(Math.pow(player.position.x - ladderPos.x, 2) + Math.pow(player.position.z - ladderPos.z, 2));
-            
-            let isInteractableNearby = (hasKey && distToDoorFrame < 2.5 && !isDoorOpened) || (player.position.y <= -4.5 && distToLadderHole < 2.5);
-            
-            if (isInteractableNearby) {
-                if (player.position.y <= -4.5) {
-                    document.getElementById('interact-prompt').textContent = isLadderInstalled ? "🪜 [E] Climb Up Ladder" : "🛠️ [E] Install Ladder";
-                } else {
-                    document.getElementById('interact-prompt').textContent = "🚪 [E] Open Door";
-                }
+            if(doorGroup) {
+                let distToDoorFrame = Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2));
                 
-                if(platform === 'pc') document.getElementById('interact-prompt').style.display = 'block';
-                else if(platform === 'mobile') document.getElementById('btn-mobile-interact').style.display = 'flex';
-            } else {
-                document.getElementById('interact-prompt').style.display = 'none';
-                document.getElementById('btn-mobile-interact').style.display = 'none';
-            }
-
-            if(doorGroup && isDoorOpened && doorPivot) {
-                const targetRotation = -Math.PI / 2;
-                if(doorPivot.rotation.y > targetRotation) {
-                    doorPivot.rotation.y -= 0.06; 
-                    doorGroup.updateMatrixWorld(true);
+                if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
+                    if(platform === 'pc') document.getElementById('interact-prompt').style.display = 'block';
+                    else if(platform === 'mobile') document.getElementById('btn-mobile-interact').style.display = 'flex';
                 } else {
-                    let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
-                    if(distanceToEscapeSensor < 1.5 && player.position.y >= -1) { 
-                        gameActive = false; playHorrorScream(false);
-                        document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
-                        document.getElementById('clear-screen').style.display = 'flex';
-                        if(platform === 'pc') document.exitPointerLock(); 
-                        return;
-                    }
+                    document.getElementById('interact-prompt').style.display = 'none';
+                    document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
-            } else if(!hasKey && distToDoorFrame < 1.4 && player.position.y >= -1) {
-                showToast("🔒 The door is firmly locked.<br>Find the golden key to open it.");
+
+                if(isDoorOpened && doorPivot) {
+                    const targetRotation = -Math.PI / 2;
+                    if(doorPivot.rotation.y > targetRotation) {
+                        doorPivot.rotation.y -= 0.06; doorGroup.updateMatrixWorld(true);
+                    } else {
+                        let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
+                        if(distanceToEscapeSensor < 1.5) { 
+                            gameActive = false; playHorrorScream(false);
+                            document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
+                            document.getElementById('clear-screen').style.display = 'flex';
+                            if(platform === 'pc') document.exitPointerLock(); 
+                            return;
+                        }
+                    }
+                } else if(!hasKey && distToDoorFrame < 1.4) {
+                    showToast("🔒 The door is firmly locked.<br>Find the golden key to bypass the pit obstacles.");
+                }
             }
 
             smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.25;
@@ -1205,10 +1217,6 @@
             if(sBar) { sBar.style.width = `${stamina}%`; sBar.style.background = isExhausted ? '#d62828' : '#bfae6f'; }
 
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
-            
-            // 벽 밀착 이동 시 조심스럽게 속도 다운
-            if (isStickingToWall && player.position.y >= -1) currentMoveSpeed *= 0.5;
-
             const fX = (forwardX * moveZ + rightX * moveX) * currentMoveSpeed;
             const fZ = (forwardZ * moveZ + rightZ * moveX) * currentMoveSpeed;
 
@@ -1216,8 +1224,9 @@
             let bobX = 0, bobY = 0;
 
             if (isMoving) {
+                const oldP = { x: player.position.x, z: player.position.z };
                 const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
-                const safeP = checkGridCollision(player.position, new THREE.Vector3(tentativeP.x, player.position.y, tentativeP.z), 0.55);
+                const safeP = checkGridCollision(player.position, new THREE.Vector3(tentativeP.x, 0, tentativeP.z), 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 
                 if (isGrounded) {
@@ -1228,38 +1237,16 @@
                 }
             }
 
-            // --- [신규 기믹: 구덩이 범위 감지 및 낙하 유도 처리] ---
-            let distToPit = Math.sqrt(Math.pow(player.position.x - pitCenter.x, 2) + Math.pow(player.position.z - pitCenter.z, 2));
-            
-            if (distToPit < pitRadius && player.position.y >= 0.0) {
-                if (!isStickingToWall) {
-                    // 벽에 안 붙었을 시 화면 흔들림(Jitter) 발동 및 아래층 추락 유도
-                    bobX += (Math.random() - 0.5) * 0.25;
-                    bobY += (Math.random() - 0.5) * 0.25;
-                    
-                    // 강제 수직 하강 속도 부여
-                    if (player.position.y === 0) playerVelocityY = -0.12;
-                    isGrounded = false;
-                }
-            }
-
             playerVelocityY += gravity; player.position.y += playerVelocityY;
-
-            // 더블 레이어 접지 시스템 판정
-            if (player.position.y <= -6) { 
-                // 지하 바닥 충돌 접지
-                player.position.y = -6; 
-                playerVelocityY = 0; 
-                isGrounded = true; 
-            } else if (player.position.y <= 0 && player.position.y > -2) {
-                // 1층 바닥 접지 (구덩이 밖이거나 벽에 안전하게 붙어 이동 중일 때만 안 떨어짐)
-                if (distToPit >= pitRadius || isStickingToWall) {
-                    player.position.y = 0; 
-                    playerVelocityY = 0; 
-                    isGrounded = true; 
+            // 바닥 y=0 하한선 연산은 구덩이 구역 외부일 때만 고정 처리
+            if (player.position.y <= 0 && player.position.y > -0.5) {
+                let insidePitZone = (pitBounds.active && 
+                                    player.position.x > pitBounds.minX && player.position.x < pitBounds.maxX &&
+                                    player.position.z > pitBounds.minZ && player.position.z < pitBounds.maxZ);
+                if (!insidePitZone) {
+                    player.position.y = 0; playerVelocityY = 0; isGrounded = true;
                 }
             }
-            // ----------------------------------------------------
 
             player.rotation.y = smoothCamAngleX;
             fpsRig.position.set(player.position.x, player.position.y + 1.5, player.position.z);
@@ -1276,10 +1263,9 @@
 
             let closestDist = 999;
             entities.forEach(e => {
-                 e.mesh.visible = (player.position.y >= -2.0); // 플레이어가 지하로 탈출하면 시야에서 안보이게 가림
                 processEntityAI(e, player.position);
                 const d = Math.sqrt(Math.pow(player.position.x - e.mesh.position.x, 2) + Math.pow(player.position.z - e.mesh.position.z, 2));
-                if (d < closestDist && player.position.y >= -2.0) closestDist = d;
+                if (d < closestDist) closestDist = d;
                 
                 let waveSpeed = e.state === 'chase' ? 0.045 : 0.015;
                 e.core.position.y = 1.3 + Math.sin(Date.now() * waveSpeed) * 0.12;
@@ -1291,7 +1277,7 @@
             });
 
             const heartUI = document.getElementById('heartbeat-ui');
-            if (closestDist < 12 && player.position.y >= -2.0) {
+            if (closestDist < 12 && player.position.y >= -0.5) {
                 let proximityFactor = (12 - closestDist) / 12; let heartbeatInterval = 800 - (proximityFactor * 550); 
                 let now = Date.now();
                 if (now - lastHeartbeatSoundTime > heartbeatInterval) {
@@ -1301,9 +1287,8 @@
                 }
             } else { heartUI.style.transform = 'translateX(-50%) scale(0)'; }
 
-            if (closestDist < 1.2 && player.position.y >= -2.0) {
-                isGameOver = true; playHorrorScream(false);
-                document.getElementById('gameover-screen').style.display = 'flex';
+            if (closestDist < 1.2 && player.position.y >= -0.5) {
+                triggerGameOver("The entity has completely severed your life signal.");
                 return;
             }
 

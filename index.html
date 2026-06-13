@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>{The Backrooms}</title>
+    <title>《The Backrooms》</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -1020,7 +1020,7 @@
                 hasKey = true; scene.remove(keyMesh);
                 if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
-                showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Exit radar linked.</span>");
+                showToast("🔑 Key acquired!<br><span style='color:#00ff66;'>Exit radar linked.</span>");
             }
 
             if(!hasKey) {

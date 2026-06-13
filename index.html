@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>《The Backrooms》</title>
+    <title>The Backrooms - True Escape</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -534,7 +534,7 @@
             scene.add(doorGroup);
             doorGroup.updateMatrixWorld(true);
 
-            // [Clear Timing Fix] Sensor placed deeper (-2.2) to ensure the player walks inside before clearing
+            // Escape Sensor
             let sensorOffset = new THREE.Vector3(0, 1.0, -2.2); 
             sensorOffset.applyQuaternion(doorGroup.quaternion);
             globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
@@ -785,12 +785,16 @@
             }
         });
 
+        // 🚨 [CRITICAL FIX] Safe Collision check avoiding TypeErrors for Entities
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
-            // [Important] Returns the previous position if NaN occurs, preventing screen collapse
             if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
 
             if(isDoorOpened && doorGroup) {
-                let distToDoorPivot = oldPos.distanceTo(doorGroup.position);
+                // Fixed math to support both Vector3 (Player) and Object (Entities) safely!
+                let dX = oldPos.x - doorGroup.position.x;
+                let dZ = oldPos.z - doorGroup.position.z;
+                let distToDoorPivot = Math.sqrt(dX*dX + dZ*dZ);
+                
                 if(distToDoorPivot < 2.8) {
                     return { x: tentativePos.x, z: tentativePos.z };
                 }
@@ -839,6 +843,7 @@
             if (len > 0.1) {
                 const sp = e.state === 'chase' ? e.speed * 1.45 : e.speed;
                 const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
+                // Using the fixed safe check
                 const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
                 ePos.x = safeE.x; ePos.z = safeE.z; 
                 e.mesh.rotation.y = Math.atan2(dX, dZ);
@@ -1021,14 +1026,12 @@
                     document.getElementById('btn-mobile-interact').style.display = 'none';
                 }
 
-                // [Clear Timing Fix] Start clear check only after the door is 'fully' opened (90 degrees)!
                 if(isDoorOpened && doorPivot) {
                     const targetRotation = -Math.PI / 2;
                     if(doorPivot.rotation.y > targetRotation) {
                         doorPivot.rotation.y -= 0.06; // Rotate smoothly
                         doorGroup.updateMatrixWorld(true);
                     } else {
-                        // Player must walk deep into the room to succeed
                         let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
                         if(distanceToEscapeSensor < 1.5) { 
                             gameActive = false; playHorrorScream(false);
@@ -1039,7 +1042,7 @@
                         }
                     }
                 } else if(!hasKey && distToDoorFrame < 1.4) {
-                    showToast("🔒 The door is locked.<br>Find the golden key to open it.");
+                    showToast("🔒 The door is firmly locked.<br>Find the golden key to open it.");
                 }
             }
 
@@ -1052,7 +1055,7 @@
             let moveX = 0, moveZ = 0;
             if (platform === 'pc') {
                 if (keys.w) moveZ += 1; if (keys.s) moveZ -= 1; if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
-                isMoving = (moveX !== 0 || moveZ !== 0); isSSprint = (isMoving && keys.shift && !isExhausted);
+                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted);
             } else {
                 if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = -joystickInput.y; }
                 isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.75 && !isExhausted);

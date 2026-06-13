@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>《The Backrooms - Escape》</title>
+    <title>{The Backrooms}</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -170,12 +170,12 @@
 
     <div id="start-screen">
         <h2 class="title-main">THE BACKROOMS</h2>
-        <h1 class="title-sub">EXPLORATION</h1>
-        <div class="title-level">LEVEL 0 - HORROR ESCAPE</div>
+        <h1 class="title-sub">LEVEL 0</h1>
+        <div class="title-level">EP1 Backroom</div>
         
         <div class="platform-select-box">
             <button id="pc-select-btn" class="platform-choice-btn" onclick="setPlatformType('pc')">💻 PC CONTROL</button>
-            <button id="mobile-select-btn" class="platform-choice-btn" onclick="setPlatformType('mobile')">📱 MOBILE TOUCH</button>
+            <button id="mobile-select-btn" class="platform-choice-btn" onclick="setPlatformType('mobile')">📱 MOBILE CONTROL</button>
         </div>
 
         <div id="main-start-trigger" class="start-btn-container" onclick="launchGameCore()">
@@ -189,7 +189,7 @@
     <div id="top-controls">
         <button id="btn-toggle-panel" class="btn" style="background:#222; color:#bfae6f; width:44px; height:38px; font-size:16px; padding:0;" onclick="toggleSettingsPanel()">◢</button>
         <div id="ui-container" class="collapsed">
-            <button class="btn" style="background:#661e1e; color:#fff; border-color:#8c2b2b;" onclick="triggerPause(true)">⏸️ PAUSE GAME</button>
+            <button class="btn" style="background:#661e1e; color:#fff; border-color:#8c2b2b;" onclick="triggerPause(true)">⏸️ STOP</button>
             <button class="btn" style="background:#1e4666; color:#fff; border-color:#2b6f8c;" onclick="toggleFullScreen()">📺 FULL SCREEN</button>
             
             <div class="setting-row">
@@ -226,18 +226,18 @@
     </div>
 
     <div id="gameover-screen">
-        <h1 style="font-size: 32px; margin-bottom: 5px; letter-spacing: 3px;">CONNECTION LOST</h1>
-        <p style="color:#555; font-size:13px; margin-bottom:25px;">The entity has completely severed your life signal.</p>
+        <h1 style="font-size: 32px; margin-bottom: 5px; letter-spacing: 3px;">Game over</h1>
+        <p style="color:#555; font-size:13px; margin-bottom:25px;">Your lose</p>
         <div class="go-btn-box">
             <button class="go-btn" onclick="backToMainMenu()">↩️ MAIN MENU</button>
-            <button class="go-btn" style="background:#0e2411; color:#77ff77; border-color:#1d5c28;" onclick="rollback30SecondsSafe()">🛡️ RESPAWN</button>
+            <button class="go-btn" style="background:#0e2411; color:#77ff77; border-color:#1d5c28;" onclick="rollback30SecondsSafe()">RESPAWN</button>
         </div>
     </div>
 
     <div id="clear-screen">
-        <h1 style="font-size: 36px; margin-bottom: 5px; letter-spacing: 5px; color:#ffdd66; text-shadow: 0 0 15px rgba(255,221,102,0.4)">NOCLIP SUCCESS</h1>
+        <h1 style="font-size: 36px; margin-bottom: 5px; letter-spacing: 5px; color:#ffdd66; text-shadow: 0 0 15px rgba(255,221,102,0.4)">Misson Success</h1>
         <p id="clear-time-record" style="color:#ffdd66; font-size:18px; font-weight:bold; margin: 0 0 15px 0; letter-spacing:1px;"></p>
-        <p style="color:#aaa; font-size:14px; margin-bottom:30px;">You successfully no-clipped out of Backrooms Level 0 into reality.</p>
+        <p style="color:#aaa; font-size:14px; margin-bottom:30px;">You successfully Backrooms Level 0</p>
         <button class="go-btn" style="background:#bfae6f; color:#111; border-color:#fff;" onclick="backToMainMenu()">↩️ MAIN MENU</button>
     </div>
 
@@ -297,7 +297,8 @@
         fpsRig.add(flashlightMesh);
 
         const armMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.6 });
-        const leftArm = new Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); leftArm.rotateX(Math.PI / 2.3); leftArm.position.set(-0.25, -0.25, -0.3); fpsRig.add(leftArm);
+        // [FIXED TYPO HERE: Changed "new Mesh" to "new THREE.Mesh"]
+        const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); leftArm.rotateX(Math.PI / 2.3); leftArm.position.set(-0.25, -0.25, -0.3); fpsRig.add(leftArm);
         const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); rightArm.rotateX(Math.PI / 2.3); rightArm.position.set(0.25, -0.25, -0.3); fpsRig.add(rightArm);
 
         function generateHighQualityWallTextures() {
@@ -348,11 +349,10 @@
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // [수정점] 얼룩의 갯수와 투명도를 줄여 듬성듬성하게 표현
             for (let i = 0; i < 4; i++) {
                 let x = Math.random() * size, y = Math.random() * size, r = 30 + Math.random() * 40;
                 let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(52, 44, 18, 0.35)'); // 투명도 감소
+                grad.addColorStop(0, 'rgba(52, 44, 18, 0.35)'); 
                 grad.addColorStop(1, 'rgba(52, 44, 18, 0)');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
             }
@@ -456,15 +456,12 @@
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
                     } else if(Math.random() < 0.12) { 
-                        // [수정점] 천장 틀에 맞게 구성된 디테일한 형광등 모델링
                         const lampGroup = new THREE.Group();
                         
-                        // 금속 프레임
                         const frameGeo = new THREE.BoxGeometry(2.4, 0.05, 1.2);
                         const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
                         const frame = new THREE.Mesh(frameGeo, frameMat);
                         
-                        // 하얀 형광등 패널
                         const panelGeo = new THREE.BoxGeometry(2.2, 0.06, 1.0);
                         const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffe0 }); 
                         const panel = new THREE.Mesh(panelGeo, panelMat);
@@ -474,7 +471,6 @@
                         lampGroup.add(panel);
                         lampGroup.position.set(x, wallHeight - 0.02, z);
                         
-                        // 50% 확률로 가로/세로 방향 랜덤 틀 정렬
                         if (Math.random() > 0.5) {
                             lampGroup.rotation.y = Math.PI / 2;
                         }
@@ -847,8 +843,6 @@
 
         function processEntityAI(e, playerPos) {
             const ePos = e.mesh.position; 
-            
-            // Calculate distance manually to avoid any Three.js object type crashes
             const dist = Math.sqrt(Math.pow(ePos.x - playerPos.x, 2) + Math.pow(ePos.z - playerPos.z, 2));
             
             e.stuckCheckTimer += 1;

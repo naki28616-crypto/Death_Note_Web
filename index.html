@@ -258,13 +258,23 @@
         let keyMesh = null, doorGroup = null, doorPivot = null;
         let globalEscapeSensorPos = new THREE.Vector3(); 
         
-        const mapRows = 22, mapCols = 22, unitSize = 5, wallHeight = 5.5;
+        const mapRows = 25, mapCols = 25, unitSize = 5, wallHeight = 5.5;
         let mapData = [], instancedWalls = null, lamps = [];
+        let envMeshes = [];
 
-        // --- 빙고 구덩이 변수 리스트 ---
-        let bingoPits = []; // 실시간 흔들림 계산을 위한 격자 발판 배열
-        let pitBounds = { minX:0, maxX:0, minZ:0, maxZ:0, active: false }; // 낙사 감지 존 범위
-        const pathThickness = 0.28; // 격자 다리 폭 (선이 지나치게 얇으면 밟기 힘드므로 보정)
+        // --- 빙고 구덩이 및 하위 맵 변수 리스트 ---
+        let bingoPits = [];
+        let pitBounds = { minX:0, maxX:0, minZ:0, maxZ:0, active: false };
+        const pathThickness = 0.45; 
+        let mainRooms = [];
+        let bingoRoomCenter = {r: 0, c: 0};
+
+        let inLowerLevel = false;
+        const lowerMapRows = 11, lowerMapCols = 11;
+        let lowerMapData = [], instancedWallsLower = null;
+        let ladderGroup = null;
+        let lowerSpawnPoint = {x:0, z:0};
+        let escapeReturnPoint = {x:0, z:0};
 
         const backroomsYellow = 0xbaa761; 
         const scene = new THREE.Scene();
@@ -311,23 +321,18 @@
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d'); 
             ctx.fillStyle = '#dfd5a0'; ctx.fillRect(0, 0, size, size);
-            
             const imgData = ctx.getImageData(0, 0, size, size);
-            const data = imgData.data;
-            for(let i = 0; i < data.length; i += 4) {
+            for(let i = 0; i < imgData.data.length; i += 4) {
                 if(Math.random() < 0.12) {
                     const noise = (Math.random() - 0.5) * 16;
-                    data[i] = Math.max(0, Math.min(255, data[i] + noise - 6));
-                    data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise - 6));
-                    data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise - 8));
+                    imgData.data[i] = Math.max(0, Math.min(255, imgData.data[i] + noise - 6));
+                    imgData.data[i+1] = Math.max(0, Math.min(255, imgData.data[i+1] + noise - 6));
+                    imgData.data[i+2] = Math.max(0, Math.min(255, imgData.data[i+2] + noise - 8));
                 }
             }
             ctx.putImageData(imgData, 0, 0);
-            
             ctx.strokeStyle = 'rgba(194, 183, 126, 0.45)'; ctx.lineWidth = 1.5;
-            for (let x = 0; x < size; x += 32) { 
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke(); 
-            }
+            for (let x = 0; x < size; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke(); }
             const tex = new THREE.CanvasTexture(canvas);
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
             tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
@@ -339,33 +344,18 @@
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = '#837543'; 
-            ctx.fillRect(0, 0, size, size);
-            
+            ctx.fillStyle = '#837543'; ctx.fillRect(0, 0, size, size);
             const imgData = ctx.getImageData(0, 0, size, size);
-            const data = imgData.data;
-            for(let i = 0; i < data.length; i += 4) {
+            for(let i = 0; i < imgData.data.length; i += 4) {
                 const carpetGrain = (Math.random() - 0.5) * 24; 
-                data[i] = Math.max(0, Math.min(255, data[i] + carpetGrain));
-                data[i+1] = Math.max(0, Math.min(255, data[i+1] + carpetGrain));
-                data[i+2] = Math.max(0, Math.min(255, data[i+2] + carpetGrain * 0.8));
+                imgData.data[i] = Math.max(0, Math.min(255, imgData.data[i] + carpetGrain));
+                imgData.data[i+1] = Math.max(0, Math.min(255, imgData.data[i+1] + carpetGrain));
+                imgData.data[i+2] = Math.max(0, Math.min(255, imgData.data[i+2] + carpetGrain * 0.8));
             }
             ctx.putImageData(imgData, 0, 0);
-            
-            for (let i = 0; i < 4; i++) {
-                let x = Math.random() * size, y = Math.random() * size, r = 30 + Math.random() * 40;
-                let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(52, 44, 18, 0.35)'); 
-                grad.addColorStop(1, 'rgba(52, 44, 18, 0)');
-                ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
-            }
-            
             const tex = new THREE.CanvasTexture(canvas);
             tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
             tex.repeat.set(16, 16); 
-            const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
-            tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
             return tex;
         }
 
@@ -374,47 +364,37 @@
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = '#d3c79b'; 
-            ctx.fillRect(0, 0, size, size);
-            
+            ctx.fillStyle = '#d3c79b'; ctx.fillRect(0, 0, size, size);
             const imgData = ctx.getImageData(0, 0, size, size);
-            const data = imgData.data;
-            for(let i = 0; i < data.length; i += 4) {
+            for(let i = 0; i < imgData.data.length; i += 4) {
                 const noise = (Math.random() - 0.5) * 8;
-                data[i] = Math.max(0, Math.min(255, data[i] + noise));
-                data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
-                data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+                imgData.data[i] = Math.max(0, Math.min(255, imgData.data[i] + noise));
+                imgData.data[i+1] = Math.max(0, Math.min(255, imgData.data[i+1] + noise));
+                imgData.data[i+2] = Math.max(0, Math.min(255, imgData.data[i+2] + noise));
             }
             ctx.putImageData(imgData, 0, 0);
-            
-            ctx.fillStyle = 'rgba(70, 65, 48, 0.6)';
-            for (let i = 0; i < 400; i++) {
-                let rx = Math.random() * size, ry = Math.random() * size;
-                let rw = 1 + Math.random() * 2, rh = 1 + Math.random() * 1.5;
-                ctx.fillRect(rx, ry, rw, rh);
-            }
-            
-            ctx.strokeStyle = 'rgba(120, 112, 85, 0.6)'; ctx.lineWidth = 1.5;
-            ctx.strokeRect(0, 0, size, size);
-            
+            ctx.strokeStyle = 'rgba(120, 112, 85, 0.6)'; ctx.lineWidth = 1.5; ctx.strokeRect(0, 0, size, size);
             const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(22, 22);
-            const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
-            tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(22, 22);
             return tex;
         }
 
         const wallTexture = generateHighQualityWallTextures();
         const floorTexture = generateFloorTexture();
         const ceilTexture = generateCeilTexture();
-
         const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.85 });
         const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.95 }); 
         const ceilMat = new THREE.MeshStandardMaterial({ map: ceilTexture, roughness: 0.88 });
 
+        function clearEnv() {
+            if(instancedWalls) scene.remove(instancedWalls);
+            if(instancedWallsLower) scene.remove(instancedWallsLower);
+            lamps.forEach(l => scene.remove(l)); lamps = [];
+            envMeshes.forEach(m => scene.remove(m)); envMeshes = [];
+        }
+
         function generateRandomMaze() {
+            mainRooms = [];
             mapData = Array(mapRows).fill().map(() => Array(mapCols).fill(1));
             let visited = Array(mapRows).fill().map(() => Array(mapCols).fill(false));
             function carve(r, c) {
@@ -429,22 +409,53 @@
             }
             carve(1, 1);
             
-            for(let k=0; k < 3; k++) {
-                let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3, centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
+            // Generate 4 flat areas (5x5 rooms)
+            for(let k=0; k < 4; k++) {
+                let centerR = Math.floor(Math.random() * (mapRows - 10)) + 5, centerC = Math.floor(Math.random() * (mapCols - 10)) + 5;
                 for(let r = centerR - 2; r <= centerR + 2; r++) {
                     for(let c = centerC - 2; c <= centerC + 2; c++) {
                         if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) mapData[r][c] = 0;
                     }
                 }
+                mainRooms.push({r: centerR, c: centerC});
             }
             
+            // Select one flat area for the Bingo Pit
+            bingoRoomCenter = mainRooms[Math.floor(Math.random() * mainRooms.length)];
+            
+            // Carve exit path from Bingo Room (towards South) to place the door
+            for(let i=1; i<=3; i++) {
+                let pR = bingoRoomCenter.r + i;
+                if (pR < mapRows - 1) {
+                    mapData[pR][bingoRoomCenter.c - 1] = 0;
+                    mapData[pR][bingoRoomCenter.c] = 0;
+                    mapData[pR][bingoRoomCenter.c + 1] = 0;
+                }
+            }
+
             for(let r=0; r<mapRows; r++) { mapData[r][0] = 1; mapData[r][mapCols-1] = 1; }
             for(let c=0; c<mapCols; c++) { mapData[0][c] = 1; mapData[mapRows-1][c] = 1; }
+
+            // Generate Lower Map Data (11x11)
+            lowerMapData = Array(lowerMapRows).fill().map(() => Array(lowerMapCols).fill(1));
+            let lowerVisited = Array(lowerMapRows).fill().map(() => Array(lowerMapCols).fill(false));
+            function lowerCarve(r, c) {
+                lowerVisited[r][c] = true; lowerMapData[r][c] = 0;
+                const lDirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(() => Math.random() - 0.5);
+                for(let [dr, dc] of lDirs) {
+                    let nr = r + dr, nc = c + dc;
+                    if(nr > 0 && nr < lowerMapRows-1 && nc > 0 && nc < lowerMapCols-1 && !lowerVisited[nr][nc]) {
+                        lowerMapData[r + dr/2][c + dc/2] = 0; lowerCarve(nr, nc);
+                    }
+                }
+            }
+            lowerCarve(1, 1);
+            for(let r=0; r<lowerMapRows; r++) { lowerMapData[r][0] = 1; lowerMapData[r][lowerMapCols-1] = 1; }
+            for(let c=0; c<lowerMapCols; c++) { lowerMapData[0][c] = 1; lowerMapData[lowerMapRows-1][c] = 1; }
         }
 
         function buildMazeGraphics() {
-            if(instancedWalls) scene.remove(instancedWalls);
-            lamps.forEach(l => scene.remove(l)); lamps = [];
+            clearEnv();
             let wallCount = 0;
             for(let r=0; r<mapRows; r++) { for(let c=0; c<mapCols; c++) { if(mapData[r][c] === 1) wallCount++; } }
 
@@ -461,37 +472,44 @@
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
                     } else if(mapData[r][c] === 0 && Math.random() < 0.12) { 
                         const lampGroup = new THREE.Group();
-                        const frameGeo = new THREE.BoxGeometry(2.4, 0.05, 1.2);
-                        const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-                        const frame = new THREE.Mesh(frameGeo, frameMat);
-                        
-                        const panelGeo = new THREE.BoxGeometry(2.2, 0.06, 1.0);
-                        const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffe0 }); 
-                        const panel = new THREE.Mesh(panelGeo, panelMat);
-                        panel.position.y = -0.01; 
-                        
-                        lampGroup.add(frame);
-                        lampGroup.add(panel);
+                        const frame = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.05, 1.2), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+                        const panel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 1.0), new THREE.MeshBasicMaterial({ color: 0xffffe0 }));
+                        panel.position.y = -0.01; lampGroup.add(frame, panel);
                         lampGroup.position.set(x, wallHeight - 0.02, z);
-                        
                         if (Math.random() > 0.5) lampGroup.rotation.y = Math.PI / 2;
-                        
                         scene.add(lampGroup); lamps.push(lampGroup);
-                        
-                        const pl = new THREE.PointLight(0xfff5cc, 0.6, 11); 
-                        pl.position.set(x, wallHeight - 0.3, z); scene.add(pl);
+                        const pl = new THREE.PointLight(0xfff5cc, 0.6, 11); pl.position.set(x, wallHeight - 0.3, z); scene.add(pl);
                     }
                 }
             }
             scene.add(instancedWalls);
 
-            // 일반 바닥 평면 생성 방식 대신 구덩이가 뚫릴 수 있도록 격자 평면 처리 진행 유연화 유도 가능하나,
-            // 간단하게 기본 바닥은 그대로 두고 구덩이 구역 타일 위치만 뚫어 렌더링하기 위해 바닥 매쉬 조각화 대신,
-            // 커다란 Plane 바닥을 생성한 뒤 그 위에 구덩이 메테리얼을 덮거나 뚫는 형태를 원칙으로 함.
-            // 여기서는 구덩이 감지 시 물리 추락을 시키므로, 시각적으로 구덩이를 표현할 어두운 박스를 아래에 매립함.
             const mW = mapCols*unitSize, mH = mapRows*unitSize;
-            const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; scene.add(f);
-            const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl);
+            const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; scene.add(f); envMeshes.push(f);
+            const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl); envMeshes.push(cl);
+
+            // Lower Level Map Walls
+            let lowerWallCount = 0;
+            for(let r=0; r<lowerMapRows; r++) { for(let c=0; c<lowerMapCols; c++) { if(lowerMapData[r][c] === 1) lowerWallCount++; } }
+            instancedWallsLower = new THREE.InstancedMesh(wallGeo, new THREE.MeshStandardMaterial({color: 0x24221b, roughness: 1.0}), lowerWallCount);
+            let lIdx = 0;
+            for(let r=0; r<lowerMapData.length; r++) {
+                for(let c=0; c<lowerMapData[r].length; c++) {
+                    if(lowerMapData[r][c] === 1) {
+                        const lx = (c - lowerMapCols/2) * unitSize + unitSize/2;
+                        const lz = (r - lowerMapRows/2) * unitSize + unitSize/2;
+                        dummy.position.set(lx, -30 + wallHeight/2, lz); dummy.updateMatrix();
+                        instancedWallsLower.setMatrixAt(lIdx++, dummy.matrix);
+                    }
+                }
+            }
+            scene.add(instancedWallsLower);
+
+            const llW = lowerMapCols*unitSize, llH = lowerMapRows*unitSize;
+            const lf = new THREE.Mesh(new THREE.PlaneGeometry(llW, llH), new THREE.MeshStandardMaterial({color: 0x111111, roughness: 1}));
+            lf.rotation.x = -Math.PI/2; lf.position.y = -30; scene.add(lf); envMeshes.push(lf);
+            const lcl = new THREE.Mesh(new THREE.PlaneGeometry(llW, llH), new THREE.MeshStandardMaterial({color: 0x080808}));
+            lcl.rotation.x = Math.PI/2; lcl.position.y = -30 + wallHeight; scene.add(lcl); envMeshes.push(lcl);
         }
 
         function getSafeSpawn(avoidPos = null, minPlayerDist = 0) {
@@ -510,104 +528,106 @@
             return { x: unitSize, z: unitSize, row: 1, col: 1 };
         }
 
-        // --- 빙고판 구덩이 그래픽 빌드 함수 ---
-        function clearAndBuildBingoPit(centerGridX, centerGridZ, dirAngle) {
-            bingoPits.forEach(p => scene.add(p.mesh) ? scene.remove(p.mesh): null);
+        function clearAndBuildLargeBingoPit(pitCenterX, pitCenterZ) {
+            bingoPits.forEach(p => { if(p.mesh) scene.remove(p.mesh); });
             bingoPits = [];
             pitBounds.active = false;
 
-            // 구덩이를 생성할 범위 타일 연산 (문 바로 앞 1.5타일 반경)
-            let checkR = Math.floor((centerGridZ - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
-            let checkC = Math.floor((centerGridX - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
-
-            // 문 앞의 구덩이가 될 중심 좌표 계산
-            let pitCenterX = centerGridX;
-            let pitCenterZ = centerGridZ;
-
-            if (Math.abs(dirAngle) < 0.1) { pitCenterZ += unitSize; }
-            else if (Math.abs(dirAngle - Math.PI) < 0.1) { pitCenterZ -= unitSize; }
-            else if (Math.abs(dirAngle - Math.PI/2) < 0.1) { pitCenterX += unitSize; }
-            else { pitCenterX -= unitSize; }
-
-            // 구덩이 충돌 바운더리 박스 설정 ( unitSize 크기만큼 바닥을 뚫음 )
-            const pitRadius = unitSize * 0.95;
-            pitBounds.minX = pitCenterX - pitRadius;
-            pitBounds.maxX = pitCenterX + pitRadius;
-            pitBounds.minZ = pitCenterZ - pitRadius;
-            pitBounds.maxZ = pitCenterZ + pitRadius;
+            const pitSize = unitSize * 4.2; // Massive pit inside the 5x5 room
+            pitBounds.minX = pitCenterX - pitSize/2;
+            pitBounds.maxX = pitCenterX + pitSize/2;
+            pitBounds.minZ = pitCenterZ - pitSize/2;
+            pitBounds.maxZ = pitCenterZ + pitSize/2;
             pitBounds.active = true;
 
-            // 1. 시각적 연출: 바닥 뚫린 것처럼 보이기 위해 검은색 구덩이 구역 바닥에 밀어넣기
-            const pitVoidGeo = new THREE.BoxGeometry(unitSize * 1.9, 4.0, unitSize * 1.9);
-            const pitVoidMat = new THREE.MeshBasicMaterial({ color: 0x030302 });
+            const pitVoidGeo = new THREE.BoxGeometry(pitSize + 1, 25.0, pitSize + 1);
+            const pitVoidMat = new THREE.MeshBasicMaterial({ color: 0x010101 });
             const pitVoid = new THREE.Mesh(pitVoidGeo, pitVoidMat);
-            pitVoid.position.set(pitCenterX, -2.01, pitCenterZ); // 바닥 면 바로 밑으로 싱크 처리
-            scene.add(pitVoid);
+            pitVoid.position.set(pitCenterX, -12.51, pitCenterZ); 
+            scene.add(pitVoid); envMeshes.push(pitVoid);
 
-            // 2. 가로 세로 선발판 (빙고판) 생성 기믹
             const metalMat = new THREE.MeshStandardMaterial({ color: 0x2d2b22, roughness: 0.6, metalness: 0.7 });
-            const lineCount = 4; // 격자 개수
-            const spacing = (unitSize * 1.8) / (lineCount - 1);
+            const lineCount = 6;
+            const spacing = pitSize / (lineCount + 1);
 
-            // 가로 다리 배치
-            for(let i=0; i<lineCount; i++) {
-                let offsetZ = -unitSize * 0.9 + (i * spacing);
-                let pGeo = new THREE.BoxGeometry(unitSize * 1.9, 0.08, pathThickness);
-                let pMesh = new THREE.Mesh(pGeo, metalMat);
-                pMesh.position.set(pitCenterX, 0.01, pitCenterZ + offsetZ);
-                scene.add(pMesh);
-                
-                bingoPits.push({
-                    mesh: pMesh,
-                    type: 'h',
-                    baseX: pMesh.position.x,
-                    baseZ: pMesh.position.z,
-                    randPhase: Math.random() * 10,
-                    speed: 2.0 + Math.random() * 1.5
-                });
+            for(let i=1; i<=lineCount; i++) {
+                let offsetZ = -pitSize/2 + (i * spacing);
+                let pMesh = new THREE.Mesh(new THREE.BoxGeometry(pitSize, 0.08, pathThickness * 1.5), metalMat);
+                pMesh.position.set(pitCenterX, 0.01, pitCenterZ + offsetZ); scene.add(pMesh);
+                bingoPits.push({ mesh: pMesh, type: 'h', baseX: pMesh.position.x, baseZ: pMesh.position.z, randPhase: Math.random()*10, speed: 1.5 + Math.random() });
             }
 
-            // 세로 다리 배치
-            for(let i=0; i<lineCount; i++) {
-                let offsetX = -unitSize * 0.9 + (i * spacing);
-                let pGeo = new THREE.BoxGeometry(pathThickness, 0.08, unitSize * 1.9);
-                let pMesh = new THREE.Mesh(pGeo, metalMat);
-                pMesh.position.set(pitCenterX + offsetX, 0.01, pitCenterZ);
-                scene.add(pMesh);
-
-                bingoPits.push({
-                    mesh: pMesh,
-                    type: 'v',
-                    baseX: pMesh.position.x,
-                    baseZ: pMesh.position.z,
-                    randPhase: Math.random() * 10,
-                    speed: 2.0 + Math.random() * 1.5
-                });
+            for(let i=1; i<=lineCount; i++) {
+                let offsetX = -pitSize/2 + (i * spacing);
+                let pMesh = new THREE.Mesh(new THREE.BoxGeometry(pathThickness * 1.5, 0.08, pitSize), metalMat);
+                pMesh.position.set(pitCenterX + offsetX, 0.01, pitCenterZ); scene.add(pMesh);
+                bingoPits.push({ mesh: pMesh, type: 'v', baseX: pMesh.position.x, baseZ: pMesh.position.z, randPhase: Math.random()*10, speed: 1.5 + Math.random() });
             }
         }
 
-        function spawnWallAttachedDoor() {
-            if(doorGroup) scene.remove(doorGroup);
+        function buildLowerLevelEntities() {
+            if(ladderGroup) scene.remove(ladderGroup);
+            ladderGroup = new THREE.Group();
 
-            doorGroup = new THREE.Group();
-            let foundWall = false, doorRow = 1, doorCol = 1, angle = 0;
-            let offsetOffsetX = 0, offsetOffsetZ = 0;
-
-            for(let i=0; i<500; i++) {
-                let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
-                if(mapData[r][c] === 0) {
-                    if(mapData[r-1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = -2.45; angle = 0; doorRow = r; doorCol = c; foundWall = true; break; }
-                    if(mapData[r+1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = 2.45; angle = Math.PI; doorRow = r; doorCol = c; foundWall = true; break; }
-                    if(mapData[r][c-1] === 1) { offsetOffsetX = -2.45; offsetOffsetZ = 0; angle = Math.PI / 2; doorRow = r; doorCol = c; foundWall = true; break; }
-                    if(mapData[r][c+1] === 1) { offsetOffsetX = 2.45; offsetOffsetZ = 0; angle = -Math.PI / 2; doorRow = r; doorCol = c; foundWall = true; break; }
+            // Find a wall cell adjacent to an empty cell
+            let found = false, lr = 1, lc = 1;
+            for(let r=1; r<lowerMapRows-1; r++) {
+                for(let c=1; c<lowerMapCols-1; c++) {
+                    if(lowerMapData[r][c] === 0 && lowerMapData[r-1][c] === 1) { found=true; lr=r-1; lc=c; break; }
                 }
+                if(found) break;
             }
 
-            const targetCenterX = (doorCol - mapCols/2) * unitSize + unitSize/2;
-            const targetCenterZ = (doorRow - mapRows/2) * unitSize + unitSize/2;
+            let lX = (lc - lowerMapCols/2) * unitSize + unitSize/2;
+            let lZ = (lr - lowerMapRows/2) * unitSize + unitSize/2;
 
-            doorGroup.position.set(targetCenterX + offsetOffsetX, 0, targetCenterZ + offsetOffsetZ);
-            doorGroup.rotation.y = angle;
+            let ladMat = new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.5});
+            let poleL = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 8), ladMat); poleL.position.set(-0.6, 1.5, 0);
+            let poleR = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 8), ladMat); poleR.position.set(0.6, 1.5, 0);
+            ladderGroup.add(poleL, poleR);
+            for(let i=0; i<10; i++) {
+                let rung = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2), ladMat);
+                rung.rotation.z = Math.PI/2; rung.position.set(0, -2 + i*0.8, 0); ladderGroup.add(rung);
+            }
+
+            // Square Escape Hole
+            let holeGeo = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+            let holeMat = new THREE.MeshBasicMaterial({color: 0x000000, side: THREE.DoubleSide});
+            let holeMesh = new THREE.Mesh(holeGeo, holeMat);
+            holeMesh.position.set(0, 4.5, -0.5); 
+            ladderGroup.add(holeMesh);
+
+            const ladLight = new THREE.PointLight(0x4488ff, 1.0, 15); ladLight.position.set(0, 2, 2); ladderGroup.add(ladLight);
+            ladderGroup.position.set(lX, -30, lZ + unitSize/2 - 0.5); 
+            scene.add(ladderGroup);
+
+            // Set lower level spawn point safely away from ladder
+            for(let r=1; r<lowerMapRows-1; r++) {
+                for(let c=1; c<lowerMapCols-1; c++) {
+                    if(lowerMapData[r][c] === 0 && (r!==lr+1 || c!==lc)) {
+                        lowerSpawnPoint.x = (c - lowerMapCols/2) * unitSize + unitSize/2;
+                        lowerSpawnPoint.z = (r - lowerMapRows/2) * unitSize + unitSize/2;
+                        return;
+                    }
+                }
+            }
+        }
+
+        function spawnLevelElements(playerPos) {
+            isDoorOpened = false;
+
+            let bX = (bingoRoomCenter.c - mapCols/2) * unitSize + unitSize/2;
+            let bZ = (bingoRoomCenter.r - mapRows/2) * unitSize + unitSize/2;
+            clearAndBuildLargeBingoPit(bX, bZ);
+
+            let doorR = bingoRoomCenter.r + 3;
+            if(doorR >= mapRows-1) doorR = mapRows-2;
+            let dX = (bingoRoomCenter.c - mapCols/2) * unitSize + unitSize/2;
+            let dZ = (doorR - mapRows/2) * unitSize + unitSize/2;
+
+            if(doorGroup) scene.remove(doorGroup);
+            doorGroup = new THREE.Group();
+            doorGroup.position.set(dX, 0, dZ);
 
             const frameMat = new THREE.MeshStandardMaterial({ color: 0x1d140e, roughness: 0.9 });
             const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.8, 0.2), frameMat); leftPost.position.set(-0.85, 1.4, 0);
@@ -615,64 +635,37 @@
             const topPost = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.15, 0.2), frameMat); topPost.position.set(0, 2.8, 0);
             doorGroup.add(leftPost, rightPost, topPost);
 
-            doorPivot = new THREE.Group();
-            doorPivot.position.set(-0.78, 1.4, 0); 
-            
+            doorPivot = new THREE.Group(); doorPivot.position.set(-0.78, 1.4, 0); 
             const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.56, 2.65, 0.12), new THREE.MeshStandardMaterial({ color: 0x3d2516, roughness: 0.75 }));
-            doorPanel.position.set(0.78, 0, 0); 
-            doorPivot.add(doorPanel);
-            
-            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8, roughness: 0.1 }));
-            knob.position.set(0.65, 0, 0.09); 
-            doorPanel.add(knob);
-            
+            doorPanel.position.set(0.78, 0, 0); doorPivot.add(doorPanel);
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8 }));
+            knob.position.set(0.65, 0, 0.09); doorPanel.add(knob);
             doorGroup.add(doorPivot);
 
             const corridorGeo = new THREE.BoxGeometry(1.6, 2.8, 3.0);
-            const corridorMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
-            const escapeCorridor = new THREE.Mesh(corridorGeo, corridorMat);
-            escapeCorridor.position.set(0, 1.4, -1.5); 
-            doorGroup.add(escapeCorridor);
+            const escapeCorridor = new THREE.Mesh(corridorGeo, new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }));
+            escapeCorridor.position.set(0, 1.4, -1.5); doorGroup.add(escapeCorridor);
 
+            const greenLight = new THREE.PointLight(0x00ff55, 0, 6); greenLight.position.set(0, 1.4, -0.2);
+            doorGroup.add(greenLight); doorGroup.greenLight = greenLight;
             scene.add(doorGroup);
-            doorGroup.updateMatrixWorld(true);
 
-            let sensorOffset = new THREE.Vector3(0, 1.0, -2.2); 
-            sensorOffset.applyQuaternion(doorGroup.quaternion);
-            globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
+            globalEscapeSensorPos.copy(doorGroup.position).add(new THREE.Vector3(0, 1.0, -2.2));
 
-            const greenLight = new THREE.PointLight(0x00ff55, 0, 6);
-            greenLight.position.set(0, 1.4, -0.2);
-            doorGroup.add(greenLight);
-            doorGroup.greenLight = greenLight;
-
-            // [핵심 연출 연결] 탈출 지점 바로 코앞에 빙고 구덩이를 연출하여 가로막기
-            clearAndBuildBingoPit(targetCenterX, targetCenterZ, angle);
-
-            return { x: doorGroup.position.x, z: doorGroup.position.z };
-        }
-
-        function spawnQuestItems(playerPos) {
-            isDoorOpened = false;
-            const doorLoc = spawnWallAttachedDoor();
+            // Place return spawn point right before the Bingo Pit
+            escapeReturnPoint = { x: bX, z: bZ - unitSize * 2.5 };
 
             if(keyMesh) scene.remove(keyMesh);
             keyMesh = new THREE.Group();
             const keyRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.04, 8, 16), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9, roughness: 0.05 }));
             const keyBar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9 }));
-            keyBar.position.y = -0.2; keyBar.rotation.z = Math.PI/2;
-            keyMesh.add(keyRing, keyBar);
-            
-            const keyLight = new THREE.PointLight(0xffdd44, 2.5, 12);
-            keyLight.position.y = 0.2;
-            keyMesh.add(keyLight);
-
-            const keyLoc = getSafeSpawn(playerPos, 15);
-            keyMesh.position.set(keyLoc.x, 0.6, keyLoc.z);
+            keyBar.position.y = -0.2; keyBar.rotation.z = Math.PI/2; keyMesh.add(keyRing, keyBar);
+            const keyLight = new THREE.PointLight(0xffdd44, 2.5, 12); keyLight.position.y = 0.2; keyMesh.add(keyLight);
+            const keyLoc = getSafeSpawn(playerPos, 15); keyMesh.position.set(keyLoc.x, 0.6, keyLoc.z);
             scene.add(keyMesh);
-        }
 
-        generateRandomMaze(); buildMazeGraphics();
+            buildLowerLevelEntities();
+        }
 
         let player = new THREE.Group(); scene.add(player);
 
@@ -721,17 +714,14 @@
         function toggleFullScreen() {
             if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
                 if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-                showToast("📺 Full screen mode activated.");
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
+            } else { if (document.exitFullscreen) document.exitFullscreen(); }
         }
 
         function showToast(msg) {
             const toast = document.getElementById('game-toast');
             toast.innerHTML = msg; toast.style.display = 'block';
             clearTimeout(toast.timer);
-            toast.timer = setTimeout(() => { toast.style.display = 'none'; }, 3500);
+            toast.timer = setTimeout(() => { toast.style.display = 'none'; }, 4000);
         }
 
         function setPlatformType(type) {
@@ -749,21 +739,18 @@
             document.getElementById('cctv-ui').style.display = 'block';
             document.getElementById('quest-ui').style.display = 'block';
             
-            hasKey = false;
+            hasKey = false; inLowerLevel = false;
             if(platform === 'mobile') {
                 document.getElementById('joystick-zone').style.display = 'block';
                 document.getElementById('mobile-controls-right').style.display = 'flex';
                 document.getElementById('stamina-container').style.display = 'block';
-            } else {
-                document.body.requestPointerLock();
-                if(platform === 'pc') document.getElementById('crosshair').style.display = 'block';
-            }
+            } else { document.body.requestPointerLock(); if(platform === 'pc') document.getElementById('crosshair').style.display = 'block'; }
             
             cameraAngleX = 0.0; cameraAngleY = 0.0; smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
             generateRandomMaze(); buildMazeGraphics();
             
             const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
-            spawnQuestItems(player.position);
+            spawnLevelElements(player.position);
             
             entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = esp; e.state='patrol'; e.screamActive=false; });
             
@@ -778,9 +765,7 @@
             if(!isPaused && platform === 'pc') { document.body.requestPointerLock(); }
         }
 
-        window.addEventListener('click', () => {
-            if(gameActive && !isPaused && !isGameOver && platform === 'pc') document.body.requestPointerLock();
-        });
+        window.addEventListener('click', () => { if(gameActive && !isPaused && !isGameOver && platform === 'pc') document.body.requestPointerLock(); });
 
         document.addEventListener('pointerlockchange', () => {
             if (document.pointerLockElement !== document.body && gameActive && !isGameOver && platform === 'pc' && !isPaused) {
@@ -792,8 +777,7 @@
             isFlashlightOn = !isFlashlightOn;
             const mBtn = document.getElementById('btn-mobile-flash');
             if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
-            flashlight.intensity = isFlashlightOn ? 1.8 : 0;
-            lensMesh.material.color.setHex(isFlashlightOn ? 0xffffee : 0x222222);
+            flashlight.intensity = isFlashlightOn ? 1.8 : 0; lensMesh.material.color.setHex(isFlashlightOn ? 0xffffee : 0x222222);
         }
 
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
@@ -802,21 +786,21 @@
         function openTheEscapeDoor() {
             if(!hasKey || isDoorOpened) return;
             isDoorOpened = true; 
-            showToast("🔓 The door is open! Cross the shifting Bingo Pit!");
+            showToast("🔓 The door is open! Hurry and escape!");
             document.getElementById('interact-prompt').style.display = 'none';
             document.getElementById('btn-mobile-interact').style.display = 'none';
         }
 
         document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation(); 
-            if(gameActive && !isPaused && hasKey && !isDoorOpened) openTheEscapeDoor();
+            if(gameActive && !isPaused && hasKey && !isDoorOpened && !inLowerLevel) openTheEscapeDoor();
         });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
-            if (k === 'e' && gameActive && !isPaused) {
+            if (k === 'e' && gameActive && !isPaused && !inLowerLevel) {
                 if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) openTheEscapeDoor();
             }
         });
@@ -883,27 +867,27 @@
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
 
-            // 구덩이 내부 추락 연산 처리 중일 경우 벽 충돌을 건너뛰고 자유 추락 허용
-            if (player.position.y < -0.05) {
-                return { x: tentativePos.x, z: tentativePos.z };
-            }
+            if (!inLowerLevel && player.position.y < -0.05) return { x: tentativePos.x, z: tentativePos.z };
 
-            if(isDoorOpened && doorGroup) {
-                let dX = oldPos.x - doorGroup.position.x;
-                let dZ = oldPos.z - doorGroup.position.z;
-                let distToDoorPivot = Math.sqrt(dX*dX + dZ*dZ);
+            if(!inLowerLevel && isDoorOpened && doorGroup) {
+                let distToDoorPivot = Math.sqrt(Math.pow(oldPos.x - doorGroup.position.x, 2) + Math.pow(oldPos.z - doorGroup.position.z, 2));
                 if(distToDoorPivot < 3.2) return { x: tentativePos.x, z: tentativePos.z };
             }
             
             let res = { x: tentativePos.x, z: tentativePos.z };
-            const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
-            const pRow = Math.floor((oldPos.z - unitSize/2 + (mapRows * unitSize)/2) / unitSize);
+            let currentMap = inLowerLevel ? lowerMapData : mapData;
+            let cRows = inLowerLevel ? lowerMapRows : mapRows;
+            let cCols = inLowerLevel ? lowerMapCols : mapCols;
+
+            const pCol = Math.floor((oldPos.x - unitSize/2 + (cCols * unitSize)/2) / unitSize);
+            const pRow = Math.floor((oldPos.z - unitSize/2 + (cRows * unitSize)/2) / unitSize);
+            
             for (let r = pRow - 1; r <= pRow + 1; r++) {
                 for (let c = pCol - 1; c <= pCol + 1; c++) {
-                    if (r < 0 || r >= mapRows || c < 0 || c >= mapCols) continue;
-                    if (mapData[r][c] === 1) {
-                        const wX = (c - mapCols/2) * unitSize + unitSize/2;
-                        const wZ = (r - mapRows/2) * unitSize + unitSize/2;
+                    if (r < 0 || r >= cRows || c < 0 || c >= cCols) continue;
+                    if (currentMap[r][c] === 1) {
+                        const wX = (c - cCols/2) * unitSize + unitSize/2;
+                        const wZ = (r - cRows/2) * unitSize + unitSize/2;
                         const minX = wX - unitSize/2 - radius, maxX = wX + unitSize/2 + radius;
                         const minZ = wZ - unitSize/2 - radius, maxZ = wZ + unitSize/2 + radius;
                         if (res.x > minX && res.x < maxX && res.z > minZ && res.z < maxZ) {
@@ -917,35 +901,39 @@
         }
 
         function processEntityAI(e, playerPos) {
-            const ePos = e.mesh.position; 
-            const dist = Math.sqrt(Math.pow(ePos.x - playerPos.x, 2) + Math.pow(ePos.z - playerPos.z, 2));
-            
-            e.stuckCheckTimer += 1;
-            if(e.stuckCheckTimer > 50) {
-                const stuckDist = Math.sqrt(Math.pow(ePos.x - e.lastPos.x, 2) + Math.pow(ePos.z - e.lastPos.z, 2));
-                if(stuckDist < 0.15) { e.patrolTarget = getSafeSpawn(playerPos); }
-                e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
-            }
-            
-            if (dist < 14 && !isGameOver && player.position.y >= -0.2) { 
-                if(!e.screamActive) { e.screamActive = true; playHorrorScream(true); }
-                e.state = 'chase'; 
-            } else if (e.state === 'chase' && (dist > 20 || player.position.y < -0.2)) { 
+            if (inLowerLevel) {
                 e.state = 'patrol'; e.screamActive = false; playHorrorScream(false);
-                e.patrolTarget = getSafeSpawn(playerPos); 
+            } else {
+                const ePos = e.mesh.position; 
+                const dist = Math.sqrt(Math.pow(ePos.x - playerPos.x, 2) + Math.pow(ePos.z - playerPos.z, 2));
+                
+                e.stuckCheckTimer += 1;
+                if(e.stuckCheckTimer > 50) {
+                    const stuckDist = Math.sqrt(Math.pow(ePos.x - e.lastPos.x, 2) + Math.pow(ePos.z - e.lastPos.z, 2));
+                    if(stuckDist < 0.15) { e.patrolTarget = getSafeSpawn(playerPos); }
+                    e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
+                }
+                
+                if (dist < 14 && !isGameOver && player.position.y >= -0.2) { 
+                    if(!e.screamActive) { e.screamActive = true; playHorrorScream(true); }
+                    e.state = 'chase'; 
+                } else if (e.state === 'chase' && (dist > 20 || player.position.y < -0.2)) { 
+                    e.state = 'patrol'; e.screamActive = false; playHorrorScream(false);
+                    e.patrolTarget = getSafeSpawn(playerPos); 
+                }
+                
+                let dest = (e.state === 'chase') ? playerPos : e.patrolTarget;
+                if(e.state === 'patrol' && Math.abs(ePos.x - dest.x) < 1.2 && Math.abs(ePos.z - dest.z) < 1.2) { e.patrolTarget = getSafeSpawn(playerPos); }
+                const dX = dest.x - ePos.x, dZ = dest.z - ePos.z; const len = Math.sqrt(dX*dX + dZ*dZ);
+                if (len > 0.1) {
+                    const sp = e.state === 'chase' ? e.speed * 1.45 : e.speed;
+                    const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
+                    const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
+                    ePos.x = safeE.x; ePos.z = safeE.z; 
+                    e.mesh.rotation.y = Math.atan2(dX, dZ);
+                }
+                if(e.state === 'chase') updateScreamVolume(dist);
             }
-            
-            let dest = (e.state === 'chase') ? playerPos : e.patrolTarget;
-            if(e.state === 'patrol' && Math.abs(ePos.x - dest.x) < 1.2 && Math.abs(ePos.z - dest.z) < 1.2) { e.patrolTarget = getSafeSpawn(playerPos); }
-            const dX = dest.x - ePos.x, dZ = dest.z - ePos.z; const len = Math.sqrt(dX*dX + dZ*dZ);
-            if (len > 0.1) {
-                const sp = e.state === 'chase' ? e.speed * 1.45 : e.speed;
-                const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
-                const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
-                ePos.x = safeE.x; ePos.z = safeE.z; 
-                e.mesh.rotation.y = Math.atan2(dX, dZ);
-            }
-            if(e.state === 'chase') updateScreamVolume(dist);
         }
 
         let audioCtx = null, mainAmbientGain = null, sfxMasterGain = null, screamGain = null, keyHintGain = null;
@@ -974,7 +962,7 @@
         function syncBgmNodeVolume() { if(mainAmbientGain && audioCtx) mainAmbientGain.gain.setValueAtTime(volumeBgmRatio * 0.35, audioCtx.currentTime); }
 
         function processKeyAudioHint(playerPos) {
-            if(!keyHintGain || !keyMesh || hasKey || !audioCtx) return;
+            if(!keyHintGain || !keyMesh || hasKey || !audioCtx || inLowerLevel) return;
             const dist = Math.sqrt(Math.pow(playerPos.x - keyMesh.position.x, 2) + Math.pow(playerPos.z - keyMesh.position.z, 2));
             if(dist < 16) {
                 let targetVol = Math.max(0.001, (16 - dist) / 16) * 0.45 * volumeSfxRatio;
@@ -1020,7 +1008,7 @@
         }
 
         function playHeartbeatSound(volume, isDouble) {
-            if (!audioCtx || isPaused || isGameOver || !sfxMasterGain) return;
+            if (!audioCtx || isPaused || isGameOver || !sfxMasterGain || inLowerLevel) return;
             try {
                 let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'sine'; osc.frequency.setValueAtTime(48, audioCtx.currentTime); 
@@ -1037,7 +1025,7 @@
         }
 
         function backToMainMenu() {
-            isGameOver = false; gameActive = false; isPaused = false; platform = null; playHorrorScream(false);
+            isGameOver = false; gameActive = false; isPaused = false; platform = null; playHorrorScream(false); inLowerLevel = false;
             document.getElementById('pause-screen').style.display = 'none';
             document.getElementById('gameover-screen').style.display = 'none';
             document.getElementById('clear-screen').style.display = 'none';
@@ -1059,6 +1047,7 @@
             flashlight.intensity = isFlashlightOn ? 1.8 : 0;
 
             bingoPits.forEach(p => scene.remove(p.mesh)); bingoPits = []; pitBounds.active = false;
+            clearEnv();
 
             try {
                 if(ambientOsc1) { ambientOsc1.stop(); ambientOsc1 = null; }
@@ -1073,7 +1062,7 @@
             isGameOver = false; playHorrorScream(false);
             let respawnPos = getSafeSpawn(player.position, 10);
             player.position.set(respawnPos.x, 0, respawnPos.z); safeSpawnPosition.copy(player.position);
-            playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
+            playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false; inLowerLevel = false;
             entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; });
             document.getElementById('gameover-screen').style.display = 'none';
             if(platform === 'pc') document.body.requestPointerLock();
@@ -1101,97 +1090,118 @@
 
             processKeyAudioHint(player.position);
 
-            // --- 빙고판 실시간 흔들림 연출 루프 구현 ---
             const timeSec = Date.now() * 0.001;
             bingoPits.forEach(p => {
                 if(p.type === 'h') {
-                    // 가로 다리는 Z축 및 위아래로 미세 유동 흔들림 부여
                     p.mesh.position.z = p.baseZ + Math.sin(timeSec * p.speed + p.randPhase) * 0.15;
                     p.mesh.position.y = 0.01 + Math.cos(timeSec * 1.2 + p.randPhase) * 0.02;
                 } else {
-                    // 세로 다리는 X축 위주 흔들림 부여
                     p.mesh.position.x = p.baseX + Math.cos(timeSec * p.speed + p.randPhase) * 0.15;
                     p.mesh.position.y = 0.01 + Math.sin(timeSec * 1.1 + p.randPhase) * 0.02;
                 }
             });
 
-            // --- 빙고판 낙사존 물리 체크 루프 ---
-            if(pitBounds.active && player.position.y >= -0.01) {
+            if(pitBounds.active && player.position.y >= -0.01 && !inLowerLevel) {
                 if(player.position.x > pitBounds.minX && player.position.x < pitBounds.maxX &&
                    player.position.z > pitBounds.minZ && player.position.z < pitBounds.maxZ) {
                     
-                    // 구덩이 구역에 들어왔다면 현재 모든 라인들과 충돌을 체크해 발을 걸쳤는지 판별
                     let onPlatform = false;
                     for(let i=0; i<bingoPits.length; i++) {
                         let p = bingoPits[i];
                         if(p.type === 'h') {
-                            // 가로선 탑승 체크 (플레이어 Z 좌표가 흔들리는 다리의 Z 폭 범위 내에 있는지)
-                            if(Math.abs(player.position.z - p.mesh.position.z) < (pathThickness * 1.5)) { onPlatform = true; break; }
+                            if(Math.abs(player.position.z - p.mesh.position.z) < (pathThickness * 1.2)) { onPlatform = true; break; }
                         } else {
-                            // 세로선 탑승 체크 (플레이어 X 좌표가 흔들리는 다리의 X 폭 범위 내에 있는지)
-                            if(Math.abs(player.position.x - p.mesh.position.x) < (pathThickness * 1.5)) { onPlatform = true; break; }
+                            if(Math.abs(player.position.x - p.mesh.position.x) < (pathThickness * 1.2)) { onPlatform = true; break; }
                         }
                     }
 
-                    // 만약 다리를 빗겨나갔다면 낙하 시작 (Grounded 상태 강제 해제)
                     if(!onPlatform && isGrounded) {
-                        isGrounded = false;
-                        playerVelocityY = -0.02; // 아래로 처박히는 가속도 주입
+                        isGrounded = false; playerVelocityY = -0.02;
                     }
                 }
             }
 
-            // 구덩이 아래 깊이 떨어졌을 때 리스폰 혹은 게임오버 처리 연계
-            if(player.position.y < -3.5 && !isGameOver) {
-                triggerGameOver("You slipped off the Bingo Grid and fell into the infinite void.");
-                return;
+            if(player.position.y < -3.5 && !inLowerLevel) {
+                inLowerLevel = true;
+                player.position.set(lowerSpawnPoint.x, -28.5, lowerSpawnPoint.z);
+                playerVelocityY = 0; isGrounded = true;
+                showToast("⚠️ You fell into the Lower Depths!<br>Find the hidden ladder to climb back up.");
             }
 
-            if(!hasKey && keyMesh && Math.sqrt(Math.pow(player.position.x - keyMesh.position.x, 2) + Math.pow(player.position.z - keyMesh.position.z, 2)) < 1.3) {
-                hasKey = true; scene.remove(keyMesh);
-                if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
-                showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Bingo grid route to escape door unlocked.</span>");
-            }
+            document.getElementById('interact-prompt').style.display = 'none';
+            document.getElementById('btn-mobile-interact').style.display = 'none';
 
-            if(!hasKey) {
-                document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.";
-            } else if(doorGroup) {
-                let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
-                if(!isDoorOpened) {
-                    document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Cross the pit & open the door.<br><span style='color:#00ff66; font-size:15px;'>📍 Door Distance: ${currentDoorDist}m</span>`;
-                } else {
-                    document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>Step carefully into the pitch black escape portal!</span>`;
+            let ladderClimbing = false;
+            if(inLowerLevel && ladderGroup) {
+                let distToLad = Math.sqrt(Math.pow(player.position.x - ladderGroup.position.x, 2) + Math.pow(player.position.z - ladderGroup.position.z, 2));
+                if(distToLad < 2.0) {
+                    document.getElementById('interact-prompt').innerHTML = "🪜 [W] / [↑] Climb Ladder";
+                    document.getElementById('interact-prompt').style.display = 'block';
+                    
+                    if(platform === 'pc' && keys.w) ladderClimbing = true;
+                    if(platform === 'mobile' && joystickInput.y < -0.2) ladderClimbing = true;
+
+                    if(ladderClimbing) {
+                        playerVelocityY = 0;
+                        player.position.y += 0.08;
+                        isGrounded = true; 
+                    } else if (player.position.y > -29.9) {
+                        playerVelocityY = 0;
+                    }
+                    
+                    if(player.position.y > -25.5) {
+                        inLowerLevel = false;
+                        player.position.set(escapeReturnPoint.x, 0, escapeReturnPoint.z);
+                        player.position.y = 0;
+                        document.getElementById('interact-prompt').style.display = 'none';
+                        showToast("⤴️ You squeezed through the hole and escaped back up!");
+                    }
                 }
-            }
-
-            if(doorGroup) {
-                let distToDoorFrame = Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2));
-                
-                if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
-                    if(platform === 'pc') document.getElementById('interact-prompt').style.display = 'block';
-                    else if(platform === 'mobile') document.getElementById('btn-mobile-interact').style.display = 'flex';
-                } else {
-                    document.getElementById('interact-prompt').style.display = 'none';
-                    document.getElementById('btn-mobile-interact').style.display = 'none';
+            } else if (!inLowerLevel) {
+                if(!hasKey && keyMesh && Math.sqrt(Math.pow(player.position.x - keyMesh.position.x, 2) + Math.pow(player.position.z - keyMesh.position.z, 2)) < 1.3) {
+                    hasKey = true; scene.remove(keyMesh);
+                    if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                    if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
+                    showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Now cross the huge Bingo grid to escape.</span>");
                 }
 
-                if(isDoorOpened && doorPivot) {
-                    const targetRotation = -Math.PI / 2;
-                    if(doorPivot.rotation.y > targetRotation) {
-                        doorPivot.rotation.y -= 0.06; doorGroup.updateMatrixWorld(true);
+                if(!hasKey) {
+                    document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.";
+                } else if(doorGroup) {
+                    let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
+                    if(!isDoorOpened) {
+                        document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Cross the pit & open the door.<br><span style='color:#00ff66; font-size:15px;'>📍 Door Distance: ${currentDoorDist}m</span>`;
                     } else {
-                        let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
-                        if(distanceToEscapeSensor < 1.5) { 
-                            gameActive = false; playHorrorScream(false);
-                            document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
-                            document.getElementById('clear-screen').style.display = 'flex';
-                            if(platform === 'pc') document.exitPointerLock(); 
-                            return;
-                        }
+                        document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>Step carefully into the pitch black escape portal!</span>`;
                     }
-                } else if(!hasKey && distToDoorFrame < 1.4) {
-                    showToast("🔒 The door is firmly locked.<br>Find the golden key to bypass the pit obstacles.");
+                }
+
+                if(doorGroup) {
+                    let distToDoorFrame = Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2));
+                    
+                    if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
+                        document.getElementById('interact-prompt').innerHTML = "🚪 [E] Open Door";
+                        document.getElementById('interact-prompt').style.display = 'block';
+                        if(platform === 'mobile') document.getElementById('btn-mobile-interact').style.display = 'flex';
+                    }
+
+                    if(isDoorOpened && doorPivot) {
+                        const targetRotation = -Math.PI / 2;
+                        if(doorPivot.rotation.y > targetRotation) {
+                            doorPivot.rotation.y -= 0.06; doorGroup.updateMatrixWorld(true);
+                        } else {
+                            let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
+                            if(distanceToEscapeSensor < 1.5) { 
+                                gameActive = false; playHorrorScream(false);
+                                document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
+                                document.getElementById('clear-screen').style.display = 'flex';
+                                if(platform === 'pc') document.exitPointerLock(); 
+                                return;
+                            }
+                        }
+                    } else if(!hasKey && distToDoorFrame < 1.4) {
+                        showToast("🔒 The door is firmly locked.<br>Find the golden key to bypass the pit obstacles.");
+                    }
                 }
             }
 
@@ -1204,10 +1214,10 @@
             let moveX = 0, moveZ = 0;
             if (platform === 'pc') {
                 if (keys.w) moveZ += 1; if (keys.s) moveZ -= 1; if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
-                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted);
+                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && keys.shift && !isExhausted && !ladderClimbing);
             } else {
                 if (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) { moveX = joystickInput.x; moveZ = -joystickInput.y; }
-                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.75 && !isExhausted);
+                isMoving = (moveX !== 0 || moveZ !== 0); isSprinting = (isMoving && joystickDistanceRatio > 0.75 && !isExhausted && !ladderClimbing);
             }
 
             if (isSprinting) { stamina -= 0.45; if (stamina <= 0) { stamina = 0; isExhausted = true; } } 
@@ -1217,6 +1227,8 @@
             if(sBar) { sBar.style.width = `${stamina}%`; sBar.style.background = isExhausted ? '#d62828' : '#bfae6f'; }
 
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
+            if(ladderClimbing) currentMoveSpeed *= 0.3; 
+            
             const fX = (forwardX * moveZ + rightX * moveX) * currentMoveSpeed;
             const fZ = (forwardZ * moveZ + rightZ * moveX) * currentMoveSpeed;
 
@@ -1224,12 +1236,11 @@
             let bobX = 0, bobY = 0;
 
             if (isMoving) {
-                const oldP = { x: player.position.x, z: player.position.z };
                 const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
                 const safeP = checkGridCollision(player.position, new THREE.Vector3(tentativeP.x, 0, tentativeP.z), 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 
-                if (isGrounded) {
+                if (isGrounded && !ladderClimbing) {
                     let waveFreq = isSprinting ? 2.5 : 1.5;
                     bobX = Math.sin(runtime * waveFreq) * 0.035; bobY = Math.cos(runtime * waveFreq * 2) * 0.025;
                     let now = Date.now();
@@ -1238,13 +1249,14 @@
             }
 
             playerVelocityY += gravity; player.position.y += playerVelocityY;
-            // 바닥 y=0 하한선 연산은 구덩이 구역 외부일 때만 고정 처리
-            if (player.position.y <= 0 && player.position.y > -0.5) {
-                let insidePitZone = (pitBounds.active && 
+            
+            let floorBaseY = inLowerLevel ? -30 : 0;
+            if (player.position.y <= floorBaseY && player.position.y > floorBaseY - 0.5) {
+                let insidePitZone = (!inLowerLevel && pitBounds.active && 
                                     player.position.x > pitBounds.minX && player.position.x < pitBounds.maxX &&
                                     player.position.z > pitBounds.minZ && player.position.z < pitBounds.maxZ);
                 if (!insidePitZone) {
-                    player.position.y = 0; playerVelocityY = 0; isGrounded = true;
+                    player.position.y = floorBaseY; playerVelocityY = 0; isGrounded = true;
                 }
             }
 
@@ -1252,7 +1264,7 @@
             fpsRig.position.set(player.position.x, player.position.y + 1.5, player.position.z);
             fpsRig.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
             
-            let armWave = isMoving ? Math.sin(runtime * (isSprinting ? 2.5 : 1.5)) * 0.08 : 0;
+            let armWave = isMoving && !ladderClimbing ? Math.sin(runtime * (isSprinting ? 2.5 : 1.5)) * 0.08 : 0;
             let armIdle = Math.sin(Date.now() * 0.001) * 0.01; 
             
             leftArm.position.z = -0.3 + armWave + armIdle; leftArm.position.y = -0.25 + Math.abs(armWave)*0.3;
@@ -1277,7 +1289,7 @@
             });
 
             const heartUI = document.getElementById('heartbeat-ui');
-            if (closestDist < 12 && player.position.y >= -0.5) {
+            if (closestDist < 12 && player.position.y >= -0.5 && !inLowerLevel) {
                 let proximityFactor = (12 - closestDist) / 12; let heartbeatInterval = 800 - (proximityFactor * 550); 
                 let now = Date.now();
                 if (now - lastHeartbeatSoundTime > heartbeatInterval) {
@@ -1287,7 +1299,7 @@
                 }
             } else { heartUI.style.transform = 'translateX(-50%) scale(0)'; }
 
-            if (closestDist < 1.2 && player.position.y >= -0.5) {
+            if (closestDist < 1.2 && player.position.y >= -0.5 && !inLowerLevel) {
                 triggerGameOver("The entity has completely severed your life signal.");
                 return;
             }

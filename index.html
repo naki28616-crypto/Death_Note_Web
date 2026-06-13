@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - True Escape (Pit Update)</title>
+    <title>The Backrooms - True Escape (Pit & Ladder Edition)</title>
     <style>
-        /* 기존 CSS 유지 */
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
             overflow: hidden; background-color: #0d0d0b; 
@@ -249,26 +248,28 @@
         let actualRecordTime = 0, isSpeedBoosted = false, isPanelExpanded = false;
 
         let playerVelocityY = 0, isGrounded = true;
-        const gravity = -0.016, jumpStrength = 0.165; 
+        const gravity = -0.014, jumpStrength = 0.165; 
         let lastHeartbeatSoundTime = 0;
 
         const basePlayerSpeed = 0.11, sprintPlayerSpeed = 0.17, exhaustedPlayerSpeed = 0.06;
         let safeSpawnPosition = new THREE.Vector3();
 
-        // ------------------ 퀘스트 및 아이템 변수 ------------------
         let hasKey = false, isDoorOpened = false;
         let keyMesh = null, doorGroup = null, doorPivot = null;
         let globalEscapeSensorPos = new THREE.Vector3(); 
         
-        // 함정(구멍) & 사다리 관련 변수 추가
-        let pitPos = { row: -1, col: -1, x: 0, z: 0 };
-        const pitDepth = -12; // 구멍의 깊이
-        let hasLadder = false, ladderInstalled = false;
-        let ladderItemMesh = null, installedLadderMesh = null, pitWallsGroup = null, instancedFloors = null;
-        let wasInPitBefore = false; // 떨어졌는지 체크용
-
         const mapRows = 22, mapCols = 22, unitSize = 5, wallHeight = 5.5;
         let mapData = [], instancedWalls = null, lamps = [];
+
+        // --- [새로 추가된 기믹용 글로벌 변수] ---
+        let isStickingToWall = false;
+        let isLadderInstalled = false;
+        const pitCenter = new THREE.Vector3(0, 0, 0); // 맵 중앙을 구덩이 영역으로 지정
+        const pitRadius = 3.8;
+        const ladderPos = new THREE.Vector3(6, -6, 6); // 지하 바닥에 배치할 사다리 구멍 위치
+        const upperLandingPos = new THREE.Vector3(4, 0, 0); // 사다리 타고 올라올 위치
+        let lowerFloor = null, holeMesh = null, ladderMesh = null, pitZoneMesh = null;
+        // ------------------------------------
 
         const backroomsYellow = 0xbaa761; 
         const scene = new THREE.Scene();
@@ -367,7 +368,7 @@
             
             const tex = new THREE.CanvasTexture(canvas);
             tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(1, 1); // InstancedMesh 타일마다 하나씩 맵핑되도록 수정
+            tex.repeat.set(16, 16); 
             const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
             tex.anisotropy = maxAnisotropy ? Math.min(4, maxAnisotropy) : 1;
             return tex;
@@ -433,12 +434,12 @@
             }
             carve(1, 1);
             
-            for(let k=0; k < 3; k++) {
-                let centerR = Math.floor(Math.random() * (mapRows - 6)) + 3, centerC = Math.floor(Math.random() * (mapCols - 6)) + 3;
-                for(let r = centerR - 2; r <= centerR + 2; r++) {
-                    for(let c = centerC - 2; c <= centerC + 2; c++) {
-                        if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) mapData[r][c] = 0;
-                    }
+            // 맵 중앙 확보 (구덩이 설치용 방)
+            let centerR = Math.floor(mapRows / 2);
+            let centerC = Math.floor(mapCols / 2);
+            for(let r = centerR - 2; r <= centerR + 2; r++) {
+                for(let c = centerC - 2; c <= centerC + 2; c++) {
+                    if(r > 0 && r < mapRows - 1 && c > 0 && c < mapCols - 1) mapData[r][c] = 0;
                 }
             }
             
@@ -446,46 +447,42 @@
             for(let c=0; c<mapCols; c++) { mapData[0][c] = 1; mapData[mapRows-1][c] = 1; }
         }
 
-        // 지형(바닥/구멍 포함) 생성
         function buildMazeGraphics() {
             if(instancedWalls) scene.remove(instancedWalls);
-            if(instancedFloors) scene.remove(instancedFloors);
-            if(pitWallsGroup) scene.remove(pitWallsGroup);
             lamps.forEach(l => scene.remove(l)); lamps = [];
             
+            // 기존 기믹 오브젝트 제거 리셋
+            if(lowerFloor) scene.remove(lowerFloor);
+            if(holeMesh) scene.remove(holeMesh);
+            if(ladderMesh) scene.remove(ladderMesh);
+            if(pitZoneMesh) scene.remove(pitZoneMesh);
+
             let wallCount = 0;
-            let floorCount = mapRows * mapCols;
             for(let r=0; r<mapRows; r++) { for(let c=0; c<mapCols; c++) { if(mapData[r][c] === 1) wallCount++; } }
 
             const wallGeo = new THREE.BoxGeometry(unitSize, wallHeight, unitSize);
             instancedWalls = new THREE.InstancedMesh(wallGeo, wallMat, wallCount);
-            
-            const floorGeo = new THREE.PlaneGeometry(unitSize, unitSize);
-            floorGeo.rotateX(-Math.PI/2);
-            instancedFloors = new THREE.InstancedMesh(floorGeo, floorMat, floorCount);
-
-            let dummy = new THREE.Object3D(), wIdx = 0, fIdx = 0;
+            let dummy = new THREE.Object3D(), idx = 0;
 
             for(let r=0; r<mapData.length; r++) {
                 for(let c=0; c<mapData[r].length; c++) {
                     const x = (c - mapCols/2) * unitSize + unitSize/2;
                     const z = (r - mapRows/2) * unitSize + unitSize/2;
-                    
-                    // 벽 생성
                     if(mapData[r][c] === 1) {
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
-                        instancedWalls.setMatrixAt(wIdx++, dummy.matrix);
+                        instancedWalls.setMatrixAt(idx++, dummy.matrix);
                     } else if(Math.random() < 0.12) { 
-                        // 천장 조명 생성
                         const lampGroup = new THREE.Group();
                         const frameGeo = new THREE.BoxGeometry(2.4, 0.05, 1.2);
                         const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
                         const frame = new THREE.Mesh(frameGeo, frameMat);
+                        
                         const panelGeo = new THREE.BoxGeometry(2.2, 0.06, 1.0);
                         const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffe0 }); 
-                        const panel = new THREE.Mesh(panelGeo, panelMat);
+                        panel = new THREE.Mesh(panelGeo, panelMat);
                         panel.position.y = -0.01; 
-                        lampGroup.add(frame); lampGroup.add(panel);
+                        
+                        lampGroup.add(frame, panel);
                         lampGroup.position.set(x, wallHeight - 0.02, z);
                         if (Math.random() > 0.5) lampGroup.rotation.y = Math.PI / 2;
                         
@@ -493,41 +490,63 @@
                         const pl = new THREE.PointLight(0xfff5cc, 0.6, 11); 
                         pl.position.set(x, wallHeight - 0.3, z); scene.add(pl);
                     }
-
-                    // 바닥 생성 (구멍이면 깊게 파인 곳에 배치)
-                    if(r === pitPos.row && c === pitPos.col) {
-                        dummy.position.set(x, pitDepth, z);
-                    } else {
-                        dummy.position.set(x, 0, z);
-                    }
-                    dummy.updateMatrix();
-                    instancedFloors.setMatrixAt(fIdx++, dummy.matrix);
                 }
             }
             scene.add(instancedWalls);
-            scene.add(instancedFloors);
-
-            // 구멍 테두리 벽(Pit Walls) 생성하여 공허로 떨어지지 않게 막음
-            if (pitPos.row !== -1 && pitPos.col !== -1) {
-                pitWallsGroup = new THREE.Group();
-                const pitWallGeo = new THREE.PlaneGeometry(unitSize, Math.abs(pitDepth));
-                const pWall1 = new THREE.Mesh(pitWallGeo, wallMat); pWall1.position.set(0, pitDepth/2, -unitSize/2);
-                const pWall2 = new THREE.Mesh(pitWallGeo, wallMat); pWall2.position.set(0, pitDepth/2, unitSize/2); pWall2.rotation.y = Math.PI;
-                const pWall3 = new THREE.Mesh(pitWallGeo, wallMat); pWall3.position.set(-unitSize/2, pitDepth/2, 0); pWall3.rotation.y = Math.PI/2;
-                const pWall4 = new THREE.Mesh(pitWallGeo, wallMat); pWall4.position.set(unitSize/2, pitDepth/2, 0); pWall4.rotation.y = -Math.PI/2;
-                pitWallsGroup.add(pWall1, pWall2, pWall3, pWall4);
-                pitWallsGroup.position.set(pitPos.x, 0, pitPos.z);
-                scene.add(pitWallsGroup);
-            }
-
-            // 천장은 그대로 단일 평면 사용
             const mW = mapCols*unitSize, mH = mapRows*unitSize;
+            const f = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), floorMat); f.rotation.x = -Math.PI/2; scene.add(f);
             const cl = new THREE.Mesh(new THREE.PlaneGeometry(mW, mH), ceilMat); cl.rotation.x = Math.PI/2; cl.position.y = wallHeight; scene.add(cl);
+
+            // --- [신규 기믹: 지하 공간 및 사다리 구멍 생성] ---
+            const lfGeo = new THREE.PlaneGeometry(mW, mH);
+            const lfMat = new THREE.MeshStandardMaterial({ color: 0x161511, roughness: 0.95 });
+            lowerFloor = new THREE.Mesh(lfGeo, lfMat);
+            lowerFloor.rotation.x = -Math.PI / 2;
+            lowerFloor.position.y = -6; // 본래 바닥에서 6단위 아래층
+            scene.add(lowerFloor);
+
+            // 캐릭터 크기보다 큰 네모난 구멍 구현
+            const holeGeo = new THREE.BoxGeometry(2.2, 0.08, 2.2);
+            const holeMat = new THREE.MeshStandardMaterial({ color: 0x030302, roughness: 1.0 });
+            holeMesh = new THREE.Mesh(holeGeo, holeMat);
+            holeMesh.position.set(ladderPos.x, -5.96, ladderPos.z);
+            scene.add(holeMesh);
+
+            // 상호작용으로 설치할 3D 사다리 오브젝트 조립
+            ladderMesh = new THREE.Group();
+            const ladBarMat = new THREE.MeshStandardMaterial({ color: 0x4a412a, roughness: 0.8 });
+            const leftPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 6.4), ladBarMat);
+            leftPole.position.set(-0.45, 3.2, 0);
+            const rightPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 6.4), ladBarMat);
+            rightPole.position.set(0.45, 3.2, 0);
+            ladderMesh.add(leftPole, rightPole);
+
+            for (let i = 0; i < 8; i++) {
+                const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.9), ladBarMat);
+                rung.rotation.z = Math.PI / 2;
+                rung.position.set(0, 0.4 + i * 0.75, 0);
+                ladderMesh.add(rung);
+            }
+            ladderMesh.position.set(ladderPos.x, -6, ladderPos.z - 0.8);
+            ladderMesh.visible = false; // 기본적으론 숨겨둠
+            scene.add(ladderMesh);
+
+            // 1층 바닥에 표시할 어두운 구덩이 영역 비주얼
+            const pitZoneGeo = new THREE.PlaneGeometry(pitRadius * 2, pitRadius * 2);
+            const pitZoneMat = new THREE.MeshBasicMaterial({ color: 0x050504 });
+            pitZoneMesh = new THREE.Mesh(pitZoneGeo, pitZoneMat);
+            pitZoneMesh.rotation.x = -Math.PI / 2;
+            pitZoneMesh.position.set(pitCenter.x, 0.01, pitCenter.z);
+            scene.add(pitZoneMesh);
+            // --------------------------------------------------
         }
 
         function getSafeSpawn(avoidPos = null, minPlayerDist = 0) {
             for(let i=0; i<400; i++) {
                 let r = Math.floor(Math.random()*mapRows), c = Math.floor(Math.random()*mapCols);
+                // 중앙 구덩이 방에는 스폰 안 되게 방지 처리
+                if (Math.abs(r - Math.floor(mapRows/2)) <= 2 && Math.abs(c - Math.floor(mapCols/2)) <= 2) continue;
+                
                 if(mapData[r][c] === 0) {
                     let spawnX = (c - mapCols/2)*unitSize + unitSize/2;
                     let spawnZ = (r - mapRows/2)*unitSize + unitSize/2;
@@ -541,60 +560,21 @@
             return { x: unitSize, z: unitSize, row: 1, col: 1 };
         }
 
-        // 사다리 모델 생성기
-        function createLadderMesh() {
-            const group = new THREE.Group();
-            const poleMat = new THREE.MeshStandardMaterial({color: 0x5a4a37, roughness: 0.9});
-            const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, Math.abs(pitDepth) + 1, 8), poleMat); p1.position.set(-0.5, Math.abs(pitDepth)/2 + 0.5, 0);
-            const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, Math.abs(pitDepth) + 1, 8), poleMat); p2.position.set(0.5, Math.abs(pitDepth)/2 + 0.5, 0);
-            group.add(p1, p2);
-            for(let i=1; i < Math.abs(pitDepth) + 1; i += 1.2) {
-                const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8), poleMat);
-                rung.rotation.z = Math.PI/2; rung.position.set(0, i, 0); group.add(rung);
-            }
-            return group;
-        }
-
-        // 구멍(Pit)과 획득용 사다리 배치
-        function setupPitAndLadder(playerPos) {
-            if(ladderItemMesh) scene.remove(ladderItemMesh);
-            if(installedLadderMesh) scene.remove(installedLadderMesh);
-            
-            // 구멍 위치 설정 (플레이어 스폰 위치와 멀리)
-            let pLoc = getSafeSpawn(playerPos, 20);
-            pitPos = { row: pLoc.row, col: pLoc.col, x: pLoc.x, z: pLoc.z };
-
-            // 획득용 사다리 미니 버전 (구멍 밑바닥에 배치)
-            ladderItemMesh = new THREE.Group();
-            const poleMat = new THREE.MeshStandardMaterial({color: 0x7c674e, roughness: 0.9});
-            const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3, 8), poleMat); p1.position.set(-0.3, 0, 0); p1.rotation.z = Math.PI/2;
-            const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3, 8), poleMat); p2.position.set(0.3, 0, 0); p2.rotation.z = Math.PI/2;
-            ladderItemMesh.add(p1, p2);
-            for(let i=-1; i<=1; i+=0.8) {
-                const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6, 8), poleMat); rung.position.set(0, 0, i); ladderItemMesh.add(rung);
-            }
-            
-            // 바닥에 살짝 떠있도록 설정
-            ladderItemMesh.position.set(pitPos.x + 0.5, pitDepth + 0.2, pitPos.z + 0.5);
-            ladderItemMesh.rotation.y = Math.random() * Math.PI;
-            scene.add(ladderItemMesh);
-        }
-
         function spawnWallAttachedDoor() {
             if(doorGroup) scene.remove(doorGroup);
 
             doorGroup = new THREE.Group();
-            let doorRow = 1, doorCol = 1, angle = 0;
+            let foundWall = false, doorRow = 1, doorCol = 1, angle = 0;
             let offsetOffsetX = 0, offsetOffsetZ = 0;
 
             for(let i=0; i<500; i++) {
                 let r = Math.floor(Math.random()*(mapRows-2))+1, c = Math.floor(Math.random()*(mapCols-2))+1;
-                // 문이 구멍(pit) 근처에 생기지 않도록 방지
-                if(mapData[r][c] === 0 && !(r === pitPos.row && c === pitPos.col)) {
-                    if(mapData[r-1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = -2.45; angle = 0; doorRow = r; doorCol = c; break; }
-                    if(mapData[r+1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = 2.45; angle = Math.PI; doorRow = r; doorCol = c; break; }
-                    if(mapData[r][c-1] === 1) { offsetOffsetX = -2.45; offsetOffsetZ = 0; angle = Math.PI / 2; doorRow = r; doorCol = c; break; }
-                    if(mapData[r][c+1] === 1) { offsetOffsetX = 2.45; offsetOffsetZ = 0; angle = -Math.PI / 2; doorRow = r; doorCol = c; break; }
+                if (Math.abs(r - Math.floor(mapRows/2)) <= 2 && Math.abs(c - Math.floor(mapCols/2)) <= 2) continue;
+                if(mapData[r][c] === 0) {
+                    if(mapData[r-1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = -2.45; angle = 0; doorRow = r; doorCol = c; foundWall = true; break; }
+                    if(mapData[r+1][c] === 1) { offsetOffsetX = 0; offsetOffsetZ = 2.45; angle = Math.PI; doorRow = r; doorCol = c; foundWall = true; break; }
+                    if(mapData[r][c-1] === 1) { offsetOffsetX = -2.45; offsetOffsetZ = 0; angle = Math.PI / 2; doorRow = r; doorCol = c; foundWall = true; break; }
+                    if(mapData[r][c+1] === 1) { offsetOffsetX = 2.45; offsetOffsetZ = 0; angle = -Math.PI / 2; doorRow = r; doorCol = c; foundWall = true; break; }
                 }
             }
 
@@ -614,25 +594,32 @@
             doorPivot.position.set(-0.78, 1.4, 0); 
             
             const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.56, 2.65, 0.12), new THREE.MeshStandardMaterial({ color: 0x3d2516, roughness: 0.75 }));
-            doorPanel.position.set(0.78, 0, 0); doorPivot.add(doorPanel);
+            doorPanel.position.set(0.78, 0, 0); 
+            doorPivot.add(doorPanel);
             
             const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshStandardMaterial({ color: 0xccaa44, metalness: 0.8, roughness: 0.1 }));
-            knob.position.set(0.65, 0, 0.09); doorPanel.add(knob);
+            knob.position.set(0.65, 0, 0.09); 
+            doorPanel.add(knob);
+            
             doorGroup.add(doorPivot);
 
             const corridorGeo = new THREE.BoxGeometry(1.6, 2.8, 3.0);
             const corridorMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
             const escapeCorridor = new THREE.Mesh(corridorGeo, corridorMat);
-            escapeCorridor.position.set(0, 1.4, -1.5); doorGroup.add(escapeCorridor);
+            escapeCorridor.position.set(0, 1.4, -1.5); 
+            doorGroup.add(escapeCorridor);
 
-            scene.add(doorGroup); doorGroup.updateMatrixWorld(true);
+            scene.add(doorGroup);
+            doorGroup.updateMatrixWorld(true);
 
             let sensorOffset = new THREE.Vector3(0, 1.0, -2.2); 
             sensorOffset.applyQuaternion(doorGroup.quaternion);
             globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
 
             const greenLight = new THREE.PointLight(0x00ff55, 0, 6);
-            greenLight.position.set(0, 1.4, -0.2); doorGroup.add(greenLight); doorGroup.greenLight = greenLight;
+            greenLight.position.set(0, 1.4, -0.2);
+            doorGroup.add(greenLight);
+            doorGroup.greenLight = greenLight;
 
             return { x: doorGroup.position.x, z: doorGroup.position.z };
         }
@@ -648,20 +635,20 @@
             keyBar.position.y = -0.2; keyBar.rotation.z = Math.PI/2;
             keyMesh.add(keyRing, keyBar);
             
-            const keyLight = new THREE.PointLight(0xffdd44, 2.5, 12); keyLight.position.y = 0.2; keyMesh.add(keyLight);
+            const keyLight = new THREE.PointLight(0xffdd44, 2.5, 12);
+            keyLight.position.y = 0.2;
+            keyMesh.add(keyLight);
 
-            // 열쇠가 구멍 위에 생기지 않도록 방지
-            let keyLoc = getSafeSpawn(playerPos, 15);
-            while(keyLoc.row === pitPos.row && keyLoc.col === pitPos.col) { keyLoc = getSafeSpawn(playerPos, 15); }
-            
-            keyMesh.position.set(keyLoc.x, 0.6, keyLoc.z); scene.add(keyMesh);
+            const keyLoc = getSafeSpawn(playerPos, 15);
+            keyMesh.position.set(keyLoc.x, 0.6, keyLoc.z);
+            scene.add(keyMesh);
         }
 
-        generateRandomMaze(); 
+        generateRandomMaze(); buildMazeGraphics();
 
         let player = new THREE.Group(); scene.add(player);
+
         let entities = [];
-        
         function createCustomHorrorEntity() {
             let ent = new THREE.Group();
             let eMat = new THREE.MeshStandardMaterial({ color: 0x090909, roughness: 0.7 }); 
@@ -674,7 +661,9 @@
                 ent.add(legRoot); legs.push(legRoot);
             }
             let eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            for(let e=0; e<4; e++) { let eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat); eye.position.set(-0.15 + (e*0.1), 1.5, 0.32 - (Math.abs(e-1.5)*0.04)); ent.add(eye); }
+            for(let e=0; e<4; e++) {
+                let eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat); eye.position.set(-0.15 + (e*0.1), 1.5, 0.32 - (Math.abs(e-1.5)*0.04)); ent.add(eye);
+            }
             scene.add(ent); return { mesh: ent, legs: legs, core: core };
         }
 
@@ -685,113 +674,245 @@
             stuckCheckTimer: 0, lastPos: new THREE.Vector3(), animOffset: Math.random()*50, screamActive: false
         });
 
-        let cameraAngleX = 0.0, cameraAngleY = 0.0, smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
+        let cameraAngleX = 0.0, cameraAngleY = 0.0;
+        let smoothCamAngleX = 0.0, smoothCamAngleY = 0.0;
         let stamina = 100.0, isExhausted = false, isMoving = false, isSprinting = false;
-        const keys = { w: false, a: false, s: false, d: false, shift: false };
+        const keys = { w: false, a: false, s: false, d: false, shift: false, q: false };
 
         function updateSensitivity(val) { globalSensitivity = parseFloat(val); document.getElementById('txt-sens').textContent = globalSensitivity.toFixed(1); }
         function updateBgmVolume(val) { volumeBgmRatio = parseInt(val) / 100; document.getElementById('txt-vol-bgm').textContent = val + '%'; syncBgmNodeVolume(); }
         function updateSfxVolume(val) { volumeSfxRatio = parseInt(val) / 100; document.getElementById('txt-vol-sfx').textContent = val + '%'; }
-        function toggleSettingsPanel() { isPanelExpanded = !isPanelExpanded; const panel = document.getElementById('ui-container'), toggleBtn = document.getElementById('btn-toggle-panel'); if (isPanelExpanded) { panel.classList.remove('collapsed'); toggleBtn.textContent = "◣"; } else { panel.classList.add('collapsed'); toggleBtn.textContent = "◢"; } }
-        function toggleFullScreen() { if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); showToast("📺 Full screen mode activated."); } else { if (document.exitFullscreen) document.exitFullscreen(); } }
 
-        function showToast(msg) {
-            const toast = document.getElementById('game-toast'); toast.innerHTML = msg; toast.style.display = 'block';
-            clearTimeout(toast.timer); toast.timer = setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        function toggleSettingsPanel() {
+            isPanelExpanded = !isPanelExpanded;
+            const panel = document.getElementById('ui-container'), toggleBtn = document.getElementById('btn-toggle-panel');
+            if (isPanelExpanded) { panel.classList.remove('collapsed'); toggleBtn.textContent = "◣"; } 
+            else { panel.classList.add('collapsed'); toggleBtn.textContent = "◢"; }
         }
 
-        function setPlatformType(type) { platform = type; document.getElementById('pc-select-btn').classList.remove('selected'); document.getElementById('mobile-select-btn').classList.remove('selected'); document.getElementById(type + '-select-btn').classList.add('selected'); document.getElementById('main-start-trigger').classList.add('ready'); }
+        function toggleFullScreen() {
+            if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  
+                if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+                showToast("📺 Full screen mode activated.");
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('game-toast');
+            toast.innerHTML = msg; toast.style.display = 'block';
+            clearTimeout(toast.timer);
+            toast.timer = setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+
+        function setPlatformType(type) {
+            platform = type;
+            document.getElementById('pc-select-btn').classList.remove('selected');
+            document.getElementById('mobile-select-btn').classList.remove('selected');
+            document.getElementById(type + '-select-btn').classList.add('selected');
+            document.getElementById('main-start-trigger').classList.add('ready');
+        }
 
         function launchGameCore() {
             if(!platform) return;
-            document.getElementById('start-screen').style.display = 'none'; document.getElementById('top-controls').style.display = 'flex';
-            document.getElementById('cctv-ui').style.display = 'block'; document.getElementById('quest-ui').style.display = 'block';
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('top-controls').style.display = 'flex';
+            document.getElementById('cctv-ui').style.display = 'block';
+            document.getElementById('quest-ui').style.display = 'block';
             
-            hasKey = false; hasLadder = false; ladderInstalled = false; wasInPitBefore = false;
-            
+            hasKey = false;
+            isLadderInstalled = false;
+            isStickingToWall = false;
+            if(ladderMesh) ladderMesh.visible = false;
+
             if(platform === 'mobile') {
-                document.getElementById('joystick-zone').style.display = 'block'; document.getElementById('mobile-controls-right').style.display = 'flex'; document.getElementById('stamina-container').style.display = 'block';
+                document.getElementById('joystick-zone').style.display = 'block';
+                document.getElementById('mobile-controls-right').style.display = 'flex';
+                document.getElementById('stamina-container').style.display = 'block';
             } else {
-                document.body.requestPointerLock(); if(platform === 'pc') document.getElementById('crosshair').style.display = 'block';
+                document.body.requestPointerLock();
+                if(platform === 'pc') document.getElementById('crosshair').style.display = 'block';
             }
             
             cameraAngleX = 0.0; cameraAngleY = 0.0; smoothCamAngleX = 0.0; smoothCamAngleY = 0.0;
+            generateRandomMaze(); buildMazeGraphics();
             
-            generateRandomMaze(); 
             const pSp = getSafeSpawn(); player.position.set(pSp.x, 0, pSp.z); safeSpawnPosition.copy(player.position);
-            
-            setupPitAndLadder(player.position); // 구멍과 사다리 배치
-            buildMazeGraphics(); // 구멍 정보를 반영하여 맵 그래픽 생성
             spawnQuestItems(player.position);
             
             entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = esp; e.state='patrol'; e.screamActive=false; });
             
-            gameActive = true; actualRecordTime = 0; isSpeedBoosted = false; initHorrorAudio();
+            gameActive = true; actualRecordTime = 0; isSpeedBoosted = false;
+            initHorrorAudio();
         }
 
-        function triggerPause(pState) { if(!gameActive || isGameOver) return; isPaused = pState; document.getElementById('pause-screen').style.display = isPaused ? 'flex' : 'none'; if(!isPaused && platform === 'pc') { document.body.requestPointerLock(); } }
+        function triggerPause(pState) {
+            if(!gameActive || isGameOver) return;
+            isPaused = pState;
+            document.getElementById('pause-screen').style.display = isPaused ? 'flex' : 'none';
+            if(!isPaused && platform === 'pc') { document.body.requestPointerLock(); }
+        }
 
-        window.addEventListener('click', () => { if(gameActive && !isPaused && !isGameOver && platform === 'pc') document.body.requestPointerLock(); });
-        document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== document.body && gameActive && !isGameOver && platform === 'pc' && !isPaused) { if(document.getElementById('pause-screen').style.display !== 'flex') triggerPause(true); } });
+        window.addEventListener('click', () => {
+            if(gameActive && !isPaused && !isGameOver && platform === 'pc') document.body.requestPointerLock();
+        });
 
-        function toggleFlashlight() { isFlashlightOn = !isFlashlightOn; const mBtn = document.getElementById('btn-mobile-flash'); if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active'); flashlight.intensity = isFlashlightOn ? 1.8 : 0; lensMesh.material.color.setHex(isFlashlightOn ? 0xffffee : 0x222222); }
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement !== document.body && gameActive && !isGameOver && platform === 'pc' && !isPaused) {
+                if(document.getElementById('pause-screen').style.display !== 'flex') triggerPause(true); 
+            }
+        });
+
+        function toggleFlashlight() {
+            isFlashlightOn = !isFlashlightOn;
+            const mBtn = document.getElementById('btn-mobile-flash');
+            if(isFlashlightOn) mBtn?.classList.add('active'); else mBtn?.classList.remove('active');
+            flashlight.intensity = isFlashlightOn ? 1.8 : 0;
+            lensMesh.material.color.setHex(isFlashlightOn ? 0xffffee : 0x222222);
+        }
 
         function handleMobileFlash(e) { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) toggleFlashlight(); }
         function handleMobileJump(e) { e.preventDefault(); e.stopPropagation(); if(isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; } }
 
-        // --------- 통합 상호작용 로직 (사다리 / 문) ---------
-        function openTheEscapeDoor() { if(!hasKey || isDoorOpened) return; isDoorOpened = true; showToast("🔓 The door is open! Enter the dark sensor area inside!"); document.getElementById('interact-prompt').style.display = 'none'; document.getElementById('btn-mobile-interact').style.display = 'none'; }
-        
-        function handleInteractAction() {
-            // 문 상호작용 확인
-            if(doorGroup && player.position.distanceTo(doorGroup.position) < 2.5 && hasKey && !isDoorOpened) {
-                openTheEscapeDoor();
-                return;
+        function openTheEscapeDoor() {
+            if(!hasKey || isDoorOpened) return;
+            isDoorOpened = true; 
+            showToast("🔓 The door is open! Enter the dark sensor area inside!");
+            document.getElementById('interact-prompt').style.display = 'none';
+            document.getElementById('btn-mobile-interact').style.display = 'none';
+        }
+
+        // --- [통합 상호작용 함수: 문 열기 & 사다리 설치/사용 멀티 제어] ---
+        function executeInteraction() {
+            if (!gameActive || isPaused || isGameOver) return;
+
+            // 기믹 1: 탈출 문 개방 상호작용
+            if (doorGroup && player.position.distanceTo(doorGroup.position) < 2.5) {
+                if (hasKey && !isDoorOpened) openTheEscapeDoor();
             }
-            // 구멍에 빠져있을 때 상호작용
-            let isOverPit = (Math.abs(player.position.x - pitPos.x) < unitSize/2 - 0.2 && Math.abs(player.position.z - pitPos.z) < unitSize/2 - 0.2);
-            if (isOverPit && player.position.y < -2) {
-                if(hasLadder && !ladderInstalled) {
-                    ladderInstalled = true;
-                    showToast("🪜 사다리를 설치했습니다! 위로 올라가세요.");
-                    installedLadderMesh = createLadderMesh();
-                    installedLadderMesh.position.set(pitPos.x, pitDepth, pitPos.z - 1.5);
-                    scene.add(installedLadderMesh);
-                } else if(ladderInstalled) {
-                    // 사다리 타기: 바닥 위쪽으로 텔레포트
-                    player.position.y = 0.5;
-                    player.position.x = pitPos.x;
-                    player.position.z = pitPos.z;
-                    isGrounded = false;
-                    playerVelocityY = jumpStrength;
-                    showToast("🏃 구멍을 무사히 빠져나왔습니다.");
+
+            // 기믹 2: 지하 공간 사다리 설치 및 등반 상호작용
+            let distToLadder = Math.sqrt(Math.pow(player.position.x - ladderPos.x, 2) + Math.pow(player.position.z - ladderPos.z, 2));
+            if (player.position.y <= -5 && distToLadder < 2.5) {
+                if (!isLadderInstalled) {
+                    isLadderInstalled = true;
+                    if (ladderMesh) ladderMesh.visible = true;
+                    showToast("🪜 사다리가 구멍에 견고히 설치되었습니다! [E]를 한번 더 누르면 위로 올라갑니다.");
+                } else {
+                    // 2단계 문 열듯 위로 올라가 1층 복귀
+                    player.position.copy(upperLandingPos);
+                    player.position.y = 0;
+                    playerVelocityY = 0;
+                    isStickingToWall = false;
+                    isGrounded = true;
+                    showToast("🏃 사다리를 타고 무사히 구덩이 위로 기어올라왔습니다!");
                 }
             }
         }
 
-        document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if(gameActive && !isPaused) handleInteractAction(); });
+        document.getElementById('btn-mobile-interact').addEventListener('touchstart', (e) => {
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            executeInteraction();
+        });
 
         window.addEventListener('keydown', (e) => { 
             const k = e.key.toLowerCase(); if (k in keys) keys[k] = true;
             if (e.key === ' ' && isGrounded && gameActive && !isPaused) { playerVelocityY = jumpStrength; isGrounded = false; }
             if (k === 'f' && gameActive && !isPaused) toggleFlashlight();
-            if (k === 'e' && gameActive && !isPaused) { handleInteractAction(); }
+            if (k === 'e' && gameActive && !isPaused) executeInteraction();
+            
+            // [벽 붙기 토글키 Q 조작]
+            if (k === 'q' && gameActive && !isPaused) {
+                isStickingToWall = !isStickingToWall;
+                showToast(isStickingToWall ? "🧱 벽면에 납작 붙었습니다. (구덩이 안전 통과 가능)" : "🏃 벽면 밀착을 해제했습니다.");
+            }
         });
         window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (k in keys) keys[k] = false; });
 
-        // 조이스틱 및 화면 터치 로직
         let joystickInput = { x: 0, y: 0 }, joystickDistanceRatio = 0, joystickTouchId = null, rotationTouchId = null, prevX = 0, prevY = 0, joystickStartPos = { x: 0, y: 0 };
         const joystickZone = document.getElementById('joystick-zone'), joystickStick = document.getElementById('joystick-stick');
-        function calculateJoystick(cX, cY) { let dX = cX - joystickStartPos.x, dY = cY - joystickStartPos.y; const dist = Math.sqrt(dX*dX + dY*dY), maxR = 40; if (dist > maxR) { dX = (dX / dist) * maxR; dY = (dY / dist) * maxR; } joystickStick.style.transform = `translate(${dX}px, ${dY}px)`; joystickInput.x = dX / maxR; joystickInput.y = dY / maxR; joystickDistanceRatio = dist / maxR; }
 
-        window.addEventListener('touchstart', (e) => { if (e.target.closest('#btn-mobile-interact') || e.target.closest('#top-controls') || e.target.closest('#mobile-controls-right') || e.target.closest('#pause-screen')) return; if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return; for (let i = 0; i < e.changedTouches.length; i++) { const t = e.changedTouches[i]; if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) { joystickTouchId = t.identifier; joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`; joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY); } else if (t.clientX >= window.innerWidth / 2 && rotationTouchId === null) { rotationTouchId = t.identifier; prevX = t.clientX; prevY = t.clientY; } } }, { passive: false });
-        window.addEventListener('touchmove', (e) => { if(platform !== 'mobile') return; for (let i = 0; i < e.touches.length; i++) { const t = e.touches[i]; if (t.identifier === joystickTouchId) calculateJoystick(t.clientX, t.clientY); if (t.identifier === rotationTouchId) { const multi = 0.004 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi; prevX = t.clientX; prevY = t.clientY; cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY)); } } });
-        window.addEventListener('touchend', (e) => { for (let i = 0; i < e.changedTouches.length; i++) { const t = e.changedTouches[i]; if (t.identifier === joystickTouchId) { joystickTouchId = null; joystickStick.style.transform = 'translate(0px, 0px)'; joystickInput = { x: 0, y: 0 }; joystickDistanceRatio = 0; joystickZone.style.left = '35px'; joystickZone.style.bottom = '35px'; } if (t.identifier === rotationTouchId) rotationTouchId = null; } });
-        window.addEventListener('mousemove', (e) => { if (!gameActive || isGameOver || isPaused || platform !== 'pc') return; if (document.pointerLockElement === document.body) { const multi = 0.0018 * globalSensitivity; cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi; cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY)); } });
+        function calculateJoystick(cX, cY) {
+            let dX = cX - joystickStartPos.x, dY = cY - joystickStartPos.y;
+            const dist = Math.sqrt(dX*dX + dY*dY), maxR = 40;
+            if (dist > maxR) { dX = (dX / dist) * maxR; dY = (dY / dist) * maxR; }
+            joystickStick.style.transform = `translate(${dX}px, ${dY}px)`;
+            joystickInput.x = dX / maxR; joystickInput.y = dY / maxR; joystickDistanceRatio = dist / maxR;
+        }
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.target.closest('#btn-mobile-interact') || 
+                e.target.closest('#top-controls') || 
+                e.target.closest('#mobile-controls-right') || 
+                e.target.closest('#pause-screen')) return;
+
+            if(!gameActive || isGameOver || isPaused || platform !== 'mobile') return;
+            
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.clientX < window.innerWidth / 2 && joystickTouchId === null) {
+                    joystickTouchId = t.identifier; joystickZone.style.left = `${t.clientX - 55}px`; joystickZone.style.bottom = `${window.innerHeight - t.clientY - 55}px`;
+                    joystickStartPos = { x: t.clientX, y: t.clientY }; calculateJoystick(t.clientX, t.clientY);
+                } else if (t.clientX >= window.innerWidth / 2 && rotationTouchId === null) {
+                    rotationTouchId = t.identifier; prevX = t.clientX; prevY = t.clientY;
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if(platform !== 'mobile') return;
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                if (t.identifier === joystickTouchId) calculateJoystick(t.clientX, t.clientY);
+                if (t.identifier === rotationTouchId) {
+                    const multi = 0.004 * globalSensitivity; cameraAngleX -= (t.clientX - prevX) * multi; cameraAngleY -= (t.clientY - prevY) * multi;
+                    prevX = t.clientX; prevY = t.clientY; cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
+                }
+            }
+        });
+
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === joystickTouchId) {
+                    joystickTouchId = null; joystickStick.style.transform = 'translate(0px, 0px)';
+                    joystickInput = { x: 0, y: 0 }; joystickDistanceRatio = 0;
+                    joystickZone.style.left = '35px'; joystickZone.style.bottom = '35px';
+                }
+                if (t.identifier === rotationTouchId) rotationTouchId = null;
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!gameActive || isGameOver || isPaused || platform !== 'pc') return;
+            if (document.pointerLockElement === document.body) {
+                const multi = 0.0018 * globalSensitivity; 
+                cameraAngleX -= e.movementX * multi; cameraAngleY -= e.movementY * multi;
+                cameraAngleY = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, cameraAngleY));
+            }
+        });
 
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
-            if(isDoorOpened && doorGroup) { let dX = oldPos.x - doorGroup.position.x; let dZ = oldPos.z - doorGroup.position.z; let distToDoorPivot = Math.sqrt(dX*dX + dZ*dZ); if(distToDoorPivot < 2.8) { return { x: tentativePos.x, z: tentativePos.z }; } }
+
+            // 지하 아래에 떨어졌을 때는 1층 벽 충돌 연산을 예외하여 자유 낙하 및 활동 보장
+            if (oldPos.y < -2.0) {
+                let boundedRes = { x: tentativePos.x, z: tentativePos.z };
+                const maxMapW = (mapCols * unitSize) / 2 - 1;
+                const maxMapH = (mapRows * unitSize) / 2 - 1;
+                if (Math.abs(boundedRes.x) > maxMapW) boundedRes.x = oldPos.x;
+                if (Math.abs(boundedRes.z) > maxMapH) boundedRes.z = oldPos.z;
+                return boundedRes;
+            }
+
+            if(isDoorOpened && doorGroup) {
+                let dX = oldPos.x - doorGroup.position.x;
+                let dZ = oldPos.z - doorGroup.position.z;
+                let distToDoorPivot = Math.sqrt(dX*dX + dZ*dZ);
+                if(distToDoorPivot < 2.8) return { x: tentativePos.x, z: tentativePos.z };
+            }
             
             let res = { x: tentativePos.x, z: tentativePos.z };
             const pCol = Math.floor((oldPos.x - unitSize/2 + (mapCols * unitSize)/2) / unitSize);
@@ -799,10 +920,11 @@
             for (let r = pRow - 1; r <= pRow + 1; r++) {
                 for (let c = pCol - 1; c <= pCol + 1; c++) {
                     if (r < 0 || r >= mapRows || c < 0 || c >= mapCols) continue;
-                    // 벽체 충돌 혹은 (선택사항: 구멍 타일에 서있지 않을 때 허공 벽 생성 등)
                     if (mapData[r][c] === 1) {
-                        const wX = (c - mapCols/2) * unitSize + unitSize/2; const wZ = (r - mapRows/2) * unitSize + unitSize/2;
-                        const minX = wX - unitSize/2 - radius, maxX = wX + unitSize/2 + radius; const minZ = wZ - unitSize/2 - radius, maxZ = wZ + unitSize/2 + radius;
+                        const wX = (c - mapCols/2) * unitSize + unitSize/2;
+                        const wZ = (r - mapRows/2) * unitSize + unitSize/2;
+                        const minX = wX - unitSize/2 - radius, maxX = wX + unitSize/2 + radius;
+                        const minZ = wZ - unitSize/2 - radius, maxZ = wZ + unitSize/2 + radius;
                         if (res.x > minX && res.x < maxX && res.z > minZ && res.z < maxZ) {
                             if (oldPos.x <= minX || oldPos.x >= maxX) res.x = oldPos.x;
                             if (oldPos.z <= minZ || oldPos.z >= maxZ) res.z = oldPos.z;
@@ -814,43 +936,169 @@
         }
 
         function processEntityAI(e, playerPos) {
+            // 귀신은 플레이어가 아래층에 있거나 벽에 매달려 있으면 탐지력을 상실하게 세팅
+            if (player.position.y < -2.0) return;
+
             const ePos = e.mesh.position; 
             const dist = Math.sqrt(Math.pow(ePos.x - playerPos.x, 2) + Math.pow(ePos.z - playerPos.z, 2));
+            
             e.stuckCheckTimer += 1;
-            if(e.stuckCheckTimer > 50) { const stuckDist = Math.sqrt(Math.pow(ePos.x - e.lastPos.x, 2) + Math.pow(ePos.z - e.lastPos.z, 2)); if(stuckDist < 0.15) { e.patrolTarget = getSafeSpawn(playerPos); } e.lastPos.copy(ePos); e.stuckCheckTimer = 0; }
-            if (dist < 14 && !isGameOver && playerPos.y > -2) { // 구멍 아래에 있으면 추적 중지
-                if(!e.screamActive) { e.screamActive = true; playHorrorScream(true); } e.state = 'chase'; 
-            } else if (e.state === 'chase' && (dist > 20 || playerPos.y <= -2)) { 
-                e.state = 'patrol'; e.screamActive = false; playHorrorScream(false); e.patrolTarget = getSafeSpawn(playerPos); 
+            if(e.stuckCheckTimer > 50) {
+                const stuckDist = Math.sqrt(Math.pow(ePos.x - e.lastPos.x, 2) + Math.pow(ePos.z - e.lastPos.z, 2));
+                if(stuckDist < 0.15) { e.patrolTarget = getSafeSpawn(playerPos); }
+                e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
             }
+            
+            if (dist < 14 && !isGameOver) { 
+                if(!e.screamActive) { e.screamActive = true; playHorrorScream(true); }
+                e.state = 'chase'; 
+            } else if (e.state === 'chase' && dist > 20) { 
+                e.state = 'patrol'; e.screamActive = false; playHorrorScream(false);
+                e.patrolTarget = getSafeSpawn(playerPos); 
+            }
+            
             let dest = (e.state === 'chase') ? playerPos : e.patrolTarget;
             if(e.state === 'patrol' && Math.abs(ePos.x - dest.x) < 1.2 && Math.abs(ePos.z - dest.z) < 1.2) { e.patrolTarget = getSafeSpawn(playerPos); }
             const dX = dest.x - ePos.x, dZ = dest.z - ePos.z; const len = Math.sqrt(dX*dX + dZ*dZ);
             if (len > 0.1) {
-                const sp = e.state === 'chase' ? e.speed * 1.45 : e.speed; const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
+                const sp = e.state === 'chase' ? e.speed * 1.45 : e.speed;
+                const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
                 const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
-                // 엔티티가 구멍 위를 지나가면 안 떨어지도록 y값 0 고정
-                ePos.x = safeE.x; ePos.z = safeE.z; e.mesh.rotation.y = Math.atan2(dX, dZ);
+                ePos.x = safeE.x; ePos.z = safeE.z; 
+                e.mesh.rotation.y = Math.atan2(dX, dZ);
             }
             if(e.state === 'chase') updateScreamVolume(dist);
         }
 
         let audioCtx = null, mainAmbientGain = null, sfxMasterGain = null, screamGain = null, keyHintGain = null;
-        let screamOsc1 = null, screamOsc2 = null, ambientOsc1 = null, ambientOsc2 = null, keyHintOsc = null; let lastFootstepTime = 0;
+        let screamOsc1 = null, screamOsc2 = null, ambientOsc1 = null, ambientOsc2 = null, keyHintOsc = null;
+        let lastFootstepTime = 0;
 
-        function initHorrorAudio() { try { if (audioCtx) return; audioCtx = new (window.AudioContext || window.webkitAudioContext)(); mainAmbientGain = audioCtx.createGain(); syncBgmNodeVolume(); let lowPass = audioCtx.createBiquadFilter(); lowPass.type = 'lowpass'; lowPass.frequency.setValueAtTime(85, audioCtx.currentTime); ambientOsc1 = audioCtx.createOscillator(); ambientOsc1.type = 'sine'; ambientOsc1.frequency.setValueAtTime(55, audioCtx.currentTime); ambientOsc2 = audioCtx.createOscillator(); ambientOsc2.type = 'triangle'; ambientOsc2.frequency.setValueAtTime(57.5, audioCtx.currentTime); ambientOsc1.connect(lowPass); ambientOsc2.connect(lowPass); lowPass.connect(mainAmbientGain); mainAmbientGain.connect(audioCtx.destination); ambientOsc1.start(); ambientOsc2.start(); sfxMasterGain = audioCtx.createGain(); sfxMasterGain.connect(audioCtx.destination); screamGain = audioCtx.createGain(); screamGain.gain.setValueAtTime(0.001, audioCtx.currentTime); screamGain.connect(sfxMasterGain); keyHintGain = audioCtx.createGain(); keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime); keyHintOsc = audioCtx.createOscillator(); keyHintOsc.type = 'sine'; keyHintOsc.frequency.setValueAtTime(140, audioCtx.currentTime); let keyFilter = audioCtx.createBiquadFilter(); keyFilter.type = 'bandpass'; keyFilter.frequency.setValueAtTime(250, audioCtx.currentTime); keyHintOsc.connect(keyFilter); keyFilter.connect(keyHintGain); keyHintGain.connect(sfxMasterGain); keyHintOsc.start(); } catch(e){} }
+        function initHorrorAudio() {
+            try {
+                if (audioCtx) return;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                mainAmbientGain = audioCtx.createGain(); syncBgmNodeVolume();
+                let lowPass = audioCtx.createBiquadFilter(); lowPass.type = 'lowpass'; lowPass.frequency.setValueAtTime(85, audioCtx.currentTime);
+                ambientOsc1 = audioCtx.createOscillator(); ambientOsc1.type = 'sine'; ambientOsc1.frequency.setValueAtTime(55, audioCtx.currentTime);
+                ambientOsc2 = audioCtx.createOscillator(); ambientOsc2.type = 'triangle'; ambientOsc2.frequency.setValueAtTime(57.5, audioCtx.currentTime);
+                ambientOsc1.connect(lowPass); ambientOsc2.connect(lowPass); lowPass.connect(mainAmbientGain); mainAmbientGain.connect(audioCtx.destination);
+                ambientOsc1.start(); ambientOsc2.start();
+                sfxMasterGain = audioCtx.createGain(); sfxMasterGain.connect(audioCtx.destination);
+                screamGain = audioCtx.createGain(); screamGain.gain.setValueAtTime(0.001, audioCtx.currentTime); screamGain.connect(sfxMasterGain);
+                keyHintGain = audioCtx.createGain(); keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                keyHintOsc = audioCtx.createOscillator(); keyHintOsc.type = 'sine'; keyHintOsc.frequency.setValueAtTime(140, audioCtx.currentTime);
+                let keyFilter = audioCtx.createBiquadFilter(); keyFilter.type = 'bandpass'; keyFilter.frequency.setValueAtTime(250, audioCtx.currentTime);
+                keyHintOsc.connect(keyFilter); keyFilter.connect(keyHintGain); keyHintGain.connect(sfxMasterGain); keyHintOsc.start();
+            } catch(e){}
+        }
+
         function syncBgmNodeVolume() { if(mainAmbientGain && audioCtx) mainAmbientGain.gain.setValueAtTime(volumeBgmRatio * 0.35, audioCtx.currentTime); }
 
-        function processKeyAudioHint(playerPos) { if(!keyHintGain || !keyMesh || hasKey || !audioCtx) return; const dist = Math.sqrt(Math.pow(playerPos.x - keyMesh.position.x, 2) + Math.pow(playerPos.z - keyMesh.position.z, 2)); if(dist < 16) { let targetVol = Math.max(0.001, (16 - dist) / 16) * 0.45 * volumeSfxRatio; keyHintGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.15); keyHintOsc.frequency.setValueAtTime(140 + Math.sin(Date.now()*0.004)*25, audioCtx.currentTime); } else { keyHintGain.gain.setTargetAtTime(0.001, audioCtx.currentTime, 0.2); } }
+        function processKeyAudioHint(playerPos) {
+            if(!keyHintGain || !keyMesh || hasKey || !audioCtx) return;
+            const dist = Math.sqrt(Math.pow(playerPos.x - keyMesh.position.x, 2) + Math.pow(playerPos.z - keyMesh.position.z, 2));
+            if(dist < 16) {
+                let targetVol = Math.max(0.001, (16 - dist) / 16) * 0.45 * volumeSfxRatio;
+                keyHintGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.15);
+                keyHintOsc.frequency.setValueAtTime(140 + Math.sin(Date.now()*0.004)*25, audioCtx.currentTime);
+            } else { keyHintGain.gain.setTargetAtTime(0.001, audioCtx.currentTime, 0.2); }
+        }
 
-        function playHorrorScream(start) { if(!audioCtx || !screamGain) return; if(start) { try { screamOsc1 = audioCtx.createOscillator(); screamOsc1.type = 'sawtooth'; screamOsc2 = audioCtx.createOscillator(); screamOsc2.type = 'square'; screamOsc1.frequency.setValueAtTime(280, audioCtx.currentTime); screamOsc2.frequency.setValueAtTime(450, audioCtx.currentTime); let now = audioCtx.currentTime; screamOsc1.frequency.linearRampToValueAtTime(700, now + 0.3); screamOsc1.frequency.linearRampToValueAtTime(150, now + 0.7); screamOsc2.frequency.linearRampToValueAtTime(900, now + 0.4); screamOsc1.connect(screamGain); screamOsc2.connect(screamGain); screamOsc1.start(); screamOsc2.start(); } catch(e){} } else { try { if(screamOsc1) { screamOsc1.stop(); screamOsc1 = null; } if(screamOsc2) { screamOsc2.stop(); screamOsc2 = null; } } catch(e){} } }
-        function updateScreamVolume(dist) { if(!screamGain || !audioCtx) return; let vol = Math.max(0.001, (18 - dist) / 18) * 0.65 * volumeSfxRatio; screamGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1); }
-        function playFootstepSound(volume) { if (!audioCtx || isPaused || isGameOver || !sfxMasterGain) return; try { let osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(65, audioCtx.currentTime); gain.gain.setValueAtTime(volume * 0.12 * volumeSfxRatio, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1); osc.connect(gain); gain.connect(sfxMasterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.11); } catch(e){} }
-        function playHeartbeatSound(volume, isDouble) { if (!audioCtx || isPaused || isGameOver || !sfxMasterGain) return; try { let osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(48, audioCtx.currentTime); gain.gain.setValueAtTime(volume * 0.65 * volumeSfxRatio, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12); osc.connect(gain); gain.connect(sfxMasterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.13); } catch(e){} }
+        function playHorrorScream(start) {
+            if(!audioCtx || !screamGain) return;
+            if(start) {
+                try {
+                    screamOsc1 = audioCtx.createOscillator(); screamOsc1.type = 'sawtooth';
+                    screamOsc2 = audioCtx.createOscillator(); screamOsc2.type = 'square';
+                    screamOsc1.frequency.setValueAtTime(280, audioCtx.currentTime); screamOsc2.frequency.setValueAtTime(450, audioCtx.currentTime);
+                    let now = audioCtx.currentTime;
+                    screamOsc1.frequency.linearRampToValueAtTime(700, now + 0.3); screamOsc1.frequency.linearRampToValueAtTime(150, now + 0.7);
+                    screamOsc2.frequency.linearRampToValueAtTime(900, now + 0.4);
+                    screamOsc1.connect(screamGain); screamOsc2.connect(screamGain); screamOsc1.start(); screamOsc2.start();
+                } catch(e){}
+            } else {
+                try {
+                    if(screamOsc1) { screamOsc1.stop(); screamOsc1 = null; }
+                    if(screamOsc2) { screamOsc2.stop(); screamOsc2 = null; }
+                } catch(e){}
+            }
+        }
 
-        function backToMainMenu() { isGameOver = false; gameActive = false; isPaused = false; platform = null; playHorrorScream(false); document.getElementById('pause-screen').style.display = 'none'; document.getElementById('gameover-screen').style.display = 'none'; document.getElementById('clear-screen').style.display = 'none'; document.getElementById('top-controls').style.display = 'none'; document.getElementById('cctv-ui').style.display = 'none'; document.getElementById('quest-ui').style.display = 'none'; document.getElementById('interact-prompt').style.display = 'none'; document.getElementById('btn-mobile-interact').style.display = 'none'; document.getElementById('joystick-zone').style.display = 'none'; document.getElementById('mobile-controls-right').style.display = 'none'; document.getElementById('stamina-container').style.display = 'none'; document.getElementById('pc-select-btn').classList.remove('selected'); document.getElementById('mobile-select-btn').classList.remove('selected'); document.getElementById('main-start-trigger').classList.remove('ready'); document.getElementById('start-screen').style.display = 'flex'; document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)'; document.getElementById('glitch-overlay').style.opacity = 0; scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow); scene.fog.density = 0.05; ambientLight.intensity = 0.85; flashlight.intensity = isFlashlightOn ? 1.8 : 0; try { if(ambientOsc1) { ambientOsc1.stop(); ambientOsc1 = null; } if(ambientOsc2) { ambientOsc2.stop(); ambientOsc2 = null; } if(keyHintOsc) { keyHintOsc.stop(); keyHintOsc = null; } audioCtx = null; } catch(e){} if (document.pointerLockElement === document.body) document.exitPointerLock(); }
-        function rollback30SecondsSafe() { isGameOver = false; playHorrorScream(false); let respawnPos = getSafeSpawn(player.position, 10); player.position.set(respawnPos.x, 0, respawnPos.z); safeSpawnPosition.copy(player.position); playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false; entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; }); document.getElementById('gameover-screen').style.display = 'none'; if(platform === 'pc') document.body.requestPointerLock(); }
-        function triggerBlackoutPhase() { const glitchOverlay = document.getElementById('glitch-overlay'); glitchOverlay.style.background = 'rgba(10, 9, 7, 0.65)'; glitchOverlay.style.opacity = 1; scene.background.setHex(0x1a1914); scene.fog.color.setHex(0x1a1914); scene.fog.density = 0.12; ambientLight.intensity = 0.15; entities.forEach(e => { e.speed = e.baseSpeed * 1.45; }); }
+        function updateScreamVolume(dist) {
+            if(!screamGain || !audioCtx) return;
+            let vol = Math.max(0.001, (18 - dist) / 18) * 0.65 * volumeSfxRatio;
+            screamGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1);
+        }
+
+        function playFootstepSound(volume) {
+            if (!audioCtx || isPaused || isGameOver || !sfxMasterGain) return;
+            try {
+                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(65, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(volume * 0.12 * volumeSfxRatio, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(sfxMasterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.11);
+            } catch(e){}
+        }
+
+        function playHeartbeatSound(volume, isDouble) {
+            if (!audioCtx || isPaused || isGameOver || !sfxMasterGain) return;
+            try {
+                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(48, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(volume * 0.65 * volumeSfxRatio, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                osc.connect(gain); gain.connect(sfxMasterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.13);
+            } catch(e){}
+        }
+
+        function backToMainMenu() {
+            isGameOver = false; gameActive = false; isPaused = false; platform = null; playHorrorScream(false);
+            document.getElementById('pause-screen').style.display = 'none';
+            document.getElementById('gameover-screen').style.display = 'none';
+            document.getElementById('clear-screen').style.display = 'none';
+            document.getElementById('top-controls').style.display = 'none';
+            document.getElementById('cctv-ui').style.display = 'none';
+            document.getElementById('quest-ui').style.display = 'none';
+            document.getElementById('interact-prompt').style.display = 'none';
+            document.getElementById('btn-mobile-interact').style.display = 'none';
+            document.getElementById('joystick-zone').style.display = 'none';
+            document.getElementById('mobile-controls-right').style.display = 'none';
+            document.getElementById('stamina-container').style.display = 'none';
+            document.getElementById('pc-select-btn').classList.remove('selected');
+            document.getElementById('mobile-select-btn').classList.remove('selected');
+            document.getElementById('main-start-trigger').classList.remove('ready');
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('glitch-overlay').style.background = 'rgba(0,0,0,0)';
+            document.getElementById('glitch-overlay').style.opacity = 0;
+            scene.background.setHex(backroomsYellow); scene.fog.color.setHex(backroomsYellow); scene.fog.density = 0.05; ambientLight.intensity = 0.85;
+            flashlight.intensity = isFlashlightOn ? 1.8 : 0;
+            try {
+                if(ambientOsc1) { ambientOsc1.stop(); ambientOsc1 = null; }
+                if(ambientOsc2) { ambientOsc2.stop(); ambientOsc2 = null; }
+                if(keyHintOsc) { keyHintOsc.stop(); keyHintOsc = null; }
+                audioCtx = null;
+            } catch(e){}
+            if (document.pointerLockElement === document.body) document.exitPointerLock();
+        }
+
+        function rollback30SecondsSafe() {
+            isGameOver = false; playHorrorScream(false);
+            let respawnPos = getSafeSpawn(player.position, 10);
+            player.position.set(respawnPos.x, 0, respawnPos.z); safeSpawnPosition.copy(player.position);
+            playerVelocityY = 0; isGrounded = true; stamina = 100; isExhausted = false;
+            isStickingToWall = false; isLadderInstalled = false; if(ladderMesh) ladderMesh.visible = false;
+            entities.forEach(e => { const esp = getSafeSpawn(player.position, 12); e.mesh.position.set(esp.x, 0, esp.z); e.state = 'patrol'; e.patrolTarget = esp; e.screamActive = false; });
+            document.getElementById('gameover-screen').style.display = 'none';
+            if(platform === 'pc') document.body.requestPointerLock();
+        }
+
+        function triggerBlackoutPhase() {
+            const glitchOverlay = document.getElementById('glitch-overlay');
+            glitchOverlay.style.background = 'rgba(10, 9, 7, 0.65)'; glitchOverlay.style.opacity = 1;
+            scene.background.setHex(0x1a1914); scene.fog.color.setHex(0x1a1914); scene.fog.density = 0.12; 
+            ambientLight.intensity = 0.15;
+            entities.forEach(e => { e.speed = e.baseSpeed * 1.45; });
+        }
 
         function animate() {
             requestAnimationFrame(animate);
@@ -866,83 +1114,78 @@
 
             processKeyAudioHint(player.position);
 
-            // 열쇠 획득
             if(!hasKey && keyMesh && Math.sqrt(Math.pow(player.position.x - keyMesh.position.x, 2) + Math.pow(player.position.z - keyMesh.position.z, 2)) < 1.3) {
-                hasKey = true; scene.remove(keyMesh); if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                hasKey = true; scene.remove(keyMesh);
+                if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
                 showToast("🔑 Golden Key acquired!<br><span style='color:#00ff66;'>Exit radar linked.</span>");
             }
-            
-            // 사다리 획득 (구멍 밑에서)
-            if(!hasLadder && ladderItemMesh && player.position.y < -2) {
-                let dL = Math.sqrt(Math.pow(player.position.x - ladderItemMesh.position.x, 2) + Math.pow(player.position.z - ladderItemMesh.position.z, 2));
-                if(dL < 1.5) {
-                    hasLadder = true;
-                    scene.remove(ladderItemMesh);
-                    showToast("🪜 낡은 사다리를 주웠습니다. 설치할 장소를 찾으세요.");
+
+            // --- [퀘스트 UI 텍스트 동적 분기 관리] ---
+            if (player.position.y <= -4.5) {
+                // 지하 공간 추락 시
+                let distToLadder = Math.sqrt(Math.pow(player.position.x - ladderPos.x, 2) + Math.pow(player.position.z - ladderPos.z, 2));
+                if (!isLadderInstalled) {
+                    document.getElementById('quest-ui').innerHTML = "⚠️ DETECTED:<br><span style='color:#ff5555;'>구덩이 추락! 큰 구멍을 찾아 사다리를 설치하세요 [E].</span>";
+                } else {
+                    document.getElementById('quest-ui').innerHTML = "🪜 READY:<br><span style='color:#55ff55;'>사다리 완료! [E]를 눌러 다시 1층으로 복귀하세요.</span>";
                 }
-            }
-
-            // UI 텍스트 갱신 로직 수정
-            let questStr = "";
-            let isOverPit = (Math.abs(player.position.x - pitPos.x) < unitSize/2 - 0.2 && Math.abs(player.position.z - pitPos.z) < unitSize/2 - 0.2);
-            if (player.position.y < -1) {
-                questStr = `🕳️ 구멍에 빠졌습니다!<br><span style="color:#ffaa00;">${hasLadder ? '사다리를 설치할 곳을 찾으세요.' : '바닥에서 사다리를 찾으세요.'}</span>`;
-            } else if(!hasKey) {
-                questStr = "🔑 QUEST:<br>Find the hidden key.";
-            } else if(doorGroup) {
-                let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
-                if(!isDoorOpened) { questStr = `🚪 QUEST:<br>Find the door to escape.<br><span style='color:#00ff66; font-size:15px;'>📍 Distance remaining: ${currentDoorDist}m</span>`; } 
-                else { questStr = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>The door is open! Step into the inner sensor!</span>`; }
-            }
-            document.getElementById('quest-ui').innerHTML = questStr;
-
-            // 상호작용 프롬프트 UI 관리
-            let showInteractUI = false;
-            let interactTextStr = "";
-
-            if (doorGroup) {
-                let distToDoorFrame = Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2));
-                if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened && player.position.y > -2) {
-                    showInteractUI = true; interactTextStr = "🚪 [E] Open Door";
-                } else if(!hasKey && distToDoorFrame < 1.4 && player.position.y > -2) {
-                    showToast("🔒 The door is firmly locked.<br>Find the golden key to open it.");
-                }
-                
-                // 문 탈출 검사
-                if(isDoorOpened && doorPivot) {
-                    const targetRotation = -Math.PI / 2;
-                    if(doorPivot.rotation.y > targetRotation) { doorPivot.rotation.y -= 0.06; doorGroup.updateMatrixWorld(true); } 
-                    else {
-                        let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
-                        if(distanceToEscapeSensor < 1.5) { 
-                            gameActive = false; playHorrorScream(false);
-                            document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
-                            document.getElementById('clear-screen').style.display = 'flex';
-                            if(platform === 'pc') document.exitPointerLock(); 
-                            return;
-                        }
+            } else {
+                // 정상 1층 구역 활동 시
+                if(!hasKey) {
+                    document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.<br><span style='color:#aaaaaa;font-size:11px;'>[Q]: 벽 밀착 토글 (구덩이 회피용)</span>";
+                } else if(doorGroup) {
+                    let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
+                    if(!isDoorOpened) {
+                        document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Find the door to escape.<br><span style='color:#00ff66; font-size:15px;'>📍 Distance: ${currentDoorDist}m</span>`;
+                    } else {
+                        document.getElementById('quest-ui').innerHTML = `🏃 QUEST:<br><span style='color:#11ff77; font-weight:900;'>The door is open! Step into the inner sensor!</span>`;
                     }
                 }
             }
 
-            if (isOverPit && player.position.y < -2) {
-                if (hasLadder && !ladderInstalled) {
-                    showInteractUI = true; interactTextStr = "🪜 [E] Install Ladder";
-                } else if (ladderInstalled) {
-                    showInteractUI = true; interactTextStr = "🧗 [E] Climb Up";
+            // 프롬프트 및 상호작용 버튼 가시성 업데이트 (탈출문 및 사다리 공용)
+            let distToDoorFrame = doorGroup ? Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) : 999;
+            let distToLadderHole = Math.sqrt(Math.pow(player.position.x - ladderPos.x, 2) + Math.pow(player.position.z - ladderPos.z, 2));
+            
+            let isInteractableNearby = (hasKey && distToDoorFrame < 2.5 && !isDoorOpened) || (player.position.y <= -4.5 && distToLadderHole < 2.5);
+            
+            if (isInteractableNearby) {
+                if (player.position.y <= -4.5) {
+                    document.getElementById('interact-prompt').textContent = isLadderInstalled ? "🪜 [E] Climb Up Ladder" : "🛠️ [E] Install Ladder";
+                } else {
+                    document.getElementById('interact-prompt').textContent = "🚪 [E] Open Door";
                 }
-            }
-
-            if (showInteractUI) {
-                if(platform === 'pc') { document.getElementById('interact-prompt').innerHTML = interactTextStr; document.getElementById('interact-prompt').style.display = 'block'; } 
-                else if(platform === 'mobile') { document.getElementById('btn-mobile-interact').style.display = 'flex'; }
+                
+                if(platform === 'pc') document.getElementById('interact-prompt').style.display = 'block';
+                else if(platform === 'mobile') document.getElementById('btn-mobile-interact').style.display = 'flex';
             } else {
-                document.getElementById('interact-prompt').style.display = 'none'; document.getElementById('btn-mobile-interact').style.display = 'none';
+                document.getElementById('interact-prompt').style.display = 'none';
+                document.getElementById('btn-mobile-interact').style.display = 'none';
             }
 
-            // 플레이어 움직임
-            smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.25; smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.25;
+            if(doorGroup && isDoorOpened && doorPivot) {
+                const targetRotation = -Math.PI / 2;
+                if(doorPivot.rotation.y > targetRotation) {
+                    doorPivot.rotation.y -= 0.06; 
+                    doorGroup.updateMatrixWorld(true);
+                } else {
+                    let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
+                    if(distanceToEscapeSensor < 1.5 && player.position.y >= -1) { 
+                        gameActive = false; playHorrorScream(false);
+                        document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
+                        document.getElementById('clear-screen').style.display = 'flex';
+                        if(platform === 'pc') document.exitPointerLock(); 
+                        return;
+                    }
+                }
+            } else if(!hasKey && distToDoorFrame < 1.4 && player.position.y >= -1) {
+                showToast("🔒 The door is firmly locked.<br>Find the golden key to open it.");
+            }
+
+            smoothCamAngleX += (cameraAngleX - smoothCamAngleX) * 0.25;
+            smoothCamAngleY += (cameraAngleY - smoothCamAngleY) * 0.25;
+            
             const forwardX = -Math.sin(smoothCamAngleX), forwardZ = -Math.cos(smoothCamAngleX);
             const rightX = Math.cos(smoothCamAngleX), rightZ = -Math.sin(smoothCamAngleX);
 
@@ -962,55 +1205,69 @@
             if(sBar) { sBar.style.width = `${stamina}%`; sBar.style.background = isExhausted ? '#d62828' : '#bfae6f'; }
 
             let currentMoveSpeed = isExhausted ? exhaustedPlayerSpeed : (isSprinting ? sprintPlayerSpeed : basePlayerSpeed);
+            
+            // 벽 밀착 이동 시 조심스럽게 속도 다운
+            if (isStickingToWall && player.position.y >= -1) currentMoveSpeed *= 0.5;
+
             const fX = (forwardX * moveZ + rightX * moveX) * currentMoveSpeed;
             const fZ = (forwardZ * moveZ + rightZ * moveX) * currentMoveSpeed;
 
-            const runtime = Date.now() * 0.005; let bobX = 0, bobY = 0;
+            const runtime = Date.now() * 0.005;
+            let bobX = 0, bobY = 0;
 
             if (isMoving) {
-                const oldP = { x: player.position.x, z: player.position.z };
                 const tentativeP = { x: player.position.x + fX, z: player.position.z + fZ };
-                const safeP = checkGridCollision(player.position, new THREE.Vector3(tentativeP.x, 0, tentativeP.z), 0.55);
+                const safeP = checkGridCollision(player.position, new THREE.Vector3(tentativeP.x, player.position.y, tentativeP.z), 0.55);
                 player.position.x = safeP.x; player.position.z = safeP.z;
                 
-                // 구멍(Pit) 안에서는 벽 밖의 공허로 이동하지 못하게 제한
-                if (player.position.y < -1) {
-                    let limit = unitSize/2 - 0.4;
-                    if (player.position.x > pitPos.x + limit) player.position.x = pitPos.x + limit;
-                    if (player.position.x < pitPos.x - limit) player.position.x = pitPos.x - limit;
-                    if (player.position.z > pitPos.z + limit) player.position.z = pitPos.z + limit;
-                    if (player.position.z < pitPos.z - limit) player.position.z = pitPos.z - limit;
-                }
-                
                 if (isGrounded) {
-                    let waveFreq = isSprinting ? 2.5 : 1.5; bobX = Math.sin(runtime * waveFreq) * 0.035; bobY = Math.cos(runtime * waveFreq * 2) * 0.025;
-                    let now = Date.now(); if(now - lastFootstepTime > (isSprinting ? 230 : 380)) { playFootstepSound(isSprinting ? 0.8 : 0.4); lastFootstepTime = now; }
+                    let waveFreq = isSprinting ? 2.5 : 1.5;
+                    bobX = Math.sin(runtime * waveFreq) * 0.035; bobY = Math.cos(runtime * waveFreq * 2) * 0.025;
+                    let now = Date.now();
+                    if(now - lastFootstepTime > (isSprinting ? 230 : 380)) { playFootstepSound(isSprinting ? 0.8 : 0.4); lastFootstepTime = now; }
                 }
             }
 
-            // 바닥(Floor) 높이 체크 - 구멍 위에 있으면 깊이(pitDepth)까지 떨어짐
-            let currentFloorY = isOverPit ? pitDepth : 0;
+            // --- [신규 기믹: 구덩이 범위 감지 및 낙하 유도 처리] ---
+            let distToPit = Math.sqrt(Math.pow(player.position.x - pitCenter.x, 2) + Math.pow(player.position.z - pitCenter.z, 2));
             
+            if (distToPit < pitRadius && player.position.y >= 0.0) {
+                if (!isStickingToWall) {
+                    // 벽에 안 붙었을 시 화면 흔들림(Jitter) 발동 및 아래층 추락 유도
+                    bobX += (Math.random() - 0.5) * 0.25;
+                    bobY += (Math.random() - 0.5) * 0.25;
+                    
+                    // 강제 수직 하강 속도 부여
+                    if (player.position.y === 0) playerVelocityY = -0.12;
+                    isGrounded = false;
+                }
+            }
+
             playerVelocityY += gravity; player.position.y += playerVelocityY;
-            
-            // 바닥 충돌 및 낙하 처리
-            if (player.position.y <= currentFloorY) { 
-                player.position.y = currentFloorY; 
+
+            // 더블 레이어 접지 시스템 판정
+            if (player.position.y <= -6) { 
+                // 지하 바닥 충돌 접지
+                player.position.y = -6; 
                 playerVelocityY = 0; 
                 isGrounded = true; 
+            } else if (player.position.y <= 0 && player.position.y > -2) {
+                // 1층 바닥 접지 (구덩이 밖이거나 벽에 안전하게 붙어 이동 중일 때만 안 떨어짐)
+                if (distToPit >= pitRadius || isStickingToWall) {
+                    player.position.y = 0; 
+                    playerVelocityY = 0; 
+                    isGrounded = true; 
+                }
             }
-            
-            // 처음 구멍에 떨어졌을 때 알림
-            if(player.position.y < -1 && !wasInPitBefore) {
-                wasInPitBefore = true;
-                showToast("⚠️ 알 수 없는 싱크홀에 빠졌습니다.<br>바닥을 수색하여 탈출구를 찾으세요.");
-            }
+            // ----------------------------------------------------
 
             player.rotation.y = smoothCamAngleX;
             fpsRig.position.set(player.position.x, player.position.y + 1.5, player.position.z);
             fpsRig.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
             
-            let armWave = isMoving ? Math.sin(runtime * (isSprinting ? 2.5 : 1.5)) * 0.08 : 0; let armIdle = Math.sin(Date.now() * 0.001) * 0.01; 
+            let armWave = isMoving ? Math.sin(runtime * (isSprinting ? 2.5 : 1.5)) * 0.08 : 0;
+            let armIdle = Math.sin(Date.now() * 0.001) * 0.01; 
+            
             leftArm.position.z = -0.3 + armWave + armIdle; leftArm.position.y = -0.25 + Math.abs(armWave)*0.3;
             rightArm.position.z = -0.3 - armWave + armIdle; rightArm.position.y = -0.25 + Math.abs(armWave)*0.3;
             flashlightMesh.position.z = -0.4 - armWave + armIdle; flashlightMesh.position.y = -0.22 + Math.abs(armWave)*0.3;
@@ -1019,28 +1276,48 @@
 
             let closestDist = 999;
             entities.forEach(e => {
+                 e.mesh.visible = (player.position.y >= -2.0); // 플레이어가 지하로 탈출하면 시야에서 안보이게 가림
                 processEntityAI(e, player.position);
                 const d = Math.sqrt(Math.pow(player.position.x - e.mesh.position.x, 2) + Math.pow(player.position.z - e.mesh.position.z, 2));
-                if (d < closestDist) closestDist = d;
-                let waveSpeed = e.state === 'chase' ? 0.045 : 0.015; e.core.position.y = 1.3 + Math.sin(Date.now() * waveSpeed) * 0.12;
-                e.legs.forEach((leg, idx) => { let offset = idx * (Math.PI / 3); leg.rotation.x = Math.sin(Date.now() * waveSpeed * 2 + offset) * 0.55; leg.rotation.z = 0.3 + Math.cos(Date.now() * waveSpeed + offset) * 0.2; });
+                if (d < closestDist && player.position.y >= -2.0) closestDist = d;
+                
+                let waveSpeed = e.state === 'chase' ? 0.045 : 0.015;
+                e.core.position.y = 1.3 + Math.sin(Date.now() * waveSpeed) * 0.12;
+                e.legs.forEach((leg, idx) => {
+                    let offset = idx * (Math.PI / 3);
+                    leg.rotation.x = Math.sin(Date.now() * waveSpeed * 2 + offset) * 0.55;
+                    leg.rotation.z = 0.3 + Math.cos(Date.now() * waveSpeed + offset) * 0.2;
+                });
             });
 
             const heartUI = document.getElementById('heartbeat-ui');
-            if (closestDist < 12 && player.position.y > -2) { // 구멍 아래에 있으면 심장 소리 무시
-                let proximityFactor = (12 - closestDist) / 12; let heartbeatInterval = 800 - (proximityFactor * 550); let now = Date.now();
-                if (now - lastHeartbeatSoundTime > heartbeatInterval) { playHeartbeatSound(0.4 + (proximityFactor * 0.5), true); lastHeartbeatSoundTime = now; heartUI.style.transform = `translateX(-50%) scale(${1.2 + proximityFactor * 0.5})`; setTimeout(() => { heartUI.style.transform = `translateX(-50%) scale(${0.9 + proximityFactor * 0.2})`; }, 120); }
+            if (closestDist < 12 && player.position.y >= -2.0) {
+                let proximityFactor = (12 - closestDist) / 12; let heartbeatInterval = 800 - (proximityFactor * 550); 
+                let now = Date.now();
+                if (now - lastHeartbeatSoundTime > heartbeatInterval) {
+                    playHeartbeatSound(0.4 + (proximityFactor * 0.5), true); lastHeartbeatSoundTime = now;
+                    heartUI.style.transform = `translateX(-50%) scale(${1.2 + proximityFactor * 0.5})`;
+                    setTimeout(() => { heartUI.style.transform = `translateX(-50%) scale(${0.9 + proximityFactor * 0.2})`; }, 120);
+                }
             } else { heartUI.style.transform = 'translateX(-50%) scale(0)'; }
 
-            if (closestDist < 1.2 && player.position.y > -2) { isGameOver = true; playHorrorScream(false); document.getElementById('gameover-screen').style.display = 'flex'; return; }
+            if (closestDist < 1.2 && player.position.y >= -2.0) {
+                isGameOver = true; playHorrorScream(false);
+                document.getElementById('gameover-screen').style.display = 'flex';
+                return;
+            }
 
             camera.position.set(player.position.x + bobX, player.position.y + 1.5 + bobY, player.position.z);
             camera.rotation.set(smoothCamAngleY, smoothCamAngleX, 0, 'YXZ');
+
             renderer.render(scene, camera);
         }
         animate();
 
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>

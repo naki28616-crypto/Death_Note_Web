@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, minimal-ui">
-    <title>The Backrooms - True Escape</title>
+    <title>《The Backrooms - Escape》</title>
     <style>
         html, body { 
             width: 100%; height: 100%; margin: 0; padding: 0; 
@@ -297,7 +297,7 @@
         fpsRig.add(flashlightMesh);
 
         const armMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.6 });
-        const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); leftArm.rotateX(Math.PI / 2.3); leftArm.position.set(-0.25, -0.25, -0.3); fpsRig.add(leftArm);
+        const leftArm = new Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); leftArm.rotateX(Math.PI / 2.3); leftArm.position.set(-0.25, -0.25, -0.3); fpsRig.add(leftArm);
         const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.5, 8), armMat); rightArm.rotateX(Math.PI / 2.3); rightArm.position.set(0.25, -0.25, -0.3); fpsRig.add(rightArm);
 
         function generateHighQualityWallTextures() {
@@ -348,10 +348,11 @@
             }
             ctx.putImageData(imgData, 0, 0);
             
-            for (let i = 0; i < 12; i++) {
-                let x = Math.random() * size, y = Math.random() * size, r = 35 + Math.random() * 55;
+            // [수정점] 얼룩의 갯수와 투명도를 줄여 듬성듬성하게 표현
+            for (let i = 0; i < 4; i++) {
+                let x = Math.random() * size, y = Math.random() * size, r = 30 + Math.random() * 40;
                 let grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(52, 44, 18, 0.65)'); 
+                grad.addColorStop(0, 'rgba(52, 44, 18, 0.35)'); // 투명도 감소
                 grad.addColorStop(1, 'rgba(52, 44, 18, 0)');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
             }
@@ -454,10 +455,36 @@
                     if(mapData[r][c] === 1) {
                         dummy.position.set(x, wallHeight/2, z); dummy.updateMatrix();
                         instancedWalls.setMatrixAt(idx++, dummy.matrix);
-                    } else if(Math.random() < 0.08) { 
-                        const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.02, 0.4), new THREE.MeshBasicMaterial({ color: 0xfffebb }));
-                        lamp.position.set(x, wallHeight - 0.01, z); scene.add(lamp); lamps.push(lamp);
-                        const pl = new THREE.PointLight(0xfff5cc, 0.5, 11); pl.position.set(x, wallHeight - 0.2, z); lamp.add(pl);
+                    } else if(Math.random() < 0.12) { 
+                        // [수정점] 천장 틀에 맞게 구성된 디테일한 형광등 모델링
+                        const lampGroup = new THREE.Group();
+                        
+                        // 금속 프레임
+                        const frameGeo = new THREE.BoxGeometry(2.4, 0.05, 1.2);
+                        const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+                        const frame = new THREE.Mesh(frameGeo, frameMat);
+                        
+                        // 하얀 형광등 패널
+                        const panelGeo = new THREE.BoxGeometry(2.2, 0.06, 1.0);
+                        const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffe0 }); 
+                        const panel = new THREE.Mesh(panelGeo, panelMat);
+                        panel.position.y = -0.01; 
+                        
+                        lampGroup.add(frame);
+                        lampGroup.add(panel);
+                        lampGroup.position.set(x, wallHeight - 0.02, z);
+                        
+                        // 50% 확률로 가로/세로 방향 랜덤 틀 정렬
+                        if (Math.random() > 0.5) {
+                            lampGroup.rotation.y = Math.PI / 2;
+                        }
+                        
+                        scene.add(lampGroup); 
+                        lamps.push(lampGroup);
+                        
+                        const pl = new THREE.PointLight(0xfff5cc, 0.6, 11); 
+                        pl.position.set(x, wallHeight - 0.3, z); 
+                        scene.add(pl);
                     }
                 }
             }
@@ -534,7 +561,6 @@
             scene.add(doorGroup);
             doorGroup.updateMatrixWorld(true);
 
-            // Escape Sensor
             let sensorOffset = new THREE.Vector3(0, 1.0, -2.2); 
             sensorOffset.applyQuaternion(doorGroup.quaternion);
             globalEscapeSensorPos.copy(doorGroup.position).add(sensorOffset);
@@ -785,12 +811,10 @@
             }
         });
 
-        // 🚨 [CRITICAL FIX] Safe Collision check avoiding TypeErrors for Entities
         function checkGridCollision(oldPos, tentativePos, radius = 0.55) {
             if (isNaN(tentativePos.x) || isNaN(tentativePos.z)) return { x: oldPos.x, z: oldPos.z };
 
             if(isDoorOpened && doorGroup) {
-                // Fixed math to support both Vector3 (Player) and Object (Entities) safely!
                 let dX = oldPos.x - doorGroup.position.x;
                 let dZ = oldPos.z - doorGroup.position.z;
                 let distToDoorPivot = Math.sqrt(dX*dX + dZ*dZ);
@@ -822,10 +846,15 @@
         }
 
         function processEntityAI(e, playerPos) {
-            const ePos = e.mesh.position; const dist = ePos.distanceTo(playerPos);
+            const ePos = e.mesh.position; 
+            
+            // Calculate distance manually to avoid any Three.js object type crashes
+            const dist = Math.sqrt(Math.pow(ePos.x - playerPos.x, 2) + Math.pow(ePos.z - playerPos.z, 2));
+            
             e.stuckCheckTimer += 1;
             if(e.stuckCheckTimer > 50) {
-                if(ePos.distanceTo(e.lastPos) < 0.15) { e.patrolTarget = getSafeSpawn(playerPos); }
+                const stuckDist = Math.sqrt(Math.pow(ePos.x - e.lastPos.x, 2) + Math.pow(ePos.z - e.lastPos.z, 2));
+                if(stuckDist < 0.15) { e.patrolTarget = getSafeSpawn(playerPos); }
                 e.lastPos.copy(ePos); e.stuckCheckTimer = 0;
             }
             
@@ -843,7 +872,6 @@
             if (len > 0.1) {
                 const sp = e.state === 'chase' ? e.speed * 1.45 : e.speed;
                 const tenE = { x: ePos.x + (dX / len) * sp, z: ePos.z + (dZ / len) * sp };
-                // Using the fixed safe check
                 const safeE = checkGridCollision({x:ePos.x, z:ePos.z}, tenE, 0.5);
                 ePos.x = safeE.x; ePos.z = safeE.z; 
                 e.mesh.rotation.y = Math.atan2(dX, dZ);
@@ -878,7 +906,7 @@
 
         function processKeyAudioHint(playerPos) {
             if(!keyHintGain || !keyMesh || hasKey || !audioCtx) return;
-            const dist = playerPos.distanceTo(keyMesh.position);
+            const dist = Math.sqrt(Math.pow(playerPos.x - keyMesh.position.x, 2) + Math.pow(playerPos.z - keyMesh.position.z, 2));
             if(dist < 16) {
                 let targetVol = Math.max(0.001, (16 - dist) / 16) * 0.45 * volumeSfxRatio;
                 keyHintGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.15);
@@ -994,7 +1022,7 @@
 
             processKeyAudioHint(player.position);
 
-            if(!hasKey && keyMesh && player.position.distanceTo(keyMesh.position) < 1.3) {
+            if(!hasKey && keyMesh && Math.sqrt(Math.pow(player.position.x - keyMesh.position.x, 2) + Math.pow(player.position.z - keyMesh.position.z, 2)) < 1.3) {
                 hasKey = true; scene.remove(keyMesh);
                 if(keyHintGain) keyHintGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 if(doorGroup && doorGroup.greenLight) doorGroup.greenLight.intensity = 3.5;
@@ -1004,7 +1032,7 @@
             if(!hasKey) {
                 document.getElementById('quest-ui').innerHTML = "🔑 QUEST:<br>Find the hidden key.";
             } else if(doorGroup) {
-                let currentDoorDist = Math.floor(player.position.distanceTo(doorGroup.position) * 1.5);
+                let currentDoorDist = Math.floor(Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2)) * 1.5);
                 if(!isDoorOpened) {
                     document.getElementById('quest-ui').innerHTML = `🚪 QUEST:<br>Find the door to escape.<br><span style='color:#00ff66; font-size:15px;'>📍 Distance remaining: ${currentDoorDist}m</span>`;
                 } else {
@@ -1013,7 +1041,7 @@
             }
 
             if(doorGroup) {
-                let distToDoorFrame = player.position.distanceTo(doorGroup.position);
+                let distToDoorFrame = Math.sqrt(Math.pow(player.position.x - doorGroup.position.x, 2) + Math.pow(player.position.z - doorGroup.position.z, 2));
                 
                 if(hasKey && distToDoorFrame < 2.5 && !isDoorOpened) {
                     if(platform === 'pc') {
@@ -1029,10 +1057,10 @@
                 if(isDoorOpened && doorPivot) {
                     const targetRotation = -Math.PI / 2;
                     if(doorPivot.rotation.y > targetRotation) {
-                        doorPivot.rotation.y -= 0.06; // Rotate smoothly
+                        doorPivot.rotation.y -= 0.06; 
                         doorGroup.updateMatrixWorld(true);
                     } else {
-                        let distanceToEscapeSensor = player.position.distanceTo(globalEscapeSensorPos);
+                        let distanceToEscapeSensor = Math.sqrt(Math.pow(player.position.x - globalEscapeSensorPos.x, 2) + Math.pow(player.position.z - globalEscapeSensorPos.z, 2));
                         if(distanceToEscapeSensor < 1.5) { 
                             gameActive = false; playHorrorScream(false);
                             document.getElementById('clear-time-record').textContent = `⏱️ Escape Time: ${calcMin}m ${calcSec}s`;
@@ -1107,7 +1135,8 @@
             let closestDist = 999;
             entities.forEach(e => {
                 processEntityAI(e, player.position);
-                const d = player.position.distanceTo(e.mesh.position); if (d < closestDist) closestDist = d;
+                const d = Math.sqrt(Math.pow(player.position.x - e.mesh.position.x, 2) + Math.pow(player.position.z - e.mesh.position.z, 2));
+                if (d < closestDist) closestDist = d;
                 
                 let waveSpeed = e.state === 'chase' ? 0.045 : 0.015;
                 e.core.position.y = 1.3 + Math.sin(Date.now() * waveSpeed) * 0.12;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Backrooms - True Escape</title>
+    <title>The Backrooms</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#0d0d0b;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -342,7 +342,7 @@ function safeSpawn(avoid,minD){
 }
 
 // ════════════════════════════════════════════
-//  [완벽 수정] BINGO PIT — 구멍 바깥의 디딤돌 평지를 시각적/물리적으로 촘촘하게 가득 채움
+//  BINGO PIT GENERATION
 // ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
@@ -390,7 +390,6 @@ function buildBingoPit(){
     const voidMat = new THREE.MeshBasicMaterial({color:0x020202});
     const holeDepth = 18;
 
-    // 디딤돌의 중심축 크기를 촘촘하게 확장하여 발이 공중에 잘못 걸려 떨어지는 버그를 원천 방지
     const hGeo = new THREE.BoxGeometry(PIT_TOTAL + 0.2, 0.1, B_PATH_W + 0.2);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const z = pitBounds.minZ + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
@@ -786,9 +785,6 @@ window.addEventListener('touchstart',e=>{
     }
 },{passive:false});
 
-// ════════════════════════════════════════════
-//  [완벽 수정] 모바일 터치 드래그 화면 시점 반전 마우스 기법과 완벽 통일
-// ════════════════════════════════════════════
 window.addEventListener('touchmove',e=>{
     if(platform!=='mobile')return;
     for(let i=0;i<e.touches.length;i++){
@@ -796,10 +792,9 @@ window.addEventListener('touchmove',e=>{
         if(t.identifier===jTouchId)calcJoy(t.clientX,t.clientY);
         if(t.identifier===rTouchId){
             const m=0.004*sensitivity;
-            // 체크박스 옵션(invY)에 따라 직관적인 시선 처리가 되도록 교정
-            const lookYDir = invY ? 1 : -1; 
+            const lookYDir = invY ? -1 : 1; 
             camX-=(t.clientX-prevX)*m;
-            camY+=(t.clientY-prevY)*m*lookYDir; 
+            camY-=(t.clientY-prevY)*m*lookYDir; 
             prevX=t.clientX;prevY=t.clientY;
             camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
         }
@@ -814,16 +809,13 @@ window.addEventListener('touchend',e=>{
     }
 });
 
-// ════════════════════════════════════════════
-//  [완벽 수정] PC 마우스 상하 축 대반전 현상 표준 1인칭 스타일 정방향 매칭 완료
-// ════════════════════════════════════════════
 window.addEventListener('mousemove',e=>{
     if(!gameActive||isGameOver||isPaused||platform!=='pc')return;
     if(document.pointerLockElement===document.body){
         const m=0.0018*sensitivity;
         const lookYDir = invY ? 1 : -1; 
         camX-=e.movementX*m;
-        camY+=e.movementY*m*lookYDir; // 위로 올리면 카메라가 위를 보도록 완벽 교정
+        camY-=e.movementY*m*lookYDir; 
         camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
     }
 });
@@ -1060,6 +1052,9 @@ function launchGame(){
     initAudio();
 }
 
+// ════════════════════════════════════════════
+//  MAIN PREVIEW CANVAS
+// ════════════════════════════════════════════
 (function initPreview(){
     const pvs=document.getElementById('preview-canvas');
     pvs.width=innerWidth;pvs.height=innerHeight;
@@ -1134,7 +1129,6 @@ function animate(){
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.025;
     if(!underground)keyHint(player.position);
 
-    // ─── [완벽 수정] 격자 브릿지와 사면 테두리를 완벽하게 디딜 수 있도록 낙사 판정 정교화 ───
     if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
@@ -1145,7 +1139,6 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            // 디딤돌의 안전반경 판정을 0.42 -> 0.05로 좁혀 플레이어 중심축이 실제 타일 밖으로 완전히 벗어났을 때만 추락하도록 변경
             const pRad = 0.05; 
             let safe = false;
 
@@ -1234,7 +1227,6 @@ function animate(){
     const fX=Math.sin(sCamX),fZ=-Math.cos(sCamX);
     const rX=Math.cos(sCamX),rZ=Math.sin(sCamX);
 
-    // ─── [완벽 수정] PC / 모바일 조작 반대 현상 정방향 벡터 축 매칭 ───
     let mX=0,mZ=0;
     if(platform==='pc'){
         if(keys.w){mX+=fX;mZ+=fZ;}if(keys.s){mX-=fX;mZ-=fZ;}
@@ -1243,7 +1235,6 @@ function animate(){
     }else{
         if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){
             const mvDir = invMove ? -1 : 1; 
-            // 모바일 조이스틱 전후좌우 이동 벡터가 시점과 정확히 맞물리도록 공식 수정
             mX=(fX*(-jInput.y)+rX*jInput.x)*mvDir;
             mZ=(fZ*(-jInput.y)+rZ*jInput.x)*mvDir;
         }

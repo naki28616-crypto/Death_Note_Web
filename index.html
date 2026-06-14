@@ -366,31 +366,26 @@ function buildBingoPit(){
     pitBounds.minZ=pitCZ-BINGO_HALF; pitBounds.maxZ=pitCZ+BINGO_HALF;
     pitBounds.active=true;
 
-    // 1) 기존 바닥 숨기기 및 빙고판 구역만 구멍이 뚫린 새로운 바닥 조립
     if(floorM) floorM.visible = false;
     floorGroup = new THREE.Group();
     const mW = COLS*UNIT, mH = ROWS*UNIT;
 
-    // 북쪽 바닥
     const nL = pitBounds.minZ - (-mH/2);
     if(nL>0){
         const fN = new THREE.Mesh(new THREE.PlaneGeometry(mW, nL), floorMat);
         fN.rotation.x = -Math.PI/2; fN.position.set(0,0,-mH/2+nL/2); floorGroup.add(fN);
     }
-    // 남쪽 바닥
     const sL = mH/2 - pitBounds.maxZ;
     if(sL>0){
         const fS = new THREE.Mesh(new THREE.PlaneGeometry(mW, sL), floorMat);
         fS.rotation.x = -Math.PI/2; fS.position.set(0,0,pitBounds.maxZ+sL/2); floorGroup.add(fS);
     }
-    // 서쪽 바닥 (구멍 영역 높이만큼만)
     const wL = pitBounds.minX - (-mW/2);
     const pZLen = pitBounds.maxZ - pitBounds.minZ;
     if(wL>0){
         const fW = new THREE.Mesh(new THREE.PlaneGeometry(wL, pZLen), floorMat);
         fW.rotation.x = -Math.PI/2; fW.position.set(-mW/2+wL/2,0,pitCZ); floorGroup.add(fW);
     }
-    // 동쪽 바닥
     const eL = mW/2 - pitBounds.maxX;
     if(eL>0){
         const fE = new THREE.Mesh(new THREE.PlaneGeometry(eL, pZLen), floorMat);
@@ -398,13 +393,11 @@ function buildBingoPit(){
     }
     scene.add(floorGroup);
 
-    // 2) 격자 뼈대 및 구멍 (평지형 바닥)
     const pathMat = new THREE.MeshStandardMaterial({map:floorTex, roughness:0.95});
     const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.88});
     const voidMat = new THREE.MeshBasicMaterial({color:0x020202});
     const holeDepth = 18;
 
-    // 가로 연결 브릿지
     const hGeo = new THREE.BoxGeometry(PIT_TOTAL, 0.1, B_PATH_W);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const z = pitBounds.minZ + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
@@ -412,7 +405,6 @@ function buildBingoPit(){
         p.position.set(pitCX, -0.05, z);
         scene.add(p); pitMeshes.push(p);
     }
-    // 세로 연결 브릿지
     const vGeo = new THREE.BoxGeometry(B_PATH_W, 0.1, PIT_TOTAL);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
@@ -421,7 +413,6 @@ function buildBingoPit(){
         scene.add(p); pitMeshes.push(p);
     }
 
-    // 3) 구멍 안쪽의 벽면 텍스쳐 적용
     const wGeoX = new THREE.BoxGeometry(B_HOLE_W, holeDepth, 0.1);
     const wGeoZ = new THREE.BoxGeometry(0.1, holeDepth, B_HOLE_W);
     for(let r=0; r<B_GRID_DIV; r++) {
@@ -439,13 +430,11 @@ function buildBingoPit(){
         }
     }
 
-    // 밑바닥 (완전한 어둠)
     pitVoid = new THREE.Mesh(new THREE.PlaneGeometry(PIT_TOTAL, PIT_TOTAL), voidMat);
     pitVoid.rotation.x = -Math.PI/2;
     pitVoid.position.set(pitCX, -holeDepth + 0.1, pitCZ);
     scene.add(pitVoid);
 
-    // 심해 느낌의 조명 효과
     const deepLight = new THREE.PointLight(0x1144ff, 1.8, 30);
     deepLight.position.set(pitCX, -10, pitCZ);
     scene.add(deepLight); pitMeshes.push(deepLight);
@@ -596,28 +585,37 @@ function buildUnderground(){
     ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
     scene.add(ladderItem); ugObjs.push(ladderItem);
 
+    // [수정] 탈출구(초록 구멍)가 반드시 지하 평지 맵 중 한 곳의 벽(1)과 완벽히 맞닿아 붙도록 설계
     let holeR=-1,holeC=-1,holeWR=0,holeWC=0;
-    outer:for(let tries=0;tries<200;tries++){
-        const r=Math.floor(Math.random()*UG_R),c=Math.floor(Math.random()*UG_C);
-        if(ugMap[r][c]===0){
-            for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
-                const nr=r+dr,nc=c+dc;
-                if(nr>=0&&nr<UG_R&&nc>=0&&nc<UG_C&&ugMap[nr][nc]===1){
-                    holeR=r;holeC=c;holeWR=dr;holeWC=dc;break outer;
+    let findTries = 0;
+    while(findTries < 500) {
+        let r = Math.floor(Math.random()*(UG_R-2))+1;
+        let c = Math.floor(Math.random()*(UG_C-2))+1;
+        if(ugMap[r][c] === 0) {
+            let options = [[-1,0],[1,0],[0,-1],[0,1]].sort(()=>Math.random()-.5);
+            let foundWall = false;
+            for(const [dr, dc] of options) {
+                if(ugMap[r+dr][c+dc] === 1) {
+                    holeR = r; holeC = c; holeWR = dr; holeWC = dc;
+                    foundWall = true; break;
                 }
             }
+            if(foundWall) break;
         }
+        findTries++;
     }
-    if(holeR<0){holeR=2;holeC=2;holeWR=-1;holeWC=0;}
+    if(holeR<0){holeR=1;holeC=1;holeWR=-1;holeWC=0;}
+
     const hp=ugW(holeR,holeC);
-    const hwp=ugW(holeR+holeWR,holeC+holeWC);
     holePosX=hp.x; holePosZ=hp.z;
-    const holeWX=hwp.x-holeWC*UG_U/2;
-    const holeWZ=hwp.z-holeWR*UG_U/2;
     holeWallNX=-holeWC; holeWallNZ=-holeWR; 
 
+    // 벽면에 정확하게 달라붙도록 오프셋 가공 조율
+    let attachX = holePosX + holeWC * (UG_U / 2 - 0.05);
+    let attachZ = holePosZ + holeWR * (UG_U / 2 - 0.05);
+
     holeGroup=new THREE.Group();
-    holeGroup.position.set(holeWX,UG_Y+UG_WH*0.72,holeWZ);
+    holeGroup.position.set(attachX,UG_Y+UG_WH*0.5,attachZ);
     holeGroup.rotation.y=Math.atan2(holeWallNX,holeWallNZ);
 
     const holeMat=new THREE.MeshStandardMaterial({color:0x00ff66,emissive:0x00ff66,emissiveIntensity:.9,roughness:.3});
@@ -628,8 +626,8 @@ function buildUnderground(){
     const hR=new THREE.Mesh(new THREE.BoxGeometry(.08,hH,.08),holeMat); hR.position.set(hW/2,0,0);
     const hIn=new THREE.Mesh(new THREE.BoxGeometry(hW,hH,.05),new THREE.MeshBasicMaterial({color:0x000000}));
     holeGroup.add(hTop,hBot,hL,hR,hIn);
-    const hl1=new THREE.PointLight(0x00ff66,4.0,10); hl1.position.set(0,0,.8); holeGroup.add(hl1);
-    const hl2=new THREE.PointLight(0x00ff66,2.0,14); hl2.position.set(0,-1.5,.8); holeGroup.add(hl2);
+    const hl1=new THREE.PointLight(0x00ff66,4.0,10); hl1.position.set(0,0,.3); holeGroup.add(hl1);
+    const hl2=new THREE.PointLight(0x00ff66,2.0,14); hl2.position.set(0,-1.5,.3); holeGroup.add(hl2);
     scene.add(holeGroup); ugObjs.push(holeGroup);
 }
 
@@ -813,9 +811,9 @@ window.addEventListener('touchmove',e=>{
         if(t.identifier===jTouchId)calcJoy(t.clientX,t.clientY);
         if(t.identifier===rTouchId){
             const m=0.004*sensitivity;
-            const lookYDir = invY ? -1 : 1; 
+            const lookYDir = invY ? 1 : -1; 
             camX-=(t.clientX-prevX)*m;
-            camY+=(t.clientY-prevY)*m*lookYDir; // 표준조작(Down->Down) 적용 및 반전가능
+            camY+=(t.clientY-prevY)*m*lookYDir; // [수정] 모바일 드래그 시점 표준화
             prevX=t.clientX;prevY=t.clientY;
             camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
         }
@@ -829,13 +827,14 @@ window.addEventListener('touchend',e=>{
         if(t.identifier===rTouchId)rTouchId=null;
     }
 });
+
 window.addEventListener('mousemove',e=>{
     if(!gameActive||isGameOver||isPaused||platform!=='pc')return;
     if(document.pointerLockElement===document.body){
         const m=0.0018*sensitivity;
-        const lookYDir = invY ? -1 : 1; 
+        const lookYDir = invY ? 1 : -1; 
         camX-=e.movementX*m;
-        camY+=e.movementY*m*lookYDir; // PC 마우스 조작도 표준으로 변경
+        camY+=e.movementY*m*lookYDir; // [수정] 마우스 상하 드래그 반대 현상 표준 FPS로 완벽 수정
         camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
     }
 });
@@ -1158,8 +1157,8 @@ function animate(){
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.025;
     if(!underground)keyHint(player.position);
 
-    // ─── 빙고판 낙사 판정 (평지 그물망 디자인 맞춤형 판정) ───
-    if(!underground&&pitBounds.active&&player.position.y>=-0.01){
+    // ─── [수정] 빙고판 디딤돌 브릿지 및 테두리 완벽 안전 낙사 판정 계산식 ───
+    if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
         if(inPit){
@@ -1169,25 +1168,23 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            // 걷는 길은 0 ~ B_PATH_W 사이. 
-            // 여유 마진(Player Radius Tolerance)으로 낙사 판정을 관대하게 줍니다.
-            const safeR = 0.35;
+            const pRad = 0.42; // 낙사 관용 허용 마진 조율 수치
             let safe = false;
-            if(mx < B_PATH_W + safeR || mx > CELL - safeR) safe = true;
-            if(mz < B_PATH_W + safeR || mz > CELL - safeR) safe = true;
+
+            // 디딤돌 브릿지 격자 라인 위 조준 확인
+            if(mx <= B_PATH_W + pRad || mx >= CELL - pRad) safe = true;
+            if(mz <= B_PATH_W + pRad || mz >= CELL - pRad) safe = true;
             
-            // 바깥 테두리 부분도 안전 처리
-            if(lx < B_PATH_W/2 || lx > (pitBounds.maxX - pitBounds.minX) - B_PATH_W/2) safe = true;
-            if(lz < B_PATH_W/2 || lz > (pitBounds.maxZ - pitBounds.minZ) - B_PATH_W/2) safe = true;
+            // 빙고판의 완전한 외곽 테두리 4면 영역을 디디고 있을 경우 안전 처리 보장
+            if(lx <= B_PATH_W + pRad || lx >= PIT_TOTAL - B_PATH_W - pRad) safe = true;
+            if(lz <= B_PATH_W + pRad || lz >= PIT_TOTAL - B_PATH_W - pRad) safe = true;
 
             if(!safe&&grounded){grounded=false;velY=-.02;}
         }
     }
 
-    // ─── 지하 진입 ───
     if(!underground&&player.position.y<-4.5&&!isGameOver){enterUnderground();return;}
 
-    // ─── 사다리 올라가기 ───
     if(underground&&climbing){
         climbT++;
         player.position.y+=.07;
@@ -1195,7 +1192,6 @@ function animate(){
         if(player.position.y>=UG_Y+UG_WH*.82||climbT>130){exitUnderground();return;}
     }
 
-    // ─── 열쇠 획득 ───
     if(!hasKey&&keyMesh&&!underground){
         const d=Math.sqrt((player.position.x-keyMesh.position.x)**2+(player.position.z-keyMesh.position.z)**2);
         if(d<1.3){
@@ -1215,7 +1211,6 @@ function animate(){
         }
     }
 
-    // ─── 퀘스트 UI ───
     const qu=document.getElementById('quest-ui');
     if(!underground){
         if(!hasKey)qu.innerHTML="🔑 QUEST:<br>Find the hidden key.";
@@ -1230,7 +1225,6 @@ function animate(){
         else qu.innerHTML="⬆ UNDERGROUND:<br>사다리 타고 탈출!<br>[▲]";
     }
 
-    // ─── 문 상호작용 ───
     if(!underground&&doorGroup){
         const dd=player.position.distanceTo(doorGroup.position);
         if(hasKey&&dd<2.5&&!doorOpened){
@@ -1260,20 +1254,19 @@ function animate(){
         }
     }
 
-    // ─── 카메라 스무딩 ───
     sCamX+=(camX-sCamX)*.18; sCamY+=(camY-sCamY)*.18;
     const fX=Math.sin(sCamX),fZ=-Math.cos(sCamX);
     const rX=Math.cos(sCamX),rZ=Math.sin(sCamX);
 
-    // ─── 이동 ───
     let mX=0,mZ=0;
     if(platform==='pc'){
+        // [수정] 조작키 벡터 방향 직관성 매칭 정상화
         if(keys.w){mX+=fX;mZ+=fZ;}if(keys.s){mX-=fX;mZ-=fZ;}
         if(keys.a){mX-=rX;mZ-=rZ;}if(keys.d){mX+=rX;mZ+=rZ;}
         moving=mX!==0||mZ!==0;sprinting=moving&&keys.shift&&!exhausted;
     }else{
         if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){
-            const mvDir = invMove ? -1 : 1; // 이동 반전 세팅값 적용
+            const mvDir = invMove ? -1 : 1; 
             mX=(fX*(-jInput.y)+rX*jInput.x)*mvDir;
             mZ=(fZ*(-jInput.y)+rZ*jInput.x)*mvDir;
         }

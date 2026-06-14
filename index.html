@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Backrooms</title>
+    <title>The Backrooms - Trape</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#0d0d0b;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -21,7 +21,6 @@
         .setting-row{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#bfae6f;font-weight:bold;}
         .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#d4cfb4;font-weight:normal;}
         .setting-row input[type="range"]{width:100%;accent-color:#bfae6f;margin-top:2px;}
-        .setting-row input[type="checkbox"]{accent-color:#bfae6f;width:16px;height:16px;cursor:pointer;}
         #mobile-controls-right{position:absolute;bottom:30px;right:30px;display:none;flex-direction:column;gap:15px;z-index:220;}
         .circle-btn{width:64px;height:64px;background:rgba(22,21,18,.92);border:2px solid #4a4537;border-radius:50%;color:#d4cfb4;font-size:24px;display:flex;justify-content:center;align-items:center;cursor:pointer;touch-action:none;box-shadow:0 6px 14px rgba(0,0,0,.7);}
         .circle-btn.active{background:#bfae6f;color:#111;border-color:#fff;}
@@ -108,8 +107,6 @@
         <button class="btn" style="background:#661e1e;color:#fff;border-color:#8c2b2b;" onclick="triggerPause(true)">⏸ PAUSE</button>
         <button class="btn" style="background:#1e4666;color:#fff;border-color:#2b6f8c;" onclick="toggleFS()">📺 FULLSCREEN</button>
         <div class="setting-row"><div><span>Sensitivity</span><span id="txt-sens">1.0</span></div><input type="range" id="cfg-sens" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSens(this.value)"></div>
-        <div class="setting-row"><div><span>Invert Look Y (시점반전)</span><input type="checkbox" onchange="invY=this.checked"></div></div>
-        <div class="setting-row"><div><span>Invert Move (이동반전)</span><input type="checkbox" onchange="invMove=this.checked"></div></div>
         <div class="setting-row"><div><span>BGM Vol</span><span id="txt-bgm">50%</span></div><input type="range" id="cfg-bgm" min="0" max="100" step="5" value="50" oninput="updateBgm(this.value)"></div>
         <div class="setting-row"><div><span>SFX Vol</span><span id="txt-sfx">70%</span></div><input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)"></div>
     </div>
@@ -148,17 +145,16 @@
 // ════════════════════════════════════════════
 //  CONSTANTS & GLOBALS
 // ════════════════════════════════════════════
-const ROWS=22, COLS=22, UNIT=5, WH=5.5;
-const BINGO_CLEAR_R=3; 
+const ROWS=28, COLS=28, UNIT=5, WH=5.5;
 
-let mapData=[], iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
+let mapData=[], reserved=[];
+let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
 
 const UG_R=14, UG_C=14, UG_U=4, UG_WH=4.5;
 const UG_Y=-32; 
 
 let platform=null, gameActive=false, isGameOver=false, isPaused=false;
 let isFlashOn=true, sensitivity=1.0, volBgm=0.5, volSfx=0.7;
-let invY=false, invMove=false; 
 let recTime=0, speedBoosted=false, panelOpen=false;
 
 let velY=0, grounded=true;
@@ -170,17 +166,17 @@ let stamina=100, exhausted=false, moving=false, sprinting=false;
 let hasKey=false, doorOpened=false;
 let keyMesh=null, doorGroup=null, doorPivot=null;
 let escapeSensor=new THREE.Vector3();
+let escapeDoorPos = {x:0, z:0, ang:0};
 
 let pitCX=0, pitCZ=0;
 let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
 let pitMeshes=[], pitVoid=null;
-let flatAreas=[]; 
 
 const B_GRID_DIV = 4;    
-const B_HOLE_W = 3.8;    
-const B_PATH_W = 0.9;    
-const PIT_TOTAL = B_GRID_DIV * B_HOLE_W + (B_GRID_DIV + 1) * B_PATH_W;
-const BINGO_HALF = PIT_TOTAL / 2;
+const B_PATH_W = 1.0;    
+const B_HOLE_W = 3.75;    
+const PIT_TOTAL = 20; // 4 * 3.75 + 5 * 1.0 = 20
+const BINGO_HALF = 10;
 
 let underground=false;
 let ugMap=[], ugWalls=null, ugFloor=null, ugCeil=null, ugObjs=[];
@@ -261,26 +257,80 @@ const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.88});
 
 // ════════════════════════════════════════════
-//  MAZE GENERATION
+//  MAZE GENERATION (ROOM + CORRIDOR LOGIC)
 // ════════════════════════════════════════════
 function genMaze(){
-    mapData=Array(ROWS).fill().map(()=>Array(COLS).fill(1));
-    flatAreas=[];
-    const vis=Array(ROWS).fill().map(()=>Array(COLS).fill(false));
+    mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
+    reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
+
+    // 빙고 방 위치 (중앙 부근, 짝수 좌표를 사용하여 미로 생성 로직과 맞춤)
+    const br_r = Math.floor(Math.random()*3)*2 + 10; // 10, 12, 14
+    const br_c = Math.floor(Math.random()*3)*2 + 10; // 10, 12, 14
+    const br_w = 4, br_h = 4;
+
+    // 방과 외벽 1칸을 예약 영역으로 설정 (미로 생성기가 건드리지 못함)
+    for(let r=br_r-1; r<=br_r+br_h; r++) {
+        for(let c=br_c-1; c<=br_c+br_w; c++) {
+            if(r>=0 && r<ROWS && c>=0 && c<COLS) reserved[r][c] = true;
+        }
+    }
+    // 4x4 실제 방 내부 공간 파내기
+    for(let r=br_r; r<br_r+br_h; r++) {
+        for(let c=br_c; c<br_c+br_w; c++) {
+            mapData[r][c] = 0;
+        }
+    }
+
+    pitCX = (br_c + 2 - COLS/2) * UNIT;
+    pitCZ = (br_r + 2 - ROWS/2) * UNIT;
+
+    // 탈출 방향 결정 (왼쪽 또는 오른쪽 샛길)
+    let exitDir = Math.random() < 0.5 ? -1 : 1;
+    if (exitDir === -1) {
+        // 왼쪽 샛길 (1칸 너비)
+        for(let c=br_c-4; c<br_c; c++) {
+            mapData[br_r+2][c] = 0;
+            reserved[br_r+1][c]=true; reserved[br_r+2][c]=true; reserved[br_r+3][c]=true;
+        }
+        reserved[br_r+2][br_c-5] = true; // 막다른 길 처리
+        escapeDoorPos.x = (br_c - 4 - COLS/2)*UNIT + UNIT/2;
+        escapeDoorPos.z = (br_r + 2 - ROWS/2)*UNIT + UNIT/2;
+        escapeDoorPos.ang = Math.PI/2;
+    } else {
+        // 오른쪽 샛길 (1칸 너비)
+        for(let c=br_c+br_w; c<br_c+br_w+4; c++) {
+            mapData[br_r+2][c] = 0;
+            reserved[br_r+1][c]=true; reserved[br_r+2][c]=true; reserved[br_r+3][c]=true;
+        }
+        reserved[br_r+2][br_c+br_w+4] = true;
+        escapeDoorPos.x = (br_c + br_w + 3 - COLS/2)*UNIT + UNIT/2;
+        escapeDoorPos.z = (br_r + 2 - ROWS/2)*UNIT + UNIT/2;
+        escapeDoorPos.ang = -Math.PI/2;
+    }
+
+    // 방 입구 (아래쪽) 뚫어주기
+    mapData[br_r+br_h][br_c+1] = 0; mapData[br_r+br_h][br_c+2] = 0;
+    reserved[br_r+br_h][br_c+1] = true; reserved[br_r+br_h][br_c+2] = true;
+
+    // 입구 바로 밖에서부터 미로 파기 시작 (홀수 좌표여야 완벽히 연결됨)
+    let startR = br_r + 5, startC = br_c + 1;
+    mapData[startR][startC] = 0; 
+    
     function carve(r,c){
-        vis[r][c]=true; mapData[r][c]=0;
         const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
-        for(const[dr,dc]of dirs){const nr=r+dr,nc=c+dc;if(nr>0&&nr<ROWS-1&&nc>0&&nc<COLS-1&&!vis[nr][nc]){mapData[r+dr/2][c+dc/2]=0;carve(nr,nc);}}
+        for(const[dr,dc]of dirs){
+            const nr=r+dr,nc=c+dc;
+            if(nr>0&&nr<ROWS-1&&nc>0&&nc<COLS-1 && mapData[nr][nc]===1 && !reserved[nr][nc]){
+                if(!reserved[r+dr/2][c+dc/2]){
+                    mapData[r+dr/2][c+dc/2]=0; mapData[nr][nc]=0;
+                    carve(nr,nc);
+                }
+            }
+        }
     }
-    carve(1,1);
-    for(let k=0;k<3;k++){
-        let cr,cc,tries=0;
-        do{cr=Math.floor(Math.random()*(ROWS-8))+4;cc=Math.floor(Math.random()*(COLS-8))+4;tries++;}
-        while(tries<50&&flatAreas.some(a=>Math.abs(a.r-cr)<6&&Math.abs(a.c-cc)<6));
-        const R=BINGO_CLEAR_R+1;
-        for(let r=cr-R;r<=cr+R;r++)for(let c=cc-R;c<=cc+R;c++){if(r>0&&r<ROWS-1&&c>0&&c<COLS-1)mapData[r][c]=0;}
-        flatAreas.push({r:cr,c:cc});
-    }
+    carve(startR, startC);
+    carve(1, 1); // 맵 전체를 확실히 채우기 위한 2차 파기
+
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
 }
@@ -304,7 +354,7 @@ function buildGraphics(){
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
-            } else if(Math.random()<.12){
+            } else if(Math.random()<.12 && !reserved[r][c]){
                 const lg=new THREE.Group();
                 const fr=new THREE.Mesh(new THREE.BoxGeometry(2.4,.05,1.2),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8}));
                 const pn=new THREE.Mesh(new THREE.BoxGeometry(2.2,.06,1.0),new THREE.MeshBasicMaterial({color:0xffffe0}));
@@ -329,16 +379,17 @@ function buildGraphics(){
 }
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
-function safeSpawn(avoid,minD){
-    for(let i=0;i<400;i++){
+
+function safeSpawn(avoid,minD,excludeReserved=true){
+    for(let i=0;i<600;i++){
         const r=Math.floor(Math.random()*ROWS),c=Math.floor(Math.random()*COLS);
-        if(mapData[r][c]===0){
+        if(mapData[r][c]===0 && (!excludeReserved || !reserved[r][c])){
             const p=worldXZ(r,c);
             if(avoid&&minD&&Math.sqrt((p.x-avoid.x)**2+(p.z-avoid.z)**2)<minD)continue;
             return{x:p.x,z:p.z,r,c};
         }
     }
-    return{x:UNIT,z:UNIT,r:1,c:1};
+    return{x:UNIT*2,z:UNIT*2,r:2,c:2};
 }
 
 // ════════════════════════════════════════════
@@ -348,12 +399,7 @@ function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
     if(pitVoid){scene.remove(pitVoid);pitVoid=null;}
     if(floorGroup){scene.remove(floorGroup); floorGroup=null;}
-    pitBounds.active=false;
-
-    const fa=flatAreas[0];
-    const fp=worldXZ(fa.r,fa.c);
-    pitCX=fp.x; pitCZ=fp.z;
-
+    
     pitBounds.minX=pitCX-BINGO_HALF; pitBounds.maxX=pitCX+BINGO_HALF;
     pitBounds.minZ=pitCZ-BINGO_HALF; pitBounds.maxZ=pitCZ+BINGO_HALF;
     pitBounds.active=true;
@@ -432,70 +478,48 @@ function buildBingoPit(){
     scene.add(deepLight); pitMeshes.push(deepLight);
 }
 
-function spawnDoor(playerPos){
+function spawnDoor(){
     if(doorGroup)scene.remove(doorGroup);
-    doorGroup=null; doorPivot=null;
-    let placed=false;
-    const offsets=[[0,1],[0,-1],[1,0],[-1,0]];
-    for(const[dr,dc]of offsets){
-        const tr=Math.round((pitCZ+dr*(BINGO_HALF+UNIT*2))/(UNIT)+(ROWS/2-.5));
-        const tc=Math.round((pitCX+dc*(BINGO_HALF+UNIT*2))/(UNIT)+(COLS/2-.5));
-        if(tr>0&&tr<ROWS-1&&tc>0&&tc<COLS-1&&mapData[tr][tc]===0){
-            const dirs2=[[0,-1,0,Math.PI/2],[0,1,0,-Math.PI/2],[-1,0,-2.45,0],[1,0,2.45,Math.PI]];
-            for(const[wr,wc,offX,ang]of dirs2){
-                if(mapData[tr+wr]&&mapData[tr+wr][tc+wc]===1){
-                    const p=worldXZ(tr,tc);
-                    _buildDoor(p.x+offX*(offX!==0?1:0),p.z+(offX===0?offX:0),ang,p.x,p.z);
-                    placed=true; break;
-                }
-            }
-            if(placed)break;
-        }
-    }
-    if(!placed){
-        for(let i=0;i<500;i++){
-            const r=Math.floor(Math.random()*(ROWS-2))+1,c=Math.floor(Math.random()*(COLS-2))+1;
-            if(mapData[r][c]===0){
-                const p=worldXZ(r,c);
-                if(mapData[r-1]&&mapData[r-1][c]===1){_buildDoor(p.x,p.z-2.45,0,p.x,p.z);break;}
-                if(mapData[r+1]&&mapData[r+1][c]===1){_buildDoor(p.x,p.z+2.45,Math.PI,p.x,p.z);break;}
-                if(mapData[r][c-1]===1){_buildDoor(p.x-2.45,p.z,Math.PI/2,p.x,p.z);break;}
-                if(mapData[r][c+1]===1){_buildDoor(p.x+2.45,p.z,-Math.PI/2,p.x,p.z);break;}
-            }
-        }
-    }
-}
-function _buildDoor(dx,dz,ang,cx,cz){
     doorGroup=new THREE.Group();
-    doorGroup.position.set(dx,0,dz);
-    doorGroup.rotation.y=ang;
+    doorGroup.position.set(escapeDoorPos.x, 0, escapeDoorPos.z);
+    doorGroup.rotation.y = escapeDoorPos.ang;
+
     const fMat2=new THREE.MeshStandardMaterial({color:0x1d140e,roughness:.9});
     const lp=new THREE.Mesh(new THREE.BoxGeometry(.15,2.8,.2),fMat2); lp.position.set(-.85,1.4,0);
     const rp=new THREE.Mesh(new THREE.BoxGeometry(.15,2.8,.2),fMat2); rp.position.set(.85,1.4,0);
     const tp=new THREE.Mesh(new THREE.BoxGeometry(1.8,.15,.2),fMat2); tp.position.set(0,2.8,0);
-    doorGroup.add(lp,rp,tp);
+    
+    // 시야 차단을 위한 양옆 블록 (비밀 통로 벽)
+    const blockL=new THREE.Mesh(new THREE.BoxGeometry(1.6,WH,1.0),fMat2); blockL.position.set(-1.6,WH/2,0);
+    const blockR=new THREE.Mesh(new THREE.BoxGeometry(1.6,WH,1.0),fMat2); blockR.position.set(1.6,WH/2,0);
+    doorGroup.add(lp,rp,tp,blockL,blockR);
+
     doorPivot=new THREE.Group(); doorPivot.position.set(-.78,1.4,0);
     const dp=new THREE.Mesh(new THREE.BoxGeometry(1.56,2.65,.12),new THREE.MeshStandardMaterial({color:0x3d2516,roughness:.75}));
     dp.position.set(.78,0,0); doorPivot.add(dp);
     const kn=new THREE.Mesh(new THREE.SphereGeometry(.06,12,12),new THREE.MeshStandardMaterial({color:0xccaa44,metalness:.8,roughness:.1}));
     kn.position.set(.65,0,.09); dp.add(kn);
     doorGroup.add(doorPivot);
-    const corr=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.8,3.0),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide}));
+
+    const corr=new THREE.Mesh(new THREE.BoxGeometry(5.0,2.8,3.0),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide}));
     corr.position.set(0,1.4,-1.5); doorGroup.add(corr);
+    
     scene.add(doorGroup); doorGroup.updateMatrixWorld(true);
     const sOff=new THREE.Vector3(0,1.0,-2.2); sOff.applyQuaternion(doorGroup.quaternion);
     escapeSensor.copy(doorGroup.position).add(sOff);
+    
     const gl=new THREE.PointLight(0x00ff55,0,6); gl.position.set(0,1.4,-.2);
     doorGroup.add(gl); doorGroup.greenLight=gl;
 }
-function spawnKey(playerPos){
+
+function spawnKey(){
     if(keyMesh)scene.remove(keyMesh);
     keyMesh=new THREE.Group();
     const kr=new THREE.Mesh(new THREE.TorusGeometry(.14,.04,8,16),new THREE.MeshStandardMaterial({color:0xffaa00,metalness:.9,roughness:.05}));
     const kb=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.35),new THREE.MeshStandardMaterial({color:0xffaa00,metalness:.9}));
     kb.position.y=-.2; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
     const kl=new THREE.PointLight(0xffdd44,2.5,12); kl.position.y=.2; keyMesh.add(kl);
-    const kp=safeSpawn(playerPos,15);
+    const kp=safeSpawn({x:pitCX, z:pitCZ}, 25, true); // 빙고판에서 멀리 스폰
     keyMesh.position.set(kp.x,.6,kp.z); scene.add(keyMesh);
 }
 
@@ -517,13 +541,7 @@ function buildUnderground(){
         for(const[dr,dc]of dirs){const nr=r+dr,nc=c+dc;if(nr>0&&nr<UG_R-1&&nc>0&&nc<UG_C-1&&!vis[nr][nc]){ugMap[r+dr/2][c+dc/2]=0;carve(nr,nc);}}
     }
     carve(1,1);
-    for(let k=0;k<2;k++){
-        const cr=Math.floor(Math.random()*(UG_R-6))+3,cc=Math.floor(Math.random()*(UG_C-6))+3;
-        for(let r=cr-2;r<=cr+2;r++)for(let c=cc-2;c<=cc+2;c++){if(r>0&&r<UG_R-1&&c>0&&c<UG_C-1)ugMap[r][c]=0;}
-    }
-    for(let r=0;r<UG_R;r++){ugMap[r][0]=1;ugMap[r][UG_C-1]=1;}
-    for(let c=0;c<UG_C;c++){ugMap[0][c]=1;ugMap[UG_R-1][c]=1;}
-
+    
     ugOX=pitCX; ugOZ=pitCZ;
     function ugW(r,c){return{x:ugOX+(c-UG_C/2)*UG_U+UG_U/2,z:ugOZ+(r-UG_R/2)*UG_U+UG_U/2};}
 
@@ -553,11 +571,12 @@ function buildUnderground(){
     ugCeil.rotation.x=Math.PI/2; ugCeil.position.set(ugOX,UG_Y+UG_WH,ugOZ);
     scene.add(ugCeil); ugObjs.push(ugCeil);
 
-    for(let k=0;k<8;k++){
-        const sp=ugSafeSpawn();
-        const pl=new THREE.PointLight(0xff3311,.55,12);
-        pl.position.set(sp.x,UG_Y+UG_WH-.5,sp.z);
-        scene.add(pl); ugObjs.push(pl);
+    function ugSafeSpawn(){
+        for(let i=0;i<200;i++){
+            const r=Math.floor(Math.random()*UG_R),c=Math.floor(Math.random()*UG_C);
+            if(ugMap[r][c]===0) return{x:ugOX+(c-UG_C/2)*UG_U+UG_U/2,z:ugOZ+(r-UG_R/2)*UG_U+UG_U/2};
+        }
+        return{x:ugOX,z:ugOZ};
     }
 
     const lsp=ugSafeSpawn();
@@ -571,35 +590,13 @@ function buildUnderground(){
     ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
     scene.add(ladderItem); ugObjs.push(ladderItem);
 
-    let holeR=-1,holeC=-1,holeWR=0,holeWC=0;
-    let findTries = 0;
-    while(findTries < 500) {
-        let r = Math.floor(Math.random()*(UG_R-2))+1;
-        let c = Math.floor(Math.random()*(UG_C-2))+1;
-        if(ugMap[r][c] === 0) {
-            let options = [[-1,0],[1,0],[0,-1],[0,1]].sort(()=>Math.random()-.5);
-            let foundWall = false;
-            for(const [dr, dc] of options) {
-                if(ugMap[r+dr][c+dc] === 1) {
-                    holeR = r; holeC = c; holeWR = dr; holeWC = dc;
-                    foundWall = true; break;
-                }
-            }
-            if(foundWall) break;
-        }
-        findTries++;
-    }
-    if(holeR<0){holeR=1;holeC=1;holeWR=-1;holeWC=0;}
-
+    let holeR=1,holeC=1,holeWR=-1,holeWC=0;
     const hp=ugW(holeR,holeC);
     holePosX=hp.x; holePosZ=hp.z;
     holeWallNX=-holeWC; holeWallNZ=-holeWR; 
 
-    let attachX = holePosX + holeWC * (UG_U / 2 - 0.05);
-    let attachZ = holePosZ + holeWR * (UG_U / 2 - 0.05);
-
     holeGroup=new THREE.Group();
-    holeGroup.position.set(attachX,UG_Y+UG_WH*0.5,attachZ);
+    holeGroup.position.set(holePosX + holeWC*(UG_U/2-0.05), UG_Y+UG_WH*0.5, holePosZ + holeWR*(UG_U/2-0.05));
     holeGroup.rotation.y=Math.atan2(holeWallNX,holeWallNZ);
 
     const holeMat=new THREE.MeshStandardMaterial({color:0x00ff66,emissive:0x00ff66,emissiveIntensity:.9,roughness:.3});
@@ -611,16 +608,7 @@ function buildUnderground(){
     const hIn=new THREE.Mesh(new THREE.BoxGeometry(hW,hH,.05),new THREE.MeshBasicMaterial({color:0x000000}));
     holeGroup.add(hTop,hBot,hL,hR,hIn);
     const hl1=new THREE.PointLight(0x00ff66,4.0,10); hl1.position.set(0,0,.3); holeGroup.add(hl1);
-    const hl2=new THREE.PointLight(0x00ff66,2.0,14); hl2.position.set(0,-1.5,.3); holeGroup.add(hl2);
     scene.add(holeGroup); ugObjs.push(holeGroup);
-}
-
-function ugSafeSpawn(){
-    for(let i=0;i<200;i++){
-        const r=Math.floor(Math.random()*UG_R),c=Math.floor(Math.random()*UG_C);
-        if(ugMap[r][c]===0) return{x:ugOX+(c-UG_C/2)*UG_U+UG_U/2,z:ugOZ+(r-UG_R/2)*UG_U+UG_U/2};
-    }
-    return{x:ugOX,z:ugOZ};
 }
 
 function ugCollide(oldX,oldZ,newX,newZ,rad){
@@ -658,11 +646,8 @@ function enterUnderground(){
     if(doorGroup)doorGroup.visible=false;
     pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;});
     if(pitVoid)pitVoid.visible=false;
-    scene.background.setHex(0x1a0e06);
-    scene.fog.color.setHex(0x1a0e06);
-    scene.fog.density=0.09;
-    ambient.intensity=0.55;
-    flash.intensity=isFlashOn?3.2:0;
+    scene.background.setHex(0x1a0e06); scene.fog.color.setHex(0x1a0e06); scene.fog.density=0.09;
+    ambient.intensity=0.55; flash.intensity=isFlashOn?3.2:0;
     showToast("⬇ 구덩이에 빠졌습니다!<br>🪜 사다리를 찾아 탈출하세요!");
 }
 
@@ -670,11 +655,6 @@ function exitUnderground(){
     underground=false; climbing=false; climbT=0; hasLadder=false;
     document.getElementById('ladder-hud').style.display='none';
     ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
-    if(ugWalls){scene.remove(ugWalls);ugWalls=null;}
-    if(ugFloor){scene.remove(ugFloor);ugFloor=null;}
-    if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
-    if(ladderMesh){scene.remove(ladderMesh);ladderMesh=null;}
-    if(holeGroup){scene.remove(holeGroup);holeGroup=null;}
     ladderPlaced=false;
     
     if(iWalls)iWalls.visible=true;
@@ -687,14 +667,11 @@ function exitUnderground(){
     pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=true;});
     if(pitVoid)pitVoid.visible=true;
     
-    player.position.set(pitCX+UNIT*2,0,pitCZ+UNIT*2);
+    player.position.set(pitCX+UNIT*2,0,pitCZ+UNIT*2); // 입구 부근으로 복귀
     velY=0; grounded=true;
-    scene.background.setHex(BG_COL);
-    scene.fog.color.setHex(BG_COL);
-    scene.fog.density=0.05;
-    ambient.intensity=0.85;
-    flash.intensity=isFlashOn?1.8:0;
-    showToast("⬆ 지상으로 복귀!<br>🏃 빙고판을 건너 문을 열고 탈출하세요!");
+    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.05;
+    ambient.intensity=0.85; flash.intensity=isFlashOn?1.8:0;
+    showToast("⬆ 지상으로 복귀!<br>🏃 모서리 길을 통해 빙고판을 건너세요!");
 }
 
 // ════════════════════════════════════════════
@@ -723,10 +700,14 @@ entities.push({mesh:ed.mesh,legs:ed.legs,core:ed.core,state:'patrol',patrolTarge
 function gridCollide(ox,oz,nx,nz,rad){
     if(isNaN(nx)||isNaN(nz))return{x:ox,z:oz};
     if(player.position.y<-.05)return{x:nx,z:nz};
-    if(doorOpened&&doorGroup){
-        const dd=Math.sqrt((ox-doorGroup.position.x)**2+(oz-doorGroup.position.z)**2);
-        if(dd<3.2)return{x:nx,z:nz};
+    
+    // 탈출 문 충돌 처리 (비밀 통로 봉쇄)
+    if(!doorOpened && doorGroup){
+        const ddx=doorGroup.position.x-nx;
+        const ddz=doorGroup.position.z-nz;
+        if(Math.sqrt(ddx*ddx + ddz*ddz) < 2.5) return{x:ox, z:oz};
     }
+
     let rx=nx,rz=nz;
     const pc=Math.floor((ox-UNIT/2+(COLS*UNIT)/2)/UNIT);
     const pr=Math.floor((oz-UNIT/2+(ROWS*UNIT)/2)/UNIT);
@@ -791,12 +772,12 @@ window.addEventListener('touchmove',e=>{
         const t=e.touches[i];
         if(t.identifier===jTouchId)calcJoy(t.clientX,t.clientY);
         if(t.identifier===rTouchId){
-            const m=0.004*sensitivity;
-            const lookYDir = invY ? -1 : 1; 
-            camX-=(t.clientX-prevX)*m;
-            camY-=(t.clientY-prevY)*m*lookYDir; 
-            prevX=t.clientX;prevY=t.clientY;
-            camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
+            const m = 0.003 * sensitivity;
+            // 직관적인 모바일 시점 조작 (드래그하는 방향으로 화면 회전)
+            camX -= (t.clientX-prevX)*m; 
+            camY -= (t.clientY-prevY)*m; 
+            prevX = t.clientX; prevY = t.clientY;
+            camY = Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
         }
     }
 });
@@ -813,10 +794,9 @@ window.addEventListener('mousemove',e=>{
     if(!gameActive||isGameOver||isPaused||platform!=='pc')return;
     if(document.pointerLockElement===document.body){
         const m=0.0018*sensitivity;
-        const lookYDir = invY ? 1 : -1; 
-        camX-=e.movementX*m;
-        camY-=e.movementY*m*lookYDir; 
-        camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
+        camX -= e.movementX*m;
+        camY -= e.movementY*m; 
+        camY = Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
     }
 });
 
@@ -907,16 +887,16 @@ function entityAI(e,pp){
     e.stuckT++;
     if(e.stuckT>50){
         const sd=Math.sqrt((ep.x-e.lastPos.x)**2+(ep.z-e.lastPos.z)**2);
-        if(sd<.15)e.patrolTarget=safeSpawn(pp);
+        if(sd<.15)e.patrolTarget=safeSpawn(pp,0,true);
         e.lastPos.copy(ep);e.stuckT=0;
     }
     if(dist<14&&!isGameOver&&player.position.y>=-0.2){
         if(!e.scream){e.scream=true;scream(true);}e.state='chase';
     }else if(e.state==='chase'&&(dist>20||player.position.y<-.2)){
-        e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp);
+        e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,true);
     }
     const dest=e.state==='chase'?pp:e.patrolTarget;
-    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<1.2&&Math.abs(ep.z-dest.z)<1.2)e.patrolTarget=safeSpawn(pp);
+    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<1.2&&Math.abs(ep.z-dest.z)<1.2)e.patrolTarget=safeSpawn(pp,0,true);
     const dx=dest.x-ep.x,dz=dest.z-ep.z,len=Math.sqrt(dx*dx+dz*dz);
     if(len>.1){
         const sp=e.state==='chase'?e.speed*1.45:e.speed;
@@ -976,9 +956,9 @@ function triggerGameOver(msg){isGameOver=true;scream(false);document.getElementB
 function respawn(){
     isGameOver=false;scream(false);
     if(underground)exitUnderground();
-    const rp=safeSpawn(player.position,10);
+    const rp=safeSpawn(player.position, 15, true);
     player.position.set(rp.x,0,rp.z);velY=0;grounded=true;stamina=100;exhausted=false;
-    entities.forEach(e=>{const ep=safeSpawn(player.position,12);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
+    entities.forEach(e=>{const ep=safeSpawn(player.position,12,true);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
     document.getElementById('gameover-screen').style.display='none';
     if(platform==='pc')document.body.requestPointerLock();
 }
@@ -1017,7 +997,6 @@ function triggerBlackout(){
 }
 
 let player=new THREE.Group(); scene.add(player);
-genMaze(); buildGraphics();
 document.addEventListener('click',function _fsOnce(){try{(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||document.documentElement.mozRequestFullScreen).call(document.documentElement);}catch(e){}document.removeEventListener('click',_fsOnce);},{once:true});
 
 function launchGame(){
@@ -1038,13 +1017,16 @@ function launchGame(){
         document.getElementById('crosshair').style.display='block';
     }
     camX=0;camY=0;sCamX=0;sCamY=0;
-    genMaze();buildGraphics();
-    const pSp=safeSpawn();player.position.set(pSp.x,0,pSp.z);
+    
+    genMaze(); buildGraphics();
+    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 35, true); // 빙고방과 멀리 스폰
+    player.position.set(pSp.x,0,pSp.z);
+    
     buildBingoPit();
-    spawnDoor(player.position);
-    spawnKey(player.position);
+    spawnDoor();
+    spawnKey();
     entities.forEach(e=>{
-        const ep=safeSpawn(player.position,12);
+        const ep=safeSpawn(player.position, 15, true);
         e.mesh.position.set(ep.x,0,ep.z);e.lastPos.copy(e.mesh.position);
         e.patrolTarget=ep;e.state='patrol';e.scream=false;
     });
@@ -1144,9 +1126,6 @@ function animate(){
 
             if(mx <= B_PATH_W + pRad || mx >= CELL - pRad) safe = true;
             if(mz <= B_PATH_W + pRad || mz >= CELL - pRad) safe = true;
-            
-            if(lx <= B_PATH_W + pRad || lx >= PIT_TOTAL - B_PATH_W - pRad) safe = true;
-            if(lz <= B_PATH_W + pRad || lz >= PIT_TOTAL - B_PATH_W - pRad) safe = true;
 
             if(!safe&&grounded){grounded=false;velY=-.02;}
         }
@@ -1167,7 +1146,7 @@ function animate(){
             hasKey=true;scene.remove(keyMesh);
             if(khGain&&actx)khGain.gain.setValueAtTime(.001,actx.currentTime);
             if(doorGroup?.greenLight)doorGroup.greenLight.intensity=3.5;
-            showToast("🔑 황금 열쇠 획득!<br>빙고판을 건너 탈출 문으로 가세요!");
+            showToast("🔑 황금 열쇠 획득!<br>빙고방을 건너 좌우측 샛길의 탈출문을 여세요!");
         }
     }
 
@@ -1233,10 +1212,10 @@ function animate(){
         if(keys.a){mX-=rX;mZ-=rZ;}if(keys.d){mX+=rX;mZ+=rZ;}
         moving=mX!==0||mZ!==0;sprinting=moving&&keys.shift&&!exhausted;
     }else{
+        // 직관적인 모바일 조이스틱 (위로 밀면 앞으로, 옆으로 밀면 옆으로)
         if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){
-            const mvDir = invMove ? -1 : 1; 
-            mX=(fX*(-jInput.y)+rX*jInput.x)*mvDir;
-            mZ=(fZ*(-jInput.y)+rZ*jInput.x)*mvDir;
+            mX = fX * (-jInput.y) + rX * jInput.x;
+            mZ = fZ * (-jInput.y) + rZ * jInput.x;
         }
         moving=mX!==0||mZ!==0;sprinting=moving&&jRatio>.75&&!exhausted;
     }

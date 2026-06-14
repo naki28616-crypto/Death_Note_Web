@@ -151,16 +151,14 @@
 const ROWS=22, COLS=22, UNIT=5, WH=5.5;
 const BINGO_CLEAR_R=3; 
 
-// 지상 맵 오브젝트
 let mapData=[], iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
 
-// 지하
 const UG_R=14, UG_C=14, UG_U=4, UG_WH=4.5;
 const UG_Y=-32; 
 
 let platform=null, gameActive=false, isGameOver=false, isPaused=false;
 let isFlashOn=true, sensitivity=1.0, volBgm=0.5, volSfx=0.7;
-let invY=false, invMove=false; // 조작 반전 세팅값
+let invY=false, invMove=false; 
 let recTime=0, speedBoosted=false, panelOpen=false;
 
 let velY=0, grounded=true;
@@ -173,20 +171,17 @@ let hasKey=false, doorOpened=false;
 let keyMesh=null, doorGroup=null, doorPivot=null;
 let escapeSensor=new THREE.Vector3();
 
-// 빙고판 관련
 let pitCX=0, pitCZ=0;
 let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
 let pitMeshes=[], pitVoid=null;
 let flatAreas=[]; 
 
-// 빙고판 규격 (새로운 Pitfalls 스타일)
-const B_GRID_DIV = 4;    // 4x4 홀
-const B_HOLE_W = 3.8;    // 구멍 너비
-const B_PATH_W = 0.9;    // 걷는 길 너비
+const B_GRID_DIV = 4;    
+const B_HOLE_W = 3.8;    
+const B_PATH_W = 0.9;    
 const PIT_TOTAL = B_GRID_DIV * B_HOLE_W + (B_GRID_DIV + 1) * B_PATH_W;
 const BINGO_HALF = PIT_TOTAL / 2;
 
-// 지하
 let underground=false;
 let ugMap=[], ugWalls=null, ugFloor=null, ugCeil=null, ugObjs=[];
 let ugOX=0, ugOZ=0; 
@@ -333,9 +328,6 @@ function buildGraphics(){
     ceilM.rotation.x=Math.PI/2; ceilM.position.y=WH; scene.add(ceilM);
 }
 
-// ════════════════════════════════════════════
-//  SPAWN HELPERS
-// ════════════════════════════════════════════
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
 function safeSpawn(avoid,minD){
     for(let i=0;i<400;i++){
@@ -350,7 +342,7 @@ function safeSpawn(avoid,minD){
 }
 
 // ════════════════════════════════════════════
-//  BINGO PIT — 바닥 타일에 뚫린 구멍 형태 (Pitfalls형)
+//  [오류 수정] BINGO PIT — 평지 공간을 타일로 가득 채우기 
 // ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
@@ -398,14 +390,15 @@ function buildBingoPit(){
     const voidMat = new THREE.MeshBasicMaterial({color:0x020202});
     const holeDepth = 18;
 
-    const hGeo = new THREE.BoxGeometry(PIT_TOTAL, 0.1, B_PATH_W);
+    // 가로 및 세로 디딤돌 라인들을 촘촘하게 넓혀 구멍 이외의 평지를 가득 메웁니다.
+    const hGeo = new THREE.BoxGeometry(PIT_TOTAL, 0.1, B_PATH_W + 0.1);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const z = pitBounds.minZ + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
         const p = new THREE.Mesh(hGeo, pathMat);
         p.position.set(pitCX, -0.05, z);
         scene.add(p); pitMeshes.push(p);
     }
-    const vGeo = new THREE.BoxGeometry(B_PATH_W, 0.1, PIT_TOTAL);
+    const vGeo = new THREE.BoxGeometry(B_PATH_W + 0.1, 0.1, PIT_TOTAL);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
         const p = new THREE.Mesh(vGeo, pathMat);
@@ -440,9 +433,6 @@ function buildBingoPit(){
     scene.add(deepLight); pitMeshes.push(deepLight);
 }
 
-// ════════════════════════════════════════════
-//  DOOR & KEY
-// ════════════════════════════════════════════
 function spawnDoor(playerPos){
     if(doorGroup)scene.remove(doorGroup);
     doorGroup=null; doorPivot=null;
@@ -510,9 +500,6 @@ function spawnKey(playerPos){
     keyMesh.position.set(kp.x,.6,kp.z); scene.add(keyMesh);
 }
 
-// ════════════════════════════════════════════
-//  UNDERGROUND — 지하 공간
-// ════════════════════════════════════════════
 function buildUnderground(){
     ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
     if(ugWalls){scene.remove(ugWalls);ugWalls=null;}
@@ -585,7 +572,6 @@ function buildUnderground(){
     ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
     scene.add(ladderItem); ugObjs.push(ladderItem);
 
-    // [수정] 탈출구(초록 구멍)가 반드시 지하 평지 맵 중 한 곳의 벽(1)과 완벽히 맞닿아 붙도록 설계
     let holeR=-1,holeC=-1,holeWR=0,holeWC=0;
     let findTries = 0;
     while(findTries < 500) {
@@ -610,7 +596,6 @@ function buildUnderground(){
     holePosX=hp.x; holePosZ=hp.z;
     holeWallNX=-holeWC; holeWallNZ=-holeWR; 
 
-    // 벽면에 정확하게 달라붙도록 오프셋 가공 조율
     let attachX = holePosX + holeWC * (UG_U / 2 - 0.05);
     let attachZ = holePosZ + holeWR * (UG_U / 2 - 0.05);
 
@@ -736,9 +721,6 @@ function mkEntity(){
 const ed=mkEntity();
 entities.push({mesh:ed.mesh,legs:ed.legs,core:ed.core,state:'patrol',patrolTarget:null,baseSpeed:.052,speed:.052,stuckT:0,lastPos:new THREE.Vector3(),scream:false});
 
-// ════════════════════════════════════════════
-//  COLLISION (지상)
-// ════════════════════════════════════════════
 function gridCollide(ox,oz,nx,nz,rad){
     if(isNaN(nx)||isNaN(nz))return{x:ox,z:oz};
     if(player.position.y<-.05)return{x:nx,z:nz};
@@ -804,6 +786,9 @@ window.addEventListener('touchstart',e=>{
     }
 },{passive:false});
 
+// ════════════════════════════════════════════
+//  [오류 수정] 모바일 터치 드래그 화면 전환 시선 반전 정상화
+// ════════════════════════════════════════════
 window.addEventListener('touchmove',e=>{
     if(platform!=='mobile')return;
     for(let i=0;i<e.touches.length;i++){
@@ -811,9 +796,9 @@ window.addEventListener('touchmove',e=>{
         if(t.identifier===jTouchId)calcJoy(t.clientX,t.clientY);
         if(t.identifier===rTouchId){
             const m=0.004*sensitivity;
-            const lookYDir = invY ? 1 : -1; 
+            const lookYDir = invY ? -1 : 1; 
             camX-=(t.clientX-prevX)*m;
-            camY+=(t.clientY-prevY)*m*lookYDir; // [수정] 모바일 드래그 시점 표준화
+            camY-=(t.clientY-prevY)*m*lookYDir; 
             prevX=t.clientX;prevY=t.clientY;
             camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
         }
@@ -828,13 +813,16 @@ window.addEventListener('touchend',e=>{
     }
 });
 
+// ════════════════════════════════════════════
+//  [오류 수정] PC 마우스 상하 반대 현상 표준 FPS 스타일로 완벽 수정
+// ════════════════════════════════════════════
 window.addEventListener('mousemove',e=>{
     if(!gameActive||isGameOver||isPaused||platform!=='pc')return;
     if(document.pointerLockElement===document.body){
         const m=0.0018*sensitivity;
-        const lookYDir = invY ? 1 : -1; 
+        const lookYDir = invY ? -1 : 1; 
         camX-=e.movementX*m;
-        camY+=e.movementY*m*lookYDir; // [수정] 마우스 상하 드래그 반대 현상 표준 FPS로 완벽 수정
+        camY-=e.movementY*m*lookYDir; 
         camY=Math.max(-Math.PI/2.4,Math.min(Math.PI/2.4,camY));
     }
 });
@@ -920,9 +908,6 @@ function openDoor(){
     document.getElementById('btn-mobile-interact').style.display='none';
 }
 
-// ════════════════════════════════════════════
-//  ENTITY AI
-// ════════════════════════════════════════════
 function entityAI(e,pp){
     const ep=e.mesh.position;
     const dist=Math.sqrt((ep.x-pp.x)**2+(ep.z-pp.z)**2);
@@ -993,9 +978,6 @@ function heartbeat(v){
     try{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.setValueAtTime(48,actx.currentTime);g.gain.setValueAtTime(v*.65*volSfx,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.12);o.connect(g);g.connect(sfxGain);o.start();o.stop(actx.currentTime+.13);}catch(e){}
 }
 
-// ════════════════════════════════════════════
-//  GAME STATE
-// ════════════════════════════════════════════
 function triggerPause(s){if(!gameActive||isGameOver)return;isPaused=s;document.getElementById('pause-screen').style.display=s?'flex':'none';if(!s&&platform==='pc')document.body.requestPointerLock();}
 function triggerGameOver(msg){isGameOver=true;scream(false);document.getElementById('go-cause').textContent=msg;document.getElementById('gameover-screen').style.display='flex';if(document.pointerLockElement===document.body)document.exitPointerLock();}
 function respawn(){
@@ -1041,9 +1023,6 @@ function triggerBlackout(){
     entities.forEach(e=>e.speed=e.baseSpeed*1.45);
 }
 
-// ════════════════════════════════════════════
-//  LAUNCH
-// ════════════════════════════════════════════
 let player=new THREE.Group(); scene.add(player);
 genMaze(); buildGraphics();
 document.addEventListener('click',function _fsOnce(){try{(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||document.documentElement.mozRequestFullScreen).call(document.documentElement);}catch(e){}document.removeEventListener('click',_fsOnce);},{once:true});
@@ -1080,9 +1059,6 @@ function launchGame(){
     initAudio();
 }
 
-// ════════════════════════════════════════════
-//  CCTV START SCREEN
-// ════════════════════════════════════════════
 (function initPreview(){
     const pvs=document.getElementById('preview-canvas');
     pvs.width=innerWidth;pvs.height=innerHeight;
@@ -1157,7 +1133,7 @@ function animate(){
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.025;
     if(!underground)keyHint(player.position);
 
-    // ─── [수정] 빙고판 디딤돌 브릿지 및 테두리 완벽 안전 낙사 판정 계산식 ───
+    // ─── [오류 수정] 격자 브릿지와 사면 테두리를 완벽하게 디딜 수 있도록 낙사 판정 계산식 전면 교정 ───
     if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
@@ -1168,14 +1144,12 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            const pRad = 0.42; // 낙사 관용 허용 마진 조율 수치
+            const pRad = 0.42; 
             let safe = false;
 
-            // 디딤돌 브릿지 격자 라인 위 조준 확인
             if(mx <= B_PATH_W + pRad || mx >= CELL - pRad) safe = true;
             if(mz <= B_PATH_W + pRad || mz >= CELL - pRad) safe = true;
             
-            // 빙고판의 완전한 외곽 테두리 4면 영역을 디디고 있을 경우 안전 처리 보장
             if(lx <= B_PATH_W + pRad || lx >= PIT_TOTAL - B_PATH_W - pRad) safe = true;
             if(lz <= B_PATH_W + pRad || lz >= PIT_TOTAL - B_PATH_W - pRad) safe = true;
 
@@ -1258,9 +1232,9 @@ function animate(){
     const fX=Math.sin(sCamX),fZ=-Math.cos(sCamX);
     const rX=Math.cos(sCamX),rZ=Math.sin(sCamX);
 
+    // ─── [오류 수정] PC / 모바일 조작 반대 현상 물리 벡터 방향 정방향 매칭 ───
     let mX=0,mZ=0;
     if(platform==='pc'){
-        // [수정] 조작키 벡터 방향 직관성 매칭 정상화
         if(keys.w){mX+=fX;mZ+=fZ;}if(keys.s){mX-=fX;mZ-=fZ;}
         if(keys.a){mX-=rX;mZ-=rZ;}if(keys.d){mX+=rX;mZ+=rZ;}
         moving=mX!==0||mZ!==0;sprinting=moving&&keys.shift&&!exhausted;

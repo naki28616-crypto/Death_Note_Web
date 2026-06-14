@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Backrooms - Trape</title>
+    <title>The Backrooms - True Escape</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#0d0d0b;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -263,18 +263,15 @@ function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
 
-    // 빙고 방 위치 (중앙 부근, 짝수 좌표를 사용하여 미로 생성 로직과 맞춤)
-    const br_r = Math.floor(Math.random()*3)*2 + 10; // 10, 12, 14
-    const br_c = Math.floor(Math.random()*3)*2 + 10; // 10, 12, 14
+    const br_r = Math.floor(Math.random()*3)*2 + 10; 
+    const br_c = Math.floor(Math.random()*3)*2 + 10; 
     const br_w = 4, br_h = 4;
 
-    // 방과 외벽 1칸을 예약 영역으로 설정 (미로 생성기가 건드리지 못함)
     for(let r=br_r-1; r<=br_r+br_h; r++) {
         for(let c=br_c-1; c<=br_c+br_w; c++) {
             if(r>=0 && r<ROWS && c>=0 && c<COLS) reserved[r][c] = true;
         }
     }
-    // 4x4 실제 방 내부 공간 파내기
     for(let r=br_r; r<br_r+br_h; r++) {
         for(let c=br_c; c<br_c+br_w; c++) {
             mapData[r][c] = 0;
@@ -284,20 +281,17 @@ function genMaze(){
     pitCX = (br_c + 2 - COLS/2) * UNIT;
     pitCZ = (br_r + 2 - ROWS/2) * UNIT;
 
-    // 탈출 방향 결정 (왼쪽 또는 오른쪽 샛길)
     let exitDir = Math.random() < 0.5 ? -1 : 1;
     if (exitDir === -1) {
-        // 왼쪽 샛길 (1칸 너비)
         for(let c=br_c-4; c<br_c; c++) {
             mapData[br_r+2][c] = 0;
             reserved[br_r+1][c]=true; reserved[br_r+2][c]=true; reserved[br_r+3][c]=true;
         }
-        reserved[br_r+2][br_c-5] = true; // 막다른 길 처리
+        reserved[br_r+2][br_c-5] = true; 
         escapeDoorPos.x = (br_c - 4 - COLS/2)*UNIT + UNIT/2;
         escapeDoorPos.z = (br_r + 2 - ROWS/2)*UNIT + UNIT/2;
         escapeDoorPos.ang = Math.PI/2;
     } else {
-        // 오른쪽 샛길 (1칸 너비)
         for(let c=br_c+br_w; c<br_c+br_w+4; c++) {
             mapData[br_r+2][c] = 0;
             reserved[br_r+1][c]=true; reserved[br_r+2][c]=true; reserved[br_r+3][c]=true;
@@ -308,11 +302,9 @@ function genMaze(){
         escapeDoorPos.ang = -Math.PI/2;
     }
 
-    // 방 입구 (아래쪽) 뚫어주기
     mapData[br_r+br_h][br_c+1] = 0; mapData[br_r+br_h][br_c+2] = 0;
     reserved[br_r+br_h][br_c+1] = true; reserved[br_r+br_h][br_c+2] = true;
 
-    // 입구 바로 밖에서부터 미로 파기 시작 (홀수 좌표여야 완벽히 연결됨)
     let startR = br_r + 5, startC = br_c + 1;
     mapData[startR][startC] = 0; 
     
@@ -329,7 +321,7 @@ function genMaze(){
         }
     }
     carve(startR, startC);
-    carve(1, 1); // 맵 전체를 확실히 채우기 위한 2차 파기
+    carve(1, 1); 
 
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
@@ -489,7 +481,6 @@ function spawnDoor(){
     const rp=new THREE.Mesh(new THREE.BoxGeometry(.15,2.8,.2),fMat2); rp.position.set(.85,1.4,0);
     const tp=new THREE.Mesh(new THREE.BoxGeometry(1.8,.15,.2),fMat2); tp.position.set(0,2.8,0);
     
-    // 시야 차단을 위한 양옆 블록 (비밀 통로 벽)
     const blockL=new THREE.Mesh(new THREE.BoxGeometry(1.6,WH,1.0),fMat2); blockL.position.set(-1.6,WH/2,0);
     const blockR=new THREE.Mesh(new THREE.BoxGeometry(1.6,WH,1.0),fMat2); blockR.position.set(1.6,WH/2,0);
     doorGroup.add(lp,rp,tp,blockL,blockR);
@@ -519,7 +510,7 @@ function spawnKey(){
     const kb=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.35),new THREE.MeshStandardMaterial({color:0xffaa00,metalness:.9}));
     kb.position.y=-.2; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
     const kl=new THREE.PointLight(0xffdd44,2.5,12); kl.position.y=.2; keyMesh.add(kl);
-    const kp=safeSpawn({x:pitCX, z:pitCZ}, 25, true); // 빙고판에서 멀리 스폰
+    const kp=safeSpawn({x:pitCX, z:pitCZ}, 25, true); 
     keyMesh.position.set(kp.x,.6,kp.z); scene.add(keyMesh);
 }
 
@@ -667,7 +658,7 @@ function exitUnderground(){
     pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=true;});
     if(pitVoid)pitVoid.visible=true;
     
-    player.position.set(pitCX+UNIT*2,0,pitCZ+UNIT*2); // 입구 부근으로 복귀
+    player.position.set(pitCX+UNIT*2,0,pitCZ+UNIT*2); 
     velY=0; grounded=true;
     scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.05;
     ambient.intensity=0.85; flash.intensity=isFlashOn?1.8:0;
@@ -701,7 +692,6 @@ function gridCollide(ox,oz,nx,nz,rad){
     if(isNaN(nx)||isNaN(nz))return{x:ox,z:oz};
     if(player.position.y<-.05)return{x:nx,z:nz};
     
-    // 탈출 문 충돌 처리 (비밀 통로 봉쇄)
     if(!doorOpened && doorGroup){
         const ddx=doorGroup.position.x-nx;
         const ddz=doorGroup.position.z-nz;
@@ -773,7 +763,6 @@ window.addEventListener('touchmove',e=>{
         if(t.identifier===jTouchId)calcJoy(t.clientX,t.clientY);
         if(t.identifier===rTouchId){
             const m = 0.003 * sensitivity;
-            // 직관적인 모바일 시점 조작 (드래그하는 방향으로 화면 회전)
             camX -= (t.clientX-prevX)*m; 
             camY -= (t.clientY-prevY)*m; 
             prevX = t.clientX; prevY = t.clientY;
@@ -1019,7 +1008,7 @@ function launchGame(){
     camX=0;camY=0;sCamX=0;sCamY=0;
     
     genMaze(); buildGraphics();
-    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 35, true); // 빙고방과 멀리 스폰
+    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 35, true); 
     player.position.set(pSp.x,0,pSp.z);
     
     buildBingoPit();
@@ -1203,8 +1192,12 @@ function animate(){
     }
 
     sCamX+=(camX-sCamX)*.18; sCamY+=(camY-sCamY)*.18;
-    const fX=Math.sin(sCamX),fZ=-Math.cos(sCamX);
-    const rX=Math.cos(sCamX),rZ=Math.sin(sCamX);
+    
+    // 💡 [조작 오류 수정 부분] Three.js의 회전계 맞춤 벡터 재생성
+    const fX = -Math.sin(sCamX);
+    const fZ = -Math.cos(sCamX);
+    const rX = Math.cos(sCamX);
+    const rZ = -Math.sin(sCamX);
 
     let mX=0,mZ=0;
     if(platform==='pc'){
@@ -1212,7 +1205,6 @@ function animate(){
         if(keys.a){mX-=rX;mZ-=rZ;}if(keys.d){mX+=rX;mZ+=rZ;}
         moving=mX!==0||mZ!==0;sprinting=moving&&keys.shift&&!exhausted;
     }else{
-        // 직관적인 모바일 조이스틱 (위로 밀면 앞으로, 옆으로 밀면 옆으로)
         if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){
             mX = fX * (-jInput.y) + rX * jInput.x;
             mZ = fZ * (-jInput.y) + rZ * jInput.x;

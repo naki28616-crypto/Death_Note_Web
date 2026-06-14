@@ -495,6 +495,8 @@
         }
         instancedWalls.instanceMatrix.needsUpdate = true;
         instancedWalls.count = idx;
+        instancedWalls.geometry.computeBoundingSphere();
+        instancedWalls.geometry.computeBoundingBox();
         scene.add(instancedWalls);
 
         const mW = mapCols*unitSize, mH = mapRows*unitSize;
@@ -528,7 +530,7 @@
     // ═══════════════════════════════════════════════
     function buildBingoPit(doorX, doorZ, doorAngle) {
         // 기존 빙고판 제거
-        bingoPits.forEach(p => scene.remove(p.mesh)); bingoPits = [];
+        bingoPits.forEach(p => { if(p.mesh && p.mesh.parent) scene.remove(p.mesh); }); bingoPits = [];
         if(pitVoidMesh) { scene.remove(pitVoidMesh); pitVoidMesh = null; }
         pitBounds.active = false;
 
@@ -541,9 +543,8 @@
         else pitCenterX -= unitSize;
 
         // 빙고판 크기: 벽면에서 약 1cm 안쪽 (평지 전체를 꽉 채움)
-        // 평지는 ±3타일 = 6타일 = 6*unitSize, 벽 두께 감안해 약간 줄임
-        const pitHalfW = unitSize * 2.9;
-        const pitHalfD = unitSize * 2.9;
+        const pitHalfW = unitSize * 2.92;
+        const pitHalfD = unitSize * 2.92;
 
         pitBounds.minX = pitCenterX - pitHalfW;
         pitBounds.maxX = pitCenterX + pitHalfW;
@@ -552,40 +553,44 @@
         pitBounds.active = true;
 
         // 검은 구멍 (지하 공간이 보이도록 깊게)
-        const voidGeo = new THREE.BoxGeometry(pitHalfW*2, 8, pitHalfD*2);
+        const voidGeo = new THREE.BoxGeometry(pitHalfW*2 - pathThickness*2, 10, pitHalfD*2 - pathThickness*2);
         const voidMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         pitVoidMesh = new THREE.Mesh(voidGeo, voidMat);
-        pitVoidMesh.position.set(pitCenterX, -4.01, pitCenterZ);
+        pitVoidMesh.position.set(pitCenterX, -5.01, pitCenterZ);
         scene.add(pitVoidMesh);
 
         // 지하 공간 힌트 조명 (구멍 안에서 희미하게 빛남)
-        const ugHint = new THREE.PointLight(0x3355ff, 1.2, 12);
+        const ugHint = new THREE.PointLight(0x3355ff, 1.5, 14);
         ugHint.position.set(pitCenterX, -2, pitCenterZ);
         scene.add(ugHint); bingoPits.push({ mesh: ugHint, type: 'light' });
 
-        // 격자 생성 (5×5, 고정, 꽉 찬 형태)
-        const metalMat = new THREE.MeshStandardMaterial({ color: 0x2d2b22, roughness: 0.6, metalness: 0.7 });
+        // ─── 입체 격자 생성 (두꺼운 3D 박스, 측면이 보이는 형태) ───
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x1a1814, roughness: 0.5, metalness: 0.8 });
         const lineCount = 5;
         const pitW = pitHalfW * 2;
         const pitD = pitHalfD * 2;
         const spacingH = pitD / (lineCount - 1);
         const spacingV = pitW / (lineCount - 1);
+        // 격자 선 두께: 시각적으로 두껍고 입체적인 박스
+        const lineW = pathThickness;  // 너비
+        const lineH = 0.28;           // 높이 (입체감)
+        const lineD = pathThickness;  // 깊이
 
-        // 가로선 (Z축 방향으로 배치)
-        const hGeo = new THREE.BoxGeometry(pitW + pathThickness, 0.12, pathThickness);
+        // 가로선 (X 방향으로 뻗음, Z 위치에 배치)
+        const hGeo = new THREE.BoxGeometry(pitW + lineW, lineH, lineD);
         for(let i = 0; i < lineCount; i++) {
             const m = new THREE.Mesh(hGeo, metalMat);
-            m.position.set(pitCenterX, 0.01, pitBounds.minZ + i * spacingH);
+            m.position.set(pitCenterX, lineH/2, pitBounds.minZ + i * spacingH);
             scene.add(m);
-            bingoPits.push({ mesh: m, type: 'h', baseZ: m.position.z });
+            bingoPits.push({ mesh: m, type: 'h' });
         }
-        // 세로선 (X축 방향으로 배치)
-        const vGeo = new THREE.BoxGeometry(pathThickness, 0.12, pitD + pathThickness);
+        // 세로선 (Z 방향으로 뻗음, X 위치에 배치)
+        const vGeo = new THREE.BoxGeometry(lineD, lineH, pitD + lineD);
         for(let i = 0; i < lineCount; i++) {
             const m = new THREE.Mesh(vGeo, metalMat);
-            m.position.set(pitBounds.minX + i * spacingV, 0.01, pitCenterZ);
+            m.position.set(pitBounds.minX + i * spacingV, lineH/2, pitCenterZ);
             scene.add(m);
-            bingoPits.push({ mesh: m, type: 'v', baseX: m.position.x });
+            bingoPits.push({ mesh: m, type: 'v' });
         }
     }
 
@@ -739,6 +744,8 @@
         }
         ugWalls.instanceMatrix.needsUpdate = true;
         ugWalls.count = uidx;
+        ugWalls.geometry.computeBoundingSphere();
+        ugWalls.geometry.computeBoundingBox();
         scene.add(ugWalls); ugObjects.push(ugWalls);
 
         // 지하 바닥/천장
@@ -876,19 +883,26 @@
     function checkUgCollision(oldPos, tentPos, radius) {
         if(isNaN(tentPos.x)||isNaN(tentPos.z)) return { x: oldPos.x, z: oldPos.z };
         let res = { x: tentPos.x, z: tentPos.z };
-        const pCol = Math.floor((oldPos.x - UG_UNIT/2 + ugSpawnX + (UG_COLS*UG_UNIT)/2) / UG_UNIT);
-        const pRow = Math.floor((oldPos.z - UG_UNIT/2 + ugSpawnZ + (UG_ROWS*UG_UNIT)/2) / UG_UNIT);
-        for(let r=pRow-1; r<=pRow+1; r++) {
-            for(let c=pCol-1; c<=pCol+1; c++) {
-                if(r<0||r>=UG_ROWS||c<0||c>=UG_COLS) continue;
+        // 좌표 변환: 월드 → 그리드 인덱스 (수정된 공식)
+        const pCol = Math.floor((oldPos.x - ugSpawnX + (UG_COLS*UG_UNIT)/2) / UG_UNIT);
+        const pRow = Math.floor((oldPos.z - ugSpawnZ + (UG_ROWS*UG_UNIT)/2) / UG_UNIT);
+        for(let r=Math.max(0,pRow-2); r<=Math.min(UG_ROWS-1,pRow+2); r++) {
+            for(let c=Math.max(0,pCol-2); c<=Math.min(UG_COLS-1,pCol+2); c++) {
                 if(ugMapData[r][c]===1) {
                     const wx = ugSpawnX+(c-UG_COLS/2)*UG_UNIT+UG_UNIT/2;
                     const wz = ugSpawnZ+(r-UG_ROWS/2)*UG_UNIT+UG_UNIT/2;
-                    const minX=wx-UG_UNIT/2-radius, maxX=wx+UG_UNIT/2+radius;
-                    const minZ=wz-UG_UNIT/2-radius, maxZ=wz+UG_UNIT/2+radius;
+                    const half = UG_UNIT/2 + radius;
+                    const minX=wx-half, maxX=wx+half;
+                    const minZ=wz-half, maxZ=wz+half;
                     if(res.x>minX&&res.x<maxX&&res.z>minZ&&res.z<maxZ) {
-                        if(oldPos.x<=minX||oldPos.x>=maxX) res.x=oldPos.x;
-                        if(oldPos.z<=minZ||oldPos.z>=maxZ) res.z=oldPos.z;
+                        // X축 침투 깊이 vs Z축 침투 깊이 비교해서 더 얕은 축으로 밀어냄
+                        const overlapX = Math.min(Math.abs(res.x-minX), Math.abs(res.x-maxX));
+                        const overlapZ = Math.min(Math.abs(res.z-minZ), Math.abs(res.z-maxZ));
+                        if(overlapX < overlapZ) {
+                            res.x = oldPos.x;
+                        } else {
+                            res.z = oldPos.z;
+                        }
                     }
                 }
             }
@@ -973,6 +987,13 @@
     function launchGameCore() {
         if(!platform) return;
         document.getElementById('start-screen').style.display = 'none';
+        // 전체화면 자동 진입
+        try {
+            const el = document.documentElement;
+            if(el.requestFullscreen) el.requestFullscreen();
+            else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            else if(el.mozRequestFullScreen) el.mozRequestFullScreen();
+        } catch(e){}
         document.getElementById('top-controls').style.display = 'flex';
         document.getElementById('cctv-ui').style.display = 'block';
         document.getElementById('quest-ui').style.display = 'block';
@@ -1405,48 +1426,67 @@
         const ctx = cvs.getContext('2d');
         cvs.width = window.innerWidth; cvs.height = window.innerHeight;
         let angle = 0;
+        // 미리 노이즈 픽셀 배열 생성 (성능 최적화)
         function drawPreview() {
             if(document.getElementById('start-screen').style.display === 'none') return;
             requestAnimationFrame(drawPreview);
             cvs.width = window.innerWidth; cvs.height = window.innerHeight;
             const w = cvs.width, h = cvs.height;
             ctx.fillStyle = '#0d0b07'; ctx.fillRect(0,0,w,h);
-            // 배경 복도 그리기 (원근감)
-            const cx = w/2, cy = h/2;
-            const vanX = cx + Math.sin(angle*0.3)*w*0.08;
-            const vanY = cy + Math.cos(angle*0.2)*h*0.06;
+            // 소실점이 좌우로 천천히 이동 (카메라 회전 효과)
+            const vanX = w/2 + Math.sin(angle)*w*0.35;
+            const vanY = h/2 + Math.cos(angle*0.4)*h*0.04;
+            const spread = w*0.18;
             // 바닥
             ctx.fillStyle = '#5a4a28';
-            ctx.beginPath(); ctx.moveTo(0,h); ctx.lineTo(w,h); ctx.lineTo(vanX+w*0.15,vanY); ctx.lineTo(vanX-w*0.15,vanY); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0,h); ctx.lineTo(w,h); ctx.lineTo(vanX+spread,vanY); ctx.lineTo(vanX-spread,vanY); ctx.closePath(); ctx.fill();
             // 천장
             ctx.fillStyle = '#c8bc8a';
-            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,0); ctx.lineTo(vanX+w*0.15,vanY); ctx.lineTo(vanX-w*0.15,vanY); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,0); ctx.lineTo(vanX+spread,vanY); ctx.lineTo(vanX-spread,vanY); ctx.closePath(); ctx.fill();
             // 왼쪽 벽
             ctx.fillStyle = '#d4c98e';
-            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,h); ctx.lineTo(vanX-w*0.15,vanY); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,h); ctx.lineTo(vanX-spread,vanY); ctx.closePath(); ctx.fill();
             // 오른쪽 벽
             ctx.fillStyle = '#cabe85';
-            ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(w,h); ctx.lineTo(vanX+w*0.15,vanY); ctx.closePath(); ctx.fill();
-            // 형광등
-            for(let i=0; i<4; i++) {
-                const lx = vanX + (Math.random()-0.5)*20;
-                const ly = vanY - 5 + i*8;
-                const lw = 60 - i*12;
-                ctx.fillStyle = `rgba(255,255,200,${0.6-i*0.1})`;
-                ctx.fillRect(lx-lw/2, ly, lw, 4);
+            ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(w,h); ctx.lineTo(vanX+spread,vanY); ctx.closePath(); ctx.fill();
+            // 복도 깊이 선들 (원근감 강화)
+            ctx.strokeStyle = 'rgba(160,148,100,0.25)'; ctx.lineWidth = 1;
+            for(let i=1; i<5; i++) {
+                const t = i/5;
+                const lx1 = vanX - spread*(1-t); const lx2 = vanX + spread*(1-t);
+                const ly = vanY + (h - vanY)*t;
+                ctx.beginPath(); ctx.moveTo(lx1,ly); ctx.lineTo(lx2,ly); ctx.stroke();
+            }
+            // 형광등 (소실점 따라 이동)
+            for(let i=0; i<5; i++) {
+                const t = (i+1)/6;
+                const lx = vanX;
+                const ly = vanY + (h*0.05 - vanY)*t;
+                const lw = (w*0.25)*(1-t);
+                const alpha = 0.55 - i*0.08;
+                ctx.fillStyle = `rgba(255,255,200,${alpha})`;
+                ctx.fillRect(lx-lw/2, ly-2, lw, 4);
+                // 빛 번짐
+                const grd = ctx.createRadialGradient(lx,ly,0,lx,ly,lw*0.7);
+                grd.addColorStop(0,`rgba(255,255,180,${alpha*0.4})`); grd.addColorStop(1,'rgba(255,255,180,0)');
+                ctx.fillStyle=grd; ctx.fillRect(lx-lw,ly-lw*0.5,lw*2,lw);
             }
             // 노이즈
-            for(let i=0; i<200; i++) {
-                ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.03})`;
+            for(let i=0; i<120; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.025})`;
                 ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1);
             }
             // 가끔 글리치 라인
-            if(Math.random() < 0.05) {
+            if(Math.random() < 0.06) {
                 const gy = Math.random()*h;
-                ctx.fillStyle = `rgba(200,180,100,${Math.random()*0.3})`;
-                ctx.fillRect(0, gy, w, 1+Math.random()*3);
+                ctx.fillStyle = `rgba(200,180,100,${Math.random()*0.35})`;
+                ctx.fillRect(0, gy, w, 1+Math.random()*4);
             }
-            angle += 0.008;
+            // 비네팅
+            const vgrd = ctx.createRadialGradient(w/2,h/2,h*0.2,w/2,h/2,h*0.8);
+            vgrd.addColorStop(0,'rgba(0,0,0,0)'); vgrd.addColorStop(1,'rgba(0,0,0,0.7)');
+            ctx.fillStyle=vgrd; ctx.fillRect(0,0,w,h);
+            angle += 0.006;
         }
         drawPreview();
     })();

@@ -147,11 +147,14 @@
 // ════════════════════════════════════════════
 const ROWS=22, COLS=22, UNIT=5, WH=5.5;
 const BINGO_CLEAR_R=3; // 빙고판 주변 평지 반경 (타일)
-const BINGO_HALF=UNIT*2.92; // 빙고판 반폭 (벽면 1cm 안쪽)
-const GRID_N=5; // 격자 선 개수
-const LINE_W=0.38; // 격자 선 너비 (두껍게 - 벽과 동일한 느낌)
-const LINE_H=0.32; // 격자 선 높이 (입체감)
-const SAFE_LINE=LINE_W*1.6; // 낙사 판정 여유
+// 빙고판: 4x4 칸 구조 (3x3 격빔 + 외테두리)
+const GRID_DIV=4;    // 가로/세로 칸 개수
+const WALL_T=0.55;   // 격벽 두께 (cm 단위 시각적)
+const WALL_H=2.8;    // 격벽 높이 (이미지와 동일한 높은 벽)
+const CELL_W=3.2;    // 한 칸의 너비 (빈 구멍 크기)
+const PIT_TOTAL=(GRID_DIV+1)*WALL_T+GRID_DIV*CELL_W; // 빙고판 전체 폭
+const BINGO_HALF=PIT_TOTAL/2;
+const SAFE_LINE=WALL_T*1.8; // 낙사 판정 여유 (격벽 위에서 안전)
 
 // 지하
 const UG_R=14, UG_C=14, UG_U=4, UG_WH=4.5;
@@ -357,7 +360,6 @@ function buildBingoPit(){
     pitBounds.active=false;
 
     // ── 평지 중 1개에 강제 배치 ──
-    // flatAreas[0]을 빙고판용으로 사용
     const fa=flatAreas[0];
     const fp=worldXZ(fa.r,fa.c);
     pitCX=fp.x; pitCZ=fp.z;
@@ -366,41 +368,74 @@ function buildBingoPit(){
     pitBounds.minZ=pitCZ-BINGO_HALF; pitBounds.maxZ=pitCZ+BINGO_HALF;
     pitBounds.active=true;
 
-    // 검은 구멍 (격자 사이 빈 공간 - 밑으로 빨려들어갈 것 같은 느낌)
-    // 격자 선 사이 각 칸마다 개별 검은 박스
-    const cellW=(BINGO_HALF*2)/(GRID_N-1);
-    const voidMat=new THREE.MeshBasicMaterial({color:0x000000});
-    // 전체 구멍 (격자 아래 깊은 검은 공간)
-    const vGeo=new THREE.BoxGeometry(BINGO_HALF*2-LINE_W*.5,12,BINGO_HALF*2-LINE_W*.5);
-    pitVoid=new THREE.Mesh(vGeo,voidMat);
-    pitVoid.position.set(pitCX,-6.01,pitCZ);
-    scene.add(pitVoid);
+    // ── 가격벽들의 X/Z 중심 좌표 미리 계산 ──
+    // 가로방향 격벽 X 좌표 (GRID_DIV+1개)
+    const wallXs=[];
+    for(let i=0;i<=GRID_DIV;i++){
+        wallXs.push(pitBounds.minX + i*(WALL_T+CELL_W) + WALL_T/2);
+    }
+    // 세로방향 격벽 Z 좌표 (GRID_DIV+1개)
+    const wallZs=[];
+    for(let i=0;i<=GRID_DIV;i++){
+        wallZs.push(pitBounds.minZ + i*(WALL_T+CELL_W) + WALL_T/2);
+    }
 
-    // 지하 힌트 조명 (구멍 안에서 파란 빛)
-    const hintL=new THREE.PointLight(0x1133ff,1.8,16);
-    hintL.position.set(pitCX,-3,pitCZ);
+    // ── 재질 ──
+    // 이미지와 동일한 벨루스스샄드/연황색 재질
+    const wallMat2=new THREE.MeshStandardMaterial({map:wallTex,roughness:.88});
+    const voidMat=new THREE.MeshBasicMaterial({color:0x050303});
+
+    // ── 전체 바닥 플레이트 (고마 재질 눈에 맞는 바닥색) ──
+    // 격벽 아래 바닥을 보여주는 연황색 평면
+    const baseFloor=new THREE.Mesh(
+        new THREE.PlaneGeometry(PIT_TOTAL,PIT_TOTAL),
+        new THREE.MeshStandardMaterial({map:floorTex,roughness:.95})
+    );
+    baseFloor.rotation.x=-Math.PI/2;
+    baseFloor.position.set(pitCX,0,pitCZ);
+    scene.add(baseFloor); pitMeshes.push(baseFloor);
+
+    // ── 칸 사이 구멍 (검은 박스 - 아래로 깊게) ──
+    const holeDepth=14;
+    for(let row=0;row<GRID_DIV;row++){
+        for(let col=0;col<GRID_DIV;col++){
+            const cx=pitBounds.minX + col*(WALL_T+CELL_W) + WALL_T + CELL_W/2;
+            const cz=pitBounds.minZ + row*(WALL_T+CELL_W) + WALL_T + CELL_W/2;
+            const hole=new THREE.Mesh(
+                new THREE.BoxGeometry(CELL_W,holeDepth,CELL_W),
+                voidMat
+            );
+            hole.position.set(cx,-holeDepth/2,cz);
+            scene.add(hole); pitMeshes.push(hole);
+        }
+    }
+
+    // ── 가로 격벽 (X방향으로 뉳은 단면 벽) ──
+    // 각 wallZ를 중심으로, 전체 너비 PIT_TOTAL을 덧는 가로벽
+    const hWallGeo=new THREE.BoxGeometry(PIT_TOTAL,WALL_H,WALL_T);
+    for(let i=0;i<=GRID_DIV;i++){
+        const m=new THREE.Mesh(hWallGeo,wallMat2);
+        m.position.set(pitCX,WALL_H/2,wallZs[i]);
+        scene.add(m); pitMeshes.push(m);
+    }
+    // ── 세로 격벽 (Z방향으로 뉳은 단면 벽) ──
+    const vWallGeo=new THREE.BoxGeometry(WALL_T,WALL_H,PIT_TOTAL);
+    for(let i=0;i<=GRID_DIV;i++){
+        const m=new THREE.Mesh(vWallGeo,wallMat2);
+        m.position.set(wallXs[i],WALL_H/2,pitCZ);
+        scene.add(m); pitMeshes.push(m);
+    }
+
+    // ── 지하 힌트 조명 ──
+    const hintL=new THREE.PointLight(0x1133ff,1.5,20);
+    hintL.position.set(pitCX,-4,pitCZ);
     scene.add(hintL); pitMeshes.push(hintL);
 
-    // ── 입체 격자 (벽과 동일한 색/두께) ──
-    // 벽 색상과 동일한 재질
-    const gridMat=new THREE.MeshStandardMaterial({color:0x2a2518,roughness:.6,metalness:.5,map:wallTex});
-    const pitW=BINGO_HALF*2, pitD=BINGO_HALF*2;
-    const spacH=pitD/(GRID_N-1), spacV=pitW/(GRID_N-1);
-
-    // 가로선 (X방향으로 뻗음)
-    const hGeo=new THREE.BoxGeometry(pitW+LINE_W,LINE_H,LINE_W);
-    for(let i=0;i<GRID_N;i++){
-        const m=new THREE.Mesh(hGeo,gridMat);
-        m.position.set(pitCX,LINE_H/2,pitBounds.minZ+i*spacH);
-        scene.add(m); pitMeshes.push(m);
-    }
-    // 세로선 (Z방향으로 뻗음)
-    const vGeo2=new THREE.BoxGeometry(LINE_W,LINE_H,pitD+LINE_W);
-    for(let i=0;i<GRID_N;i++){
-        const m=new THREE.Mesh(vGeo2,gridMat);
-        m.position.set(pitBounds.minX+i*spacV,LINE_H/2,pitCZ);
-        scene.add(m); pitMeshes.push(m);
-    }
+    // pitVoid는 전체 영역 커버 (낙사 시각적 보조)
+    const vGeo=new THREE.BoxGeometry(PIT_TOTAL,holeDepth,PIT_TOTAL);
+    pitVoid=new THREE.Mesh(vGeo,voidMat);
+    pitVoid.position.set(pitCX,-holeDepth/2-0.01,pitCZ);
+    scene.add(pitVoid);
 }
 
 // ════════════════════════════════════════════
@@ -1015,6 +1050,8 @@ function triggerBlackout(){
 // ════════════════════════════════════════════
 let player=new THREE.Group(); scene.add(player);
 genMaze(); buildGraphics();
+// 페이지 로드 즉시 전체화면 시도 (모바일 자동 적용)
+document.addEventListener('click',function _fsOnce(){try{(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||document.documentElement.mozRequestFullScreen).call(document.documentElement);}catch(e){}document.removeEventListener('click',_fsOnce);},{once:true});
 
 function launchGame(){
     if(!platform)return;
@@ -1088,11 +1125,17 @@ function launchGame(){
         const lg=new THREE.Group();lg.add(lp2,lp3);lg.position.set(0,cH-.02,-i*9-4);pvScene.add(lg);
         const pl=new THREE.PointLight(0xfff5cc,.8,12);pl.position.set(0,cH-.3,-i*9-4);pvScene.add(pl);
     }
-    // 가끔 문
-    const dM=new THREE.Mesh(new THREE.BoxGeometry(.15,2.8,.2),new THREE.MeshStandardMaterial({color:0x1d140e}));
-    dM.position.set(-cW/2+.1,1.4,-15);pvScene.add(dM);
-    const dp2=new THREE.Mesh(new THREE.BoxGeometry(1.56,2.65,.12),new THREE.MeshStandardMaterial({color:0x3d2516}));
-    dp2.position.set(-cW/2+.9,1.4,-15);pvScene.add(dp2);
+    // 문 (왼쪽 벽면에 정확히 붙어서)
+    const pvDoorG=new THREE.Group();
+    const dFrameM=new THREE.MeshStandardMaterial({color:0x1d140e,roughness:.9});
+    const dLp=new THREE.Mesh(new THREE.BoxGeometry(.15,2.8,.2),dFrameM); dLp.position.set(-.85,0,0);
+    const dRp=new THREE.Mesh(new THREE.BoxGeometry(.15,2.8,.2),dFrameM); dRp.position.set(.85,0,0);
+    const dTp=new THREE.Mesh(new THREE.BoxGeometry(1.8,.15,.2),dFrameM); dTp.position.set(0,1.4,0);
+    const dPn=new THREE.Mesh(new THREE.BoxGeometry(1.56,2.65,.12),new THREE.MeshStandardMaterial({color:0x3d2516,roughness:.75}));
+    pvDoorG.add(dLp,dRp,dTp,dPn);
+    pvDoorG.position.set(-cW/2+.12,1.4,-20);
+    pvDoorG.rotation.y=Math.PI/2;
+    pvScene.add(pvDoorG);
 
     // 카메라 경로 (복도를 천천히 이동하며 좌우로 약간 흔들림)
     let t=0;
@@ -1145,22 +1188,25 @@ function animate(){
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.025;
     if(!underground)keyHint(player.position);
 
-    // ─── 빙고판 낙사 판정 ───
+    // ─── 빙고판 낙사 판정 (새 구조: WALL_T 간격벽 위는 안전, 칸 안은 낙사) ───
     if(!underground&&pitBounds.active&&player.position.y>=-0.01){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
         if(inPit){
-            let onLine=false;
-            const pitW=pitBounds.maxX-pitBounds.minX,pitD=pitBounds.maxZ-pitBounds.minZ;
-            const sH=pitD/(GRID_N-1),sV=pitW/(GRID_N-1);
-            for(let i=0;i<GRID_N;i++){
-                if(Math.abs(player.position.z-(pitBounds.minZ+i*sH))<SAFE_LINE){onLine=true;break;}
+            // 플레이어가 어느 간격벽 위에 있는지 판정
+            // X방향 간격벽: pitBounds.minX + i*(WALL_T+CELL_W) + WALL_T/2 (i=0..GRID_DIV)
+            let onWallX=false, onWallZ=false;
+            for(let i=0;i<=GRID_DIV;i++){
+                const wx=pitBounds.minX+i*(WALL_T+CELL_W)+WALL_T/2;
+                if(Math.abs(player.position.x-wx)<SAFE_LINE){onWallX=true;break;}
             }
-            if(!onLine){
-                for(let i=0;i<GRID_N;i++){
-                    if(Math.abs(player.position.x-(pitBounds.minX+i*sV))<SAFE_LINE){onLine=true;break;}
-                }
+            for(let i=0;i<=GRID_DIV;i++){
+                const wz=pitBounds.minZ+i*(WALL_T+CELL_W)+WALL_T/2;
+                if(Math.abs(player.position.z-wz)<SAFE_LINE){onWallZ=true;break;}
             }
+            // 두 방향 모두 간격벽 위에 있어야 안전 (교차점)
+            // 또는 한 방향만 간격벽 위에 있어도 안전 (선 위)
+            const onLine=onWallX||onWallZ;
             if(!onLine&&grounded){grounded=false;velY=-.02;}
         }
     }
@@ -1255,7 +1301,7 @@ function animate(){
         if(keys.a){mX-=rX;mZ-=rZ;}if(keys.d){mX+=rX;mZ+=rZ;}
         moving=mX!==0||mZ!==0;sprinting=moving&&keys.shift&&!exhausted;
     }else{
-        if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){mX=fX*jInput.y+rX*jInput.x;mZ=fZ*jInput.y+rZ*jInput.x;}
+        if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){mX=fX*(-jInput.y)+rX*jInput.x;mZ=fZ*(-jInput.y)+rZ*jInput.x;}
         moving=mX!==0||mZ!==0;sprinting=moving&&jRatio>.75&&!exhausted;
     }
 

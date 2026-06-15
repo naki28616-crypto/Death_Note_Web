@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>《THE BACKROOMS》</title>
+    <title>《BACKROOM》</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#080806;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -64,7 +64,7 @@
         .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
         .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
         
-        /* [수정] 스크롤바 최적화 및 안정적인 높이 제어 구현 */
+        /* 스크롤바 최적화 및 안정적인 높이 제어 구현 */
         .inline-settings-panel {
             max-height: 0;
             opacity: 0;
@@ -82,14 +82,13 @@
             box-sizing: border-box;
         }
         .inline-settings-panel.open {
-            max-height: 260px; /* 고정 높이를 주어 스크롤이 정상 트리거되도록 조정 */
+            max-height: 260px; /* 내부 스크롤 보장을 위한 조절 */
             opacity: 1;
             padding: 18px;
             border: 1px solid #474436;
             margin-top: 4px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.6);
         }
-        /* 스크롤바 커스텀 스타일링 */
         .inline-settings-panel::-webkit-scrollbar { width: 6px; }
         .inline-settings-panel::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
         .inline-settings-panel::-webkit-scrollbar-thumb { background: #474436; border-radius: 3px; }
@@ -126,7 +125,7 @@
     <div id="start-content">
         <div id="cctv-badge">🔴 REC — LIVE</div>
         <h2 class="title-main">THE BACKROOMS</h2>
-        <div class="title-level">LEVE 0 BETA test</div>
+        <div class="title-level">LEVEL 0 DEMO vr</div>
         
         <div class="menu-group">
             <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
@@ -157,7 +156,7 @@
                     <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
                 </div>
                 
-                <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:7px 0; border-color:#595443;" onclick="toggleFS()">📺 TOGGLE FULLSCREEN</button>
+                <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:7px 0; border-color:#595443;" onclick="toggleFS()">FULL</button>
             </div>
         </div>
     </div>
@@ -315,7 +314,6 @@ function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
 
-    // 1. 중앙 빙고방 예약 및 공간 생성
     const br_r = Math.floor(ROWS / 2) - 2;
     const br_c = Math.floor(COLS / 2) - 2;
     const br_w = 4, br_h = 4;
@@ -334,16 +332,13 @@ function genMaze(){
     pitCX = (br_c + 2 - COLS/2) * UNIT;
     pitCZ = (br_r + 2 - ROWS/2) * UNIT;
 
-    // 2. [수정] 6개의 무작위 대형 평지 격실(3x3) 배치 로직 추가
     let flatRoomsPlaced = 0;
     let attempts = 0;
     while(flatRoomsPlaced < 6 && attempts < 200) {
         attempts++;
-        // 외곽 경계를 침범하지 않고 중앙 방과 겹치지 않게 조율
         const fr = Math.floor(Math.random() * (ROWS - 5)) + 1;
         const fc = Math.floor(Math.random() * (COLS - 5)) + 1;
         
-        // 해당 구역이 예약(중앙 방 등)되었는지 충돌 검사
         let overlap = false;
         for(let r = fr - 1; r <= fr + 3; r++) {
             for(let c = fc - 1; c <= fc + 3; c++) {
@@ -355,18 +350,16 @@ function genMaze(){
         }
         
         if(!overlap) {
-            // 3x3 크기의 벽 제거 평지격실 생성 및 예약 처리
             for(let r = fr; r < fr + 3; r++) {
                 for(let c = fc; c < fc + 3; c++) {
                     mapData[r][c] = 0;
-                    reserved[r][c] = true; // 플레이어 및 열쇠 스폰이 유효하도록 예약
+                    reserved[r][c] = true; 
                 }
             }
             flatRoomsPlaced++;
         }
     }
 
-    // 3. 탈출문 통로 배치 개설
     let exitDir = Math.random() < 0.5 ? -1 : 1;
     if (exitDir === -1) {
         for(let c=br_c-4; c<br_c; c++) {
@@ -399,7 +392,6 @@ function genMaze(){
     if(startR >= ROWS-1) startR = ROWS-2;
     mapData[startR][startC] = 0; 
     
-    // 4. 미로 조각 알고리즘 적용
     function carve(r,c){
         const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
         for(const[dr,dc]of dirs){
@@ -415,7 +407,6 @@ function genMaze(){
     carve(startR, startC);
     carve(1, 1);
 
-    // 외곽 테두리 폐쇄형 벽면 고정 보장
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
 }
@@ -463,7 +454,6 @@ function buildGraphics(){
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
 
-/* [수정] 대형 평지가 추가됨에 따라, reserved 배열 속성을 검사하여 빈 바닥 공간에 정상 안착 스폰되도록 유지 */
 function safeSpawn(avoid,minD,excludeReserved=false){
     for(let i=0;i<500;i++){
         const r=Math.floor(Math.random()*ROWS),c=Math.floor(Math.random()*COLS);
@@ -864,9 +854,9 @@ function updateSens(v){sensitivity=parseFloat(v);document.getElementById('txt-se
 function updateBgm(v){volBgm=parseInt(v)/100;document.getElementById('txt-bgm').textContent=v+'%';syncBgm();}
 function updateSfx(v){volSfx=parseInt(v)/100;document.getElementById('txt-sfx').textContent=v+'%';}
 
-/* [수정] 크로스 브라우저 호환 및 예외 처리가 강화된 전체 화면 토글 함수 */
+/* 크로스 브라우저 호환 및 예외 처리가 강화된 전체 화면 토글 함수 */
 function toggleFS(){
-    if(!document.fullscreenElement){
+    if(!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement){
         const docEl = document.documentElement;
         if(docEl.requestFullscreen) docEl.requestFullscreen();
         else if(docEl.mozRequestFullScreen) docEl.mozRequestFullScreen();

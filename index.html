@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>《The Backrooms》</title>
+    <title>《THE BACKROOMS》</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#080806;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -14,13 +14,11 @@
         #quest-ui{position:absolute;top:60px;left:25px;color:#ffea9f;font-weight:bold;font-size:14px;z-index:210;letter-spacing:1px;pointer-events:none;background:rgba(12,11,9,.9);padding:10px 16px;border-left:3px solid #d1bd71;border-radius:0 4px 4px 0;display:none;text-shadow:0 1px 4px rgba(0,0,0,1);box-shadow:0 4px 12px rgba(0,0,0,.6);}
         #interact-prompt{position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);color:#fff;background:rgba(0,0,0,.85);border:1px solid #d1bd71;padding:10px 20px;border-radius:4px;font-weight:bold;font-size:14px;z-index:100;display:none;pointer-events:none;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.5);}
         
-        /* 인게임 상단 일시정지 전용 헤드 버튼 */
         #top-controls{position:absolute;top:16px;right:16px;z-index:220;display:none;}
         
         .btn{background:#1a1914;color:#d1bd71;border:1px solid #474436;padding:9px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;white-space:nowrap;transition:all .2s;text-align:center;box-sizing:border-box;}
         .btn:hover{background:#2e2b21;color:#ffea9f;border-color:#615d4a;}
         
-        /* 설정 행 폰트 및 구조 정렬 */
         .setting-row{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;}
         .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;}
         .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:2px;cursor:pointer;}
@@ -66,11 +64,12 @@
         .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
         .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
         
-        /* 모든 인게임 설정이 집약된 단일화된 세팅 패널 */
+        /* [수정] 스크롤바 최적화 및 안정적인 높이 제어 구현 */
         .inline-settings-panel {
             max-height: 0;
             opacity: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
@@ -82,15 +81,19 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        /* [수정] 전체화면 버튼까지 안정적으로 노출되도록 max-height 확장 */
         .inline-settings-panel.open {
-            max-height: 420px; 
+            max-height: 260px; /* 고정 높이를 주어 스크롤이 정상 트리거되도록 조정 */
             opacity: 1;
             padding: 18px;
             border: 1px solid #474436;
             margin-top: 4px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.6);
         }
+        /* 스크롤바 커스텀 스타일링 */
+        .inline-settings-panel::-webkit-scrollbar { width: 6px; }
+        .inline-settings-panel::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        .inline-settings-panel::-webkit-scrollbar-thumb { background: #474436; border-radius: 3px; }
+        .inline-settings-panel::-webkit-scrollbar-thumb:hover { background: #d1bd71; }
         
         .platform-mini-box{display:flex;gap:10px;width:100%;}
         .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:9px 0;font-size:11px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
@@ -123,7 +126,7 @@
     <div id="start-content">
         <div id="cctv-badge">🔴 REC — LIVE</div>
         <h2 class="title-main">THE BACKROOMS</h2>
-        <div class="title-level">LEVEL BETA test</div>
+        <div class="title-level">LEVE 0 BETA test</div>
         
         <div class="menu-group">
             <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
@@ -306,12 +309,13 @@ const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
 
 // ════════════════════════════════════════════
-//  MAZE LOGIC
+//  MAZE LOGIC (6개 랜덤 대형 평지 격실 추가 버전)
 // ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
 
+    // 1. 중앙 빙고방 예약 및 공간 생성
     const br_r = Math.floor(ROWS / 2) - 2;
     const br_c = Math.floor(COLS / 2) - 2;
     const br_w = 4, br_h = 4;
@@ -330,6 +334,39 @@ function genMaze(){
     pitCX = (br_c + 2 - COLS/2) * UNIT;
     pitCZ = (br_r + 2 - ROWS/2) * UNIT;
 
+    // 2. [수정] 6개의 무작위 대형 평지 격실(3x3) 배치 로직 추가
+    let flatRoomsPlaced = 0;
+    let attempts = 0;
+    while(flatRoomsPlaced < 6 && attempts < 200) {
+        attempts++;
+        // 외곽 경계를 침범하지 않고 중앙 방과 겹치지 않게 조율
+        const fr = Math.floor(Math.random() * (ROWS - 5)) + 1;
+        const fc = Math.floor(Math.random() * (COLS - 5)) + 1;
+        
+        // 해당 구역이 예약(중앙 방 등)되었는지 충돌 검사
+        let overlap = false;
+        for(let r = fr - 1; r <= fr + 3; r++) {
+            for(let c = fc - 1; c <= fc + 3; c++) {
+                if(r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                    if(reserved[r][c]) { overlap = true; break; }
+                }
+            }
+            if(overlap) break;
+        }
+        
+        if(!overlap) {
+            // 3x3 크기의 벽 제거 평지격실 생성 및 예약 처리
+            for(let r = fr; r < fr + 3; r++) {
+                for(let c = fc; c < fc + 3; c++) {
+                    mapData[r][c] = 0;
+                    reserved[r][c] = true; // 플레이어 및 열쇠 스폰이 유효하도록 예약
+                }
+            }
+            flatRoomsPlaced++;
+        }
+    }
+
+    // 3. 탈출문 통로 배치 개설
     let exitDir = Math.random() < 0.5 ? -1 : 1;
     if (exitDir === -1) {
         for(let c=br_c-4; c<br_c; c++) {
@@ -362,6 +399,7 @@ function genMaze(){
     if(startR >= ROWS-1) startR = ROWS-2;
     mapData[startR][startC] = 0; 
     
+    // 4. 미로 조각 알고리즘 적용
     function carve(r,c){
         const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
         for(const[dr,dc]of dirs){
@@ -377,6 +415,7 @@ function genMaze(){
     carve(startR, startC);
     carve(1, 1);
 
+    // 외곽 테두리 폐쇄형 벽면 고정 보장
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
 }
@@ -400,7 +439,7 @@ function buildGraphics(){
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
-            } else if(Math.random()<.06 && !reserved[r][c]){
+            } else if(Math.random()<.06){
                 const lg=new THREE.Group();
                 const fr=new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,1.5),new THREE.MeshStandardMaterial({color:0x222222}));
                 const pn=new THREE.Mesh(new THREE.BoxGeometry(2.7,.05,1.2),new THREE.MeshBasicMaterial({color:0xfffbc4}));
@@ -424,7 +463,8 @@ function buildGraphics(){
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
 
-function safeSpawn(avoid,minD,excludeReserved=true){
+/* [수정] 대형 평지가 추가됨에 따라, reserved 배열 속성을 검사하여 빈 바닥 공간에 정상 안착 스폰되도록 유지 */
+function safeSpawn(avoid,minD,excludeReserved=false){
     for(let i=0;i<500;i++){
         const r=Math.floor(Math.random()*ROWS),c=Math.floor(Math.random()*COLS);
         if(mapData[r][c]===0 && (!excludeReserved || !reserved[r][c])){
@@ -563,7 +603,7 @@ function spawnKey(){
     const kb=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.4),new THREE.MeshStandardMaterial({color:0xee9900}));
     kb.position.y=-.2; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
     const kl=new THREE.PointLight(0xffcc33,2.2,12,1.2); kl.position.y=.2; keyMesh.add(kl);
-    const kp=safeSpawn({x:pitCX, z:pitCZ}, 35, true); 
+    const kp=safeSpawn({x:pitCX, z:pitCZ}, 35, false); 
     keyMesh.position.set(kp.x,.8,kp.z); scene.add(keyMesh);
 }
 
@@ -791,16 +831,16 @@ function entityAI(e,pp){
     e.stuckT++;
     if(e.stuckT>60){
         const sd=Math.sqrt((ep.x-e.lastPos.x)**2+(ep.z-e.lastPos.z)**2);
-        if(sd<.2)e.patrolTarget=safeSpawn(pp,0,true);
+        if(sd<.2)e.patrolTarget=safeSpawn(pp,0,false);
         e.lastPos.copy(ep);e.stuckT=0;
     }
     if(dist<20&&!isGameOver&&player.position.y>=-0.2){ 
         if(!e.scream){e.scream=true;scream(true);}e.state='chase';
     }else if(e.state==='chase'&&(dist>28||player.position.y<-.2)){
-        e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,true);
+        e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,false);
     }
     const dest=e.state==='chase'?pp:e.patrolTarget;
-    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<2.0&&Math.abs(ep.z-dest.z)<2.0)e.patrolTarget=safeSpawn(pp,0,true);
+    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<2.0&&Math.abs(ep.z-dest.z)<2.0)e.patrolTarget=safeSpawn(pp,0,false);
     const dx=dest.x-ep.x,dz=dest.z-ep.z,len=Math.sqrt(dx*dx+dz*dz);
     if(len>.1){
         const sp=e.state==='chase'?e.speed*1.45:e.speed;
@@ -1045,9 +1085,9 @@ function triggerGameOver(msg){isGameOver=true;scream(false);document.getElementB
 function respawn(){
     isGameOver=false;scream(false);
     if(underground)exitUnderground();
-    const rp=safeSpawn(player.position, 25, true);
+    const rp=safeSpawn(player.position, 25, false);
     player.position.set(rp.x,0,rp.z);velY=0;grounded=true;stamina=100;exhausted=false;
-    entities.forEach(e=>{const ep=safeSpawn(player.position,20,true);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
+    entities.forEach(e=>{const ep=safeSpawn(player.position,20,false);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
     document.getElementById('gameover-screen').style.display='none';
     if(platform==='pc')document.body.requestPointerLock();
 }
@@ -1105,14 +1145,14 @@ function launchGame(){
     camX=0;camY=0;sCamX=0;sCamY=0;
     
     genMaze(); buildGraphics();
-    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 40, true); 
+    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 40, false); 
     player.position.set(pSp.x,0,pSp.z);
     
     buildBingoPit();
     spawnDoor();
     spawnKey();
     entities.forEach(e=>{
-        const ep=safeSpawn(player.position, 20, true);
+        const ep=safeSpawn(player.position, 20, false);
         e.mesh.position.set(ep.x,0,ep.z);e.lastPos.copy(e.mesh.position);
         e.patrolTarget=ep;e.state='patrol';e.scream=false;
     });

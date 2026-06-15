@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>《£ack rooms》</title>
+    <title>《The £ackrooms》</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#080806;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -19,9 +19,9 @@
         .btn{background:#1a1914;color:#d1bd71;border:1px solid #474436;padding:9px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;white-space:nowrap;transition:all .2s;text-align:center;box-sizing:border-box;}
         .btn:hover{background:#2e2b21;color:#ffea9f;border-color:#615d4a;}
         
-        .setting-row{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;}
-        .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;font-size:14px;}
-        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:4px;cursor:pointer;height:8px;}
+        .setting-row{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;box-sizing:border-box;}
+        .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;font-size:15px;}
+        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:4px;cursor:pointer;height:10px;}
         
         #mobile-controls-right{position:absolute;bottom:30px;right:30px;display:none;flex-direction:column;gap:15px;z-index:220;}
         .circle-btn{width:64px;height:64px;background:rgba(20,19,16,.95);border:2px solid #544e3e;border-radius:50%;color:#e8e4cf;font-size:24px;display:flex;justify-content:center;align-items:center;cursor:pointer;touch-action:none;box-shadow:0 6px 14px rgba(0,0,0,.8);}
@@ -48,11 +48,23 @@
         
         #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;}
         #cctv-badge{font-family:monospace;font-size:14px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.6);animation:blink 1.2s step-end infinite;}
-        @keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
         
-        .title-main{font-size:24px;font-weight:600;letter-spacing:10px;margin:0;color:#d1bd71;opacity:.85;font-family:monospace;text-shadow:0 2px 4px rgba(0,0,0,0.8);}
-        .title-sub{font-size:52px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;text-shadow:0 0 25px rgba(209,189,113,.7), 0 4px 10px rgba(0,0,0,0.9);}
-        .title-level{font-size:15px;font-weight:600;letter-spacing:3px;margin:6px 0 30px;color:#9e9573;font-family:monospace;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+        /* 입체적 3D 텍스트 디자인 효과 적용 */
+        .title-main{
+            font-size:24px;font-weight:600;letter-spacing:10px;margin:0;color:#d1bd71;font-family:monospace;
+            text-shadow: 1px 1px 0px #8a7a44, 2px 2px 0px #6e6133, 3px 3px 5px rgba(0,0,0,0.9);
+        }
+        .title-sub{
+            font-size:54px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;
+            text-shadow: 
+                0 1px 0 #cccccc, 0 2px 0 #c5c5c5, 0 3px 0 #bbb, 0 4px 0 #b4b4b4, 
+                0 5px 0 #b0b0b0, 0 6px 0 #a3a3a3, 0 7px 0 #999, 0 8px 0 #888, 
+                0 9px 0 #777, 0 10px 15px rgba(0,0,0,0.9), 0 0 25px rgba(209,189,113,.4);
+        }
+        .title-level{
+            font-size:15px;font-weight:600;letter-spacing:3px;margin:12px 0 30px;color:#9e9573;font-family:monospace;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
         
         .menu-group{display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
         
@@ -64,48 +76,26 @@
         .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
         .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
         
-        /* ─── 업그레이드된 세팅 패널 (PC / 모바일 분기 및 터치 스크롤 탑재) ─── */
+        /* ─── 세팅화면 넓이 꽉 채우기 커스텀 리디자인 ─── */
         .inline-settings-panel {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(8, 8, 6, 0.96);
+            background: rgba(8, 8, 6, 0.97);
             z-index: 210;
             opacity: 0;
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* 상단부터 채워지도록 설정 */
-            align-items: flex-start;
+            justify-content: flex-start;
+            align-items: center;
             box-sizing: border-box;
-            overflow-y: auto;           /* 내부 세로 스크롤 허용 */
-            -webkit-overflow-scrolling: touch; /* 모바일 부드러운 스크롤 */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        /* PC 환경 세팅 (가로 화면) */
-        @media (min-width: 769px) {
-            .inline-settings-panel {
-                padding: 60px 0 60px 8%; 
-            }
-            .settings-content-wrapper {
-                width: 360px; /* PC 가로폭 살짝 여유있게 변경 */
-            }
-        }
-
-        /* 모바일 환경 세팅 (세로 화면) */
-        @media (max-width: 768px) {
-            .inline-settings-panel {
-                padding: 40px 24px; /* 사방 여백을 주어 터치 영역 확보 */
-                align-items: center; /* 가운데로 정렬해 가독성 확보 */
-                touch-action: pan-y; /* 모바일 창에서 세로 스크롤 허용 */
-            }
-            .settings-content-wrapper {
-                width: 100%;
-                max-width: 320px; /* 너무 뚱뚱해지지 않게 캡 가이드 */
-            }
+            padding: 40px 20px;
         }
         
         .inline-settings-panel.open {
@@ -113,15 +103,19 @@
             pointer-events: auto;
         }
         
+        /* 가로폭 매칭을 위해 내부 wrapper를 꽉 채우도록 설정 */
         .settings-content-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 20px; /* 행간 간격 확대 */
-            padding-bottom: 40px; /* 마지막 뒤로가기 버튼 아래 여백 확보 */
+            gap: 22px;
+            width: 100%;
+            max-width: 600px; /* 기존 형식 보존하며 최대폭까지 가득 채움 */
+            box-sizing: border-box;
+            padding-bottom: 50px;
         }
         
-        .platform-mini-box{display:flex;gap:10px;width:100%;}
-        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:11px 0;font-size:12px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
+        .platform-mini-box{display:flex;gap:12px;width:100%;}
+        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:12px 0;font-size:13px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
         .platform-choice-btn.selected{background:#d1bd71;color:#1c1b17;border-color:#fff;box-shadow:0 4px 12px rgba(209,189,113,.3);font-weight:900;}
 
         #gameover-screen,#pause-screen,#clear-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(3,3,2,.98);z-index:150;display:none;flex-direction:column;justify-content:center;align-items:center;}
@@ -151,7 +145,7 @@
     
     <div id="start-content">
         <div id="cctv-badge">🔴 REC — LIVE</div>
-        <h2 class="title-main">LEVE 0 test</h2>
+        <h2 class="title-main">LEVEL 0</h2>
         <h1 class="title-sub">THE BACKROOMS</h1>
         <div class="title-level">Demo</div>
         
@@ -160,7 +154,7 @@
                 <span class="start-label">START</span>
             </div>
             
-            <button class="setting-toggle-btn" onclick="toggleStartSettings(true)">⚙️ SETTINGS</button>
+            <button class="setting-toggle-btn" onclick="toggleStartSettings(true)">⚙️ SETTING</button>
         </div>
     </div>
 
@@ -170,7 +164,7 @@
             
             <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT TOOL</div>
             <div class="platform-mini-box">
-                <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">DESKTOP</button>
+                <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">PC</button>
                 <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
             </div>
             
@@ -189,7 +183,7 @@
                 <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
             </div>
             
-            <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:10px 0; border-color:#595443;" onclick="toggleFS()">📺 TOGGLE FULLSCREEN</button>
+            <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:12px 0; border-color:#595443;" onclick="toggleFS()">📺 FULL</button>
             
             <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
             
@@ -344,7 +338,7 @@ const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
 
 // ════════════════════════════════════════════
-//  MAZE LOGIC (6개 랜덤 대형 평지 격실 추가 버전)
+//  MAZE LOGIC 
 // ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
@@ -503,7 +497,7 @@ function safeSpawn(avoid,minD,excludeReserved=false){
 }
 
 // ════════════════════════════════════════════
-//  BINGO PIT SYSTEM
+//  BINGO PIT SYSTEM 
 // ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
@@ -699,6 +693,7 @@ function buildUnderground(){
     ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
     scene.add(ladderItem); ugObjs.push(ladderItem);
 
+    // 구덩이 내부 벽 타겟팅 및 리스폰 탈출용 가설 지점
     let holeR=1,holeC=1,holeWR=-1,holeWC=0;
     const hp=ugW(holeR,holeC);
     holePosX=hp.x; holePosZ=hp.z;
@@ -821,7 +816,8 @@ function exitUnderground(){
     pitMeshes.forEach(m=>{m.visible=true;});
     if(pitVoid)pitVoid.visible=true;
     
-    player.position.set(pitCX+UNIT*1.5,0,pitCZ+UNIT*1.5); 
+    // 지상 복귀 시 원래의 구덩이 위치(빙고판 근처 안전 구역)로 정확히 배치
+    player.position.set(pitCX+UNIT*1.1, 0, pitCZ+UNIT*1.1); 
     velY=0; grounded=true;
     scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.035;
     ambient.intensity=0.85; flash.intensity=isFlashOn?1.8:0;
@@ -982,6 +978,7 @@ window.addEventListener('mousemove',e=>{
 });
 
 window.addEventListener('click',()=>{if(gameActive&&!isPaused&&!isGameOver&&platform==='pc')document.body.requestPointerLock();});
+document.pointerLockElement=null;
 document.addEventListener('pointerlockchange',()=>{
     if(document.pointerLockElement!==document.body&&gameActive&&!isGameOver&&platform==='pc'&&!isPaused){
         if(document.getElementById('pause-screen').style.display!=='flex')triggerPause(true);
@@ -1195,45 +1192,99 @@ function launchGame(){
 }
 
 // ════════════════════════════════════════════
-//  MAIN PREVIEW CANVAS
+//  MAIN PREVIEW CANVAS (CCTV 관찰 맵 회전 기능 구현)
 // ════════════════════════════════════════════
 (function initPreview(){
     const pvs=document.getElementById('preview-canvas');
     pvs.width=innerWidth;pvs.height=innerHeight;
     const pvScene=new THREE.Scene();
     pvScene.background=new THREE.Color(0xa39458);
-    pvScene.fog=new THREE.FogExp2(0xa39458,.06);
-    const pvCam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,150);
-    pvCam.position.set(0,1.5,0);
+    pvScene.fog=new THREE.FogExp2(0xa39458,.045);
+    const pvCam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,200);
     const pvRen=new THREE.WebGLRenderer({canvas:pvs,antialias:false,precision:'mediump'});
     pvRen.setSize(innerWidth,innerHeight);
 
-    const pvWMat=new THREE.MeshStandardMaterial({color:0xc7bc91,roughness:.9});
-    const pvFMat=new THREE.MeshStandardMaterial({color:0x786b3c,roughness:.95});
-    const pvCMat=new THREE.MeshStandardMaterial({color:0xbab085,roughness:.9});
-    const pvAmb=new THREE.AmbientLight(0xeee9b5,.6);pvScene.add(pvAmb);
-    
-    const cW=9,cH=7.0,cL=60;
-    const fl=new THREE.Mesh(new THREE.PlaneGeometry(cW,cL),pvFMat);fl.rotation.x=-Math.PI/2;fl.position.set(0,0,-cL/2);pvScene.add(fl);
-    const cl=new THREE.Mesh(new THREE.PlaneGeometry(cW,cL),pvCMat);cl.rotation.x=Math.PI/2;cl.position.set(0,cH,-cL/2);pvScene.add(cl);
-    const wl=new THREE.Mesh(new THREE.PlaneGeometry(cL,cH),pvWMat);wl.rotation.y=Math.PI/2;wl.position.set(-cW/2,cH/2,-cL/2);pvScene.add(wl);
-    const wr=new THREE.Mesh(new THREE.PlaneGeometry(cL,cH),pvWMat);wr.rotation.y=-Math.PI/2;wr.position.set(cW/2,cH/2,-cL/2);pvScene.add(wr);
-    
-    for(let i=0; i<6; i++){
-        const lg=new THREE.Group();
-        lg.add(new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,1.5),new THREE.MeshStandardMaterial({color:0x222222})),new THREE.Mesh(new THREE.BoxGeometry(2.7,.05,1.2),new THREE.MeshBasicMaterial({color:0xfffbc4})));
-        lg.position.set(0,cH-.02,-i*10-5);pvScene.add(lg);
-        const pl=new THREE.PointLight(0xfff2b3,.6,12);pl.position.set(0,cH-.2,-i*10-5);pvScene.add(pl);
-    }
-    let t=0;
+    const pvAmb=new THREE.AmbientLight(0xfffde6,.7); pvScene.add(pvAmb);
+    const pvDir=new THREE.PointLight(0xfff2b3, 0.8, 40); pvScene.add(pvDir);
 
+    // CCTV 관찰용 방 및 복도 세트 자동 구축
+    const pUNIT = 9;
+    const pROWS = 12, pCOLS = 12;
+    const pMap = Array(pROWS).fill().map(()=>Array(pCOLS).fill(1));
+    
+    // 넓은 방 구조 조각 분할 생성
+    for(let r=2; r<5; r++) for(let c=2; c<5; c++) pMap[r][c] = 0;
+    for(let r=7; r<10; r++) for(let c=7; c<10; c++) pMap[r][c] = 0;
+    // 연결 복도 생성
+    for(let c=4; c<8; c++) pMap[3][c] = 0;
+    for(let r=3; r<8; r++) pMap[r][7] = 0;
+
+    const pWGeo = new THREE.BoxGeometry(pUNIT, WH, pUNIT);
+    const pWMat = new THREE.MeshStandardMaterial({color:0xd6cb94, roughness:.9});
+    const pInst = new THREE.InstancedMesh(pWGeo, pWMat, pROWS*pCOLS);
+    
+    const dum = new THREE.Object3D();
+    let idx = 0;
+    for(let r=0; r<pROWS; r++){
+        for(let c=0; c<pCOLS; c++){
+            if(pMap[r][c] === 1){
+                dum.position.set((c-pCOLS/2)*pUNIT, WH/2, (r-pROWS/2)*pUNIT);
+                dum.updateMatrix();
+                pInst.setMatrixAt(idx++, dum.matrix);
+            } else if(Math.random() < 0.15) {
+                const pl = new THREE.PointLight(0xfff1aa, 0.5, 14);
+                pl.position.set((c-pCOLS/2)*pUNIT, WH-0.5, (r-pROWS/2)*pUNIT);
+                pvScene.add(pl);
+            }
+        }
+    }
+    pInst.instanceMatrix.needsUpdate = true;
+    pvScene.add(pInst);
+
+    const pFl = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0x786b3c, roughness:.95}));
+    pFl.rotation.x = -Math.PI/2; pvScene.add(pFl);
+    const pCe = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0xc7bc91, roughness:.9}));
+    pCe.rotation.x = Math.PI/2; pCe.position.y = WH; pvScene.add(pCe);
+
+    // CCTV 시점 수동 로테이션 스포트 경로 제어 배열
+    const cctvSpots = [
+        { camX: -15, camY: 5.5, camZ: -15, lookX: 0, lookY: 1.2, lookZ: 0 },
+        { camX: 20, camY: 4.8, camZ: 20, lookX: 10, lookY: 1.0, lookZ: 10 },
+        { camX: -5, camY: 5.2, camZ: 25, lookX: -5, lookY: 1.5, lookZ: -5 },
+        { camX: 22, camY: 5.8, camZ: -18, lookX: 0, lookY: 0.8, lookZ: -10 }
+    ];
+
+    let t=0;
     function drawPreview(){
         if(document.getElementById('start-screen').style.display==='none')return;
         requestAnimationFrame(drawPreview);
-        t+=0.003;
-        pvCam.position.set(Math.sin(t*.6)*.3,1.7+Math.sin(t*.4)*.04,-(t*3.5)%cL);
-        pvCam.rotation.set(Math.sin(t*.2)*.02,Math.sin(t*.4)*.06,0,'YXZ');
-        pvRen.render(pvScene,pvCam);
+        t += 0.0025;
+
+        // 시간에 따라 관찰용 방(Spot) 앵글을 순차적으로 자연스럽게 스위칭 및 회전
+        const spotIdx = Math.floor(t) % cctvSpots.length;
+        const nextIdx = (spotIdx + 1) % cctvSpots.length;
+        const remainT = t % 1;
+        
+        // 보간 처리 알고리즘 적용
+        const curr = cctvSpots[spotIdx];
+        const next = cctvSpots[nextIdx];
+        
+        const smoothT = remainT * remainT * (3 - 2 * remainT); // 부드러운 전환 효과
+        
+        const cX = curr.camX + (next.camX - curr.camX) * smoothT;
+        const cY = curr.camY + (next.camY - curr.camY) * smoothT;
+        const cZ = curr.camZ + (next.camZ - curr.camZ) * smoothT;
+        
+        const lX = curr.lookX + (next.lookX - curr.lookX) * smoothT;
+        const lY = curr.lookY + (next.lookY - curr.lookY) * smoothT;
+        const lZ = curr.lookZ + (next.lookZ - curr.lookZ) * smoothT;
+
+        // CCTV 패닝 카메라 워크 적용 (미세하게 진동 및 흔들림 추가)
+        pvCam.position.set(cX + Math.sin(t*8)*0.03, cY + Math.cos(t*6)*0.02, cZ);
+        pvCam.lookAt(lX + Math.sin(t*2)*1.2, lY, lZ + Math.cos(t * 1.5)*1.2);
+        
+        pvDir.position.copy(pvCam.position);
+        pvRen.render(pvScene, pvCam);
     }
     drawPreview();
 })();
@@ -1256,6 +1307,7 @@ function animate(){
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.02;
     if(!underground)keyHint(player.position);
 
+    // 빙고판 노란색 선 밟기 판정 로직
     if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
@@ -1266,13 +1318,18 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            const pRad = 0.05; 
+            const pRad = 0.45; // 플레이어 충돌 히트박스 반경 마진 확보
             let safe = false;
 
+            // 노란색 라인 위에 있을 경우 예외 처리로 세이프 판정 부여
             if(mx <= B_PATH_W + pRad || mx >= CELL - pRad) safe = true;
             if(mz <= B_PATH_W + pRad || mz >= CELL - pRad) safe = true;
 
-            if(!safe&&grounded){grounded=false;velY=-.025;}
+            // 칸 내부 영역으로 깊숙이 들어갔을 경우 구덩이 바닥 밑으로 낙하 유도
+            if(!safe&&grounded){
+                grounded=false;
+                velY=-.035;
+            }
         }
     }
 

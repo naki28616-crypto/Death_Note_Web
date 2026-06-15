@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Backrooms - True Escape Remastered</title>
+    <title>The Backrooms</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#050503;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -143,7 +143,7 @@
     <div id="cctv-glitch-blind"></div>
     
     <div id="start-content">
-        <div id="cctv-badge">🔴 REC — LIVE CCTV</div>
+        <div id="cctv-badge">🔴 REC — LIVE</div>
         <h2 class="title-main">LEVEL 0</h2>
         <h1 class="title-sub">THE BACKROOMS</h1>
         <div class="title-level">Demo test vr</div>
@@ -161,7 +161,7 @@
         <div class="settings-content-wrapper">
             <h1 style="font-size:28px; font-weight:900; letter-spacing:3px; margin:0 0 10px 0; color:#ffffff; font-family:monospace; text-shadow:0 0 15px rgba(255,255,255,0.2);">SETTINGS</h1>
             
-            <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT PLATFORM</div>
+            <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT TOOL</div>
             <div class="platform-mini-box">
                 <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">PC</button>
                 <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
@@ -182,7 +182,7 @@
                 <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
             </div>
             
-            <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:12px 0; border-color:#595443;" onclick="toggleFS()">📺 FULL</button>
+            <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:12px 0; border-color:#595443;" onclick="toggleFS()">📺 FULLS</button>
             
             <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
             
@@ -227,7 +227,7 @@
 
 <script>
 // ════════════════════════════════════════════
-//  CONSTANTS & MAP SCALE (EXPANDED)
+//  CONSTANTS & MAP SCALE 
 // ════════════════════════════════════════════
 const ROWS=32, COLS=32, UNIT=9, WH=7.0; 
 
@@ -240,6 +240,8 @@ const UG_Y=-35;
 let platform=null, gameActive=false, isGameOver=false, isPaused=false;
 let isFlashOn=true, sensitivity=1.0, volBgm=0.4, volSfx=0.7;
 let recTime=0, speedBoosted=false;
+let lightState = 'normal'; // 1분 40초 연출용: normal, flickering, off
+let hintSpawned = false; // 4분 연출용: 힌트 화살표 생성 여부
 
 let velY=0, grounded=true;
 const GRAVITY=-0.016, JUMP=0.18;
@@ -268,7 +270,6 @@ let hasLadder=false, ladderItem=null, ladderMesh=null, ladderPlaced=false;
 let holeGroup=null, holePosX=0, holePosZ=0, holeWallNX=0, holeWallNZ=0;
 let climbing=false, climbT=0;
 
-// 안개 농도 및 노란색 톤 짙게 최적화 보정 적용
 const BG_COL=0x8f7d3e; 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(BG_COL);
@@ -304,6 +305,76 @@ const lArm=new THREE.Mesh(sharedArmGeo,armMat); lArm.rotateX(Math.PI/2.3); lArm.
 const rArm=new THREE.Mesh(sharedArmGeo,armMat); rArm.rotateX(Math.PI/2.3); rArm.position.set(.22,-.22,-.3); fpsRig.add(rArm);
 
 // ════════════════════════════════════════════
+//  4분 연출용: 벽면 붓 자국 화살표 생성 함수
+// ════════════════════════════════════════════
+function mkArrowTex(){
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,256,256);
+    
+    // 붓 자국 느낌의 거친 화살표 그리기
+    ctx.fillStyle = 'rgba(15, 15, 12, 0.85)';
+    ctx.beginPath();
+    // 화살표 머리
+    ctx.moveTo(128, 40); ctx.lineTo(190, 120); ctx.lineTo(150, 120);
+    // 화살표 몸통
+    ctx.lineTo(150, 200); ctx.lineTo(106, 200); ctx.lineTo(106, 120);
+    ctx.lineTo(66, 120); ctx.closePath();
+    ctx.fill();
+
+    // 약간 흘러내린 페인트 연출
+    ctx.strokeStyle = 'rgba(15, 15, 12, 0.8)'; ctx.lineWidth = 4;
+    for(let i=0; i<8; i++){
+        ctx.beginPath();
+        let sx = 100 + Math.random()*50;
+        let sy = 190 + Math.random()*20;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + (Math.random()-0.5)*5, sy + 15 + Math.random()*25);
+        ctx.stroke();
+    }
+    return new THREE.CanvasTexture(c);
+}
+const arrowTex = mkArrowTex();
+const arrowMat = new THREE.MeshBasicMaterial({map: arrowTex, transparent: true, depthWrite: false});
+
+function spawnHintArrow() {
+    if (!keyMesh || underground) return;
+    
+    const pr = Math.floor((player.position.z - UNIT / 2 + (ROWS * UNIT) / 2) / UNIT);
+    const pc = Math.floor((player.position.x - UNIT / 2 + (COLS * UNIT) / 2) / UNIT);
+    
+    // 플레이어 주변 벽 찾기
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    let targetWall = null;
+    
+    for (let [dr, dc] of dirs) {
+        if (pr+dr >= 0 && pr+dr < ROWS && pc+dc >= 0 && pc+dc < COLS) {
+            if (mapData[pr+dr][pc+dc] === 1) {
+                targetWall = { r: dr, c: dc };
+                break;
+            }
+        }
+    }
+
+    if (targetWall) {
+        const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 3.5), arrowMat);
+        
+        // 벽면에 밀착 배치
+        const wx = (pc + targetWall.c - COLS / 2) * UNIT + UNIT / 2;
+        const wz = (pr + targetWall.r - ROWS / 2) * UNIT + UNIT / 2;
+        arrowMesh.position.set(wx - targetWall.c * (UNIT * 0.51), WH / 2 - 0.5, wz - targetWall.r * (UNIT * 0.51));
+        
+        // 벽면 방향에 맞춰 회전
+        arrowMesh.rotation.y = Math.atan2(targetWall.r, -targetWall.c);
+        
+        scene.add(arrowMesh);
+        hintSpawned = true;
+        showToast("벽에 누군가 남긴 표식이 나타났습니다...");
+    }
+}
+
+// ════════════════════════════════════════════
 //  TEXTURE CREATION (HIGH QUALITY WALLPAPER)
 // ════════════════════════════════════════════
 function mkWallTex(){
@@ -320,7 +391,6 @@ function mkWallTex(){
         }
     }
     x.putImageData(d,0,0);
-    // 더 촘촘하고 선명해진 빈티지 스트라이프 벽지 패턴 구축
     x.strokeStyle='rgba(148,136,83,.45)'; x.lineWidth=2;
     for(let i=0;i<256;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();}
     const t=new THREE.CanvasTexture(c); return t;
@@ -338,7 +408,6 @@ function mkCeilTex(){
     const c=document.createElement('canvas'); c.width=c.height=256;
     const x=c.getContext('2d');
     x.fillStyle='#b8ac7c'; x.fillRect(0,0,256,256);
-    // 천장 격자선 드로잉 보정
     x.strokeStyle='rgba(82,75,46,0.5)'; x.lineWidth=2;
     x.strokeRect(0,0,256,256);
     const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(28,28); return t;
@@ -349,7 +418,7 @@ const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
 
 // ════════════════════════════════════════════
-//  MAZE LOGIC (막힌 맵 완전 버그 수정 완료)
+//  MAZE LOGIC 
 // ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
@@ -433,7 +502,6 @@ function genMaze(){
     if(startR >= ROWS-1) startR = ROWS-2;
     mapData[startR][startC] = 0; 
     
-    // 유효 통로 카빙 처리 알고리즘
     function carve(r,c){
         const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
         for(const[dr,dc]of dirs){
@@ -449,7 +517,6 @@ function genMaze(){
     carve(startR, startC);
     carve(1, 1);
 
-    // [버그 수정 코드] 사방이 막혀 미아가 되는 구조를 방지하기 위한 통로 전면 상호 연결 패치 보증
     for(let r=2; r<ROWS-2; r+=2){
         for(let c=2; c<COLS-2; c+=2){
             if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]){
@@ -485,7 +552,6 @@ function buildGraphics(){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
             } else if(Math.random()<.08){
-                // [리디자인] 타일 규격에 정확하게 꽉 차오르는 전등 유닛 구조 빌드
                 const lg=new THREE.Group();
                 const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
                 const pn=new THREE.Mesh(new THREE.BoxGeometry(4.3,.05,4.3),new THREE.MeshBasicMaterial({color:0xfffcd1}));
@@ -561,7 +627,6 @@ function buildBingoPit(){
     }
     scene.add(floorGroup);
 
-    // [빙고판 리디자인 패치] 노란색 격자 발판 텍스처 자체 색상 보정
     const c=document.createElement('canvas'); c.width=c.height=64;
     const ctx=c.getContext('2d');
     ctx.fillStyle='#ffd000'; ctx.fillRect(0,0,64,64);
@@ -583,7 +648,7 @@ function buildBingoPit(){
     const vGeo = new THREE.BoxGeometry(B_PATH_W + 0.1, 0.1, PIT_TOTAL + 0.1);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
-        const p = new THREE.Mesh(vGeo, pathMat);
+        const p = new Mesh(vGeo, pathMat);
         p.position.set(x, -0.02, pitCZ);
         scene.add(p); pitMeshes.push(p);
     }
@@ -660,7 +725,7 @@ function spawnKey(){
 }
 
 // ════════════════════════════════════════════
-//  BUILD UNDERGROUND (지하 고립 방지 트랙 최적화)
+//  BUILD UNDERGROUND 
 // ════════════════════════════════════════════
 function buildUnderground(){
     ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
@@ -709,7 +774,6 @@ function buildUnderground(){
     ugCeil.rotation.x=Math.PI/2; ugCeil.position.set(ugOX,UG_Y+UG_WH,ugOZ);
     scene.add(ugCeil); ugObjs.push(ugCeil);
 
-    // 지하 가설 통로 정비로 플레이어가 어딘가 갇히지 않도록 안전 좌표 추적 보증
     function ugSafeSpawn(){
         for(let i=0;i<200;i++){
             const r=Math.floor(Math.random()*(UG_R-2))+1,c=Math.floor(Math.random()*(UG_C-2))+1;
@@ -816,12 +880,10 @@ function ugCollide(oldX, oldZ, newX, newZ, rad) {
     return { x: resultX, z: resultZ };
 }
 
-// [버그 수정] 지하 진입 시 절대 벽에 끼지 않도록 스폰 지점 마진 좌표 보정
 function enterUnderground(){
     underground=true;
     buildUnderground();
     
-    // 지하 맵 정중앙의 안전 복도 좌표를 정밀하게 추적하여 강제 배치
     let startSafeR = 1, startSafeC = 1;
     for(let r=1; r<UG_R-1; r++){
         for(let c=1; c<UG_C-1; c++){
@@ -865,7 +927,6 @@ function exitUnderground(){
     pitMeshes.forEach(m=>{m.visible=true;});
     if(pitVoid)pitVoid.visible=true;
     
-    // 지상 복귀 시 굳어버리거나 벽 속으로 텔레포트되지 않도록 피트 근처의 정밀 안전 지대로 보정
     player.position.set(pitCX + PIT_TOTAL*0.5 + 2.5, 0.1, pitCZ + PIT_TOTAL*0.5 + 2.5); 
     velY=0; grounded=true;
     scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.048;
@@ -1063,7 +1124,7 @@ function placeLadder(){
     ladderMesh.position.set(holePosX,UG_Y+UG_WH*.42,holePosZ+holeWallNZ*.25);
     ladderMesh.rotation.x=.1;
     scene.add(ladderMesh);ugObjs.push(ladderMesh);
-    showToast("🪜 사다리가 가설되었습니다!<br>▲ 키를 누른 채 등반하십시오.");
+    showToast("🪜 사다리가 설치되었습니다!<br>▲ 키를 누른 채 등반하십시오.");
 }
 
 document.getElementById('btn-mobile-interact').addEventListener('touchstart',e=>{
@@ -1195,11 +1256,8 @@ function goMainMenu(){
     
     try{if(ambO1){ambO1.stop();ambO1=null;}if(ambO2){ambO2.stop();ambO2=null;}if(khOsc){khOsc.stop();khOsc=null;}actx=null;}catch(e){}
     if(document.pointerLockElement===document.body)document.exitPointerLock();
-}
-function triggerBlackout(){
-    document.getElementById('glitch-overlay').style.cssText='background:rgba(8,7,5,.6);opacity:1;';
-    scene.background.setHex(0x12110e);scene.fog.color.setHex(0x12110e);scene.fog.density=.06;ambient.intensity=.15;
-    entities.forEach(e=>e.speed=e.baseSpeed*1.4);
+    lightState = 'normal';
+    hintSpawned = false;
 }
 
 let player=new THREE.Group(); scene.add(player);
@@ -1212,6 +1270,8 @@ function launchGame(){
     document.getElementById('quest-ui').style.display='block';
     hasKey=false;doorOpened=false;underground=false;hasLadder=false;ladderPlaced=false;climbing=false;climbT=0;
     stamina=100;exhausted=false;velY=0;grounded=true;
+    lightState = 'normal'; hintSpawned = false; speedBoosted = false;
+    
     if(platform==='mobile'){
         document.getElementById('joystick-zone').style.display='block';
         document.getElementById('mobile-controls-right').style.display='flex';
@@ -1234,12 +1294,12 @@ function launchGame(){
         e.mesh.position.set(ep.x,0,ep.z);e.lastPos.copy(e.mesh.position);
         e.patrolTarget=ep;e.state='patrol';e.scream=false;
     });
-    gameActive=true;recTime=0;speedBoosted=false;
+    gameActive=true;recTime=0;
     initAudio();
 }
 
 // ════════════════════════════════════════════
-//  MAIN PREVIEW CANVAS (CCTV 지직거림 노이즈 트랜지션 보정)
+//  MAIN PREVIEW CANVAS (CCTV: 복도, 넓은 방, 탈출구, 지하 렌더링)
 // ════════════════════════════════════════════
 (function initPreview(){
     const pvs=document.getElementById('preview-canvas');
@@ -1255,13 +1315,16 @@ function launchGame(){
     const pvDir=new THREE.PointLight(0xfff2b3, 0.8, 40); pvScene.add(pvDir);
 
     const pUNIT = 9;
-    const pROWS = 12, pCOLS = 12;
+    const pROWS = 14, pCOLS = 14;
     const pMap = Array(pROWS).fill().map(()=>Array(pCOLS).fill(1));
     
+    // 넓은 방
     for(let r=2; r<5; r++) for(let c=2; c<5; c++) pMap[r][c] = 0;
-    for(let r=7; r<10; r++) for(let c=7; c<10; c++) pMap[r][c] = 0;
-    for(let c=4; c<8; c++) pMap[3][c] = 0;
-    for(let r=3; r<8; r++) pMap[r][7] = 0;
+    // 탈출구 방
+    for(let r=9; r<12; r++) for(let c=9; c<12; c++) pMap[r][c] = 0;
+    // 복도
+    for(let c=4; c<10; c++) pMap[3][c] = 0;
+    for(let r=3; r<10; r++) pMap[r][9] = 0;
 
     const pWGeo = new THREE.BoxGeometry(pUNIT, WH, pUNIT);
     const pInst = new THREE.InstancedMesh(pWGeo, wallMat, pROWS*pCOLS);
@@ -1274,7 +1337,7 @@ function launchGame(){
                 dum.position.set((c-pCOLS/2)*pUNIT, WH/2, (r-pROWS/2)*pUNIT);
                 dum.updateMatrix();
                 pInst.setMatrixAt(idx++, dum.matrix);
-            } else if(Math.random() < 0.15) {
+            } else if(Math.random() < 0.2) {
                 const pl = new THREE.PointLight(0xfff1aa, 0.5, 14);
                 pl.position.set((c-pCOLS/2)*pUNIT, WH-0.5, (r-pROWS/2)*pUNIT);
                 pvScene.add(pl);
@@ -1284,16 +1347,26 @@ function launchGame(){
     pInst.instanceMatrix.needsUpdate = true;
     pvScene.add(pInst);
 
+    // 탈출문 모형 (가짜 불빛)
+    const doorLight = new THREE.PointLight(0x00ff44, 1.5, 20);
+    doorLight.position.set((10-pCOLS/2)*pUNIT, 3, (10-pROWS/2)*pUNIT);
+    pvScene.add(doorLight);
+
+    // 지하 구덩이 모형 (가짜 불빛)
+    const holeLight = new THREE.PointLight(0x00dd55, 2.5, 25);
+    holeLight.position.set((3-pCOLS/2)*pUNIT, 1, (3-pROWS/2)*pUNIT);
+    pvScene.add(holeLight);
+
     const pFl = new THREE.Mesh(new THREE.PlaneGeometry(200,200), floorMat);
     pFl.rotation.x = -Math.PI/2; pvScene.add(pFl);
     const pCe = new THREE.Mesh(new THREE.PlaneGeometry(200,200), ceilMat);
     pCe.rotation.x = Math.PI/2; pCe.position.y = WH; pvScene.add(pCe);
 
     const cctvSpots = [
-        { camX: -15, camY: 5.5, camZ: -15, lookX: 0, lookY: 1.2, lookZ: 0 },
-        { camX: 20, camY: 4.8, camZ: 20, lookX: 10, lookY: 1.0, lookZ: 10 },
-        { camX: -5, camY: 5.2, camZ: 25, lookX: -5, lookY: 1.5, lookZ: -5 },
-        { camX: 22, camY: 5.8, camZ: -18, lookX: 0, lookY: 0.8, lookZ: -10 }
+        { camX: -10, camY: 5.5, camZ: -10, lookX: 10, lookY: 2, lookZ: -10 }, // 복도
+        { camX: -15, camY: 6.0, camZ: -15, lookX: -30, lookY: 1, lookZ: -30 }, // 넓은 방
+        { camX: 30, camY: 4.0, camZ: 30, lookX: 36, lookY: 2, lookZ: 36 }, // 탈출구 방
+        { camX: -20, camY: 5.5, camZ: -20, lookX: -27, lookY: 0, lookZ: -27 } // 지하 구덩이 느낌
     ];
 
     let t=0;
@@ -1307,7 +1380,7 @@ function launchGame(){
 
         const spotIdx = Math.floor(t) % cctvSpots.length;
         
-        // [CCTV 전환 알고리즘 패치] 스위칭 순간에 암전 노이즈 플래시 글리치 연출 발동
+        // 화면 전환 시 노이즈 및 깜빡임 효과
         if(spotIdx !== lastSpotIdx){
             lastSpotIdx = spotIdx;
             blindEl.style.opacity = '1';
@@ -1351,14 +1424,37 @@ function animate(){
     recTime+=1/60;
     const m=Math.floor(recTime/60),s=Math.floor(recTime%60);
     document.getElementById('cctv-time').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if(recTime>=100&&!speedBoosted){ 
-        speedBoosted=true;
-        triggerBlackout();
+
+    // [연출 추가] 1분 40초 (100초) 전등 깜빡임 시작
+    if(recTime >= 100 && recTime < 104 && lightState === 'normal') {
+        lightState = 'flickering';
     }
+    if(lightState === 'flickering') {
+        // 무작위로 밝기 조절하여 깜빡임 효과
+        if (Math.random() < 0.2) {
+            ambient.intensity = Math.random() * 0.8;
+            scene.fog.density = 0.08;
+        }
+        // 104초에 완전 소등
+        if(recTime >= 104) {
+            lightState = 'off';
+            ambient.intensity = 0.05;
+            scene.fog.density = 0.08;
+            lamps.forEach(l => { if(l.isPointLight) l.intensity = 0; });
+            document.getElementById('glitch-overlay').style.cssText='background:rgba(5,5,5,.8);opacity:1;';
+            entities.forEach(e => e.speed = e.baseSpeed * 1.4);
+            speedBoosted = true;
+        }
+    }
+
+    // [연출 추가] 4분 (240초) 경과 시 벽면에 화살표 힌트 낙서 표시
+    if(recTime >= 240 && !hintSpawned) {
+        spawnHintArrow();
+    }
+
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.02;
     if(!underground)keyHint(player.position);
 
-    // [버그 수정 완료] 빙고판 노란색 선 밟기 판정 메커니즘 붕괴 패치 완료
     if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
@@ -1369,16 +1465,15 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            const pRad = 0.45; // 플레이어 중심 반경 마진 안정화 확보
+            const pRad = 0.45; 
             let safe = false;
 
-            // 노란색선 바운더리 검증 연산 수정 (이제 선 위에 서 있으면 완전히 밞히고 떨어지지 않음)
             if(mx <= (B_PATH_W + pRad) || mx >= (CELL - pRad)) safe = true;
             if(mz <= (B_PATH_W + pRad) || mz >= (CELL - pRad)) safe = true;
 
             if(!safe && grounded){
                 grounded=false;
-                velY=-.04; // 검은 구덩이 내부로의 중력 추락 유도 가동
+                velY=-.04; 
             }
         }
     }

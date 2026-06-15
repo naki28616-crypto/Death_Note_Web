@@ -13,14 +13,18 @@
         #cctv-ui{position:absolute;top:25px;left:25px;color:#ff3333;font-weight:bold;font-size:16px;z-index:210;letter-spacing:1.5px;pointer-events:none;font-family:monospace;display:none;text-shadow:0 0 8px rgba(255,51,51,0.7);}
         #quest-ui{position:absolute;top:60px;left:25px;color:#ffea9f;font-weight:bold;font-size:14px;z-index:210;letter-spacing:1px;pointer-events:none;background:rgba(12,11,9,.9);padding:10px 16px;border-left:3px solid #d1bd71;border-radius:0 4px 4px 0;display:none;text-shadow:0 1px 4px rgba(0,0,0,1);box-shadow:0 4px 12px rgba(0,0,0,.6);}
         #interact-prompt{position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);color:#fff;background:rgba(0,0,0,.85);border:1px solid #d1bd71;padding:10px 20px;border-radius:4px;font-weight:bold;font-size:14px;z-index:100;display:none;pointer-events:none;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.5);}
-        #top-controls{position:absolute;top:16px;right:16px;z-index:220;display:none;flex-direction:column;align-items:flex-end;gap:6px;}
-        #ui-container{color:#e8e4cf;background:rgba(8,8,6,.98);padding:14px;border-radius:6px;border:1px solid #474436;width:220px;transition:all .3s;max-height:450px;opacity:1;overflow:hidden;transform-origin:top right;box-shadow:0 10px 25px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:12px;}
-        #ui-container.collapsed{max-height:0;padding:0 14px;opacity:0;border:0 solid transparent;pointer-events:none;}
-        .btn{background:#1a1914;color:#d1bd71;border:1px solid #474436;padding:9px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;white-space:nowrap;transition:all .2s;width:100%;text-align:center;box-sizing:border-box;}
+        
+        /* 인게임 상단 일시정지 전용 헤드 버튼 */
+        #top-controls{position:absolute;top:16px;right:16px;z-index:220;display:none;}
+        
+        .btn{background:#1a1914;color:#d1bd71;border:1px solid #474436;padding:9px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;white-space:nowrap;transition:all .2s;text-align:center;box-sizing:border-box;}
         .btn:hover{background:#2e2b21;color:#ffea9f;border-color:#615d4a;}
-        .setting-row{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#d1bd71;font-weight:bold;}
+        
+        /* 설정 행 폰트 및 구조 정렬 */
+        .setting-row{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;}
         .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;}
-        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:2px;}
+        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:2px;cursor:pointer;}
+        
         #mobile-controls-right{position:absolute;bottom:30px;right:30px;display:none;flex-direction:column;gap:15px;z-index:220;}
         .circle-btn{width:64px;height:64px;background:rgba(20,19,16,.95);border:2px solid #544e3e;border-radius:50%;color:#e8e4cf;font-size:24px;display:flex;justify-content:center;align-items:center;cursor:pointer;touch-action:none;box-shadow:0 6px 14px rgba(0,0,0,.8);}
         .circle-btn.active{background:#d1bd71;color:#111;border-color:#fff;}
@@ -35,7 +39,7 @@
         #joystick-zone{position:absolute;bottom:35px;left:35px;width:120px;height:120px;background:rgba(255,255,255,.03);border:2px solid rgba(255,255,255,.15);border-radius:50%;z-index:10;touch-action:none;display:none;}
         #joystick-stick{position:absolute;top:37px;left:37px;width:46px;height:46px;background:rgba(255,255,255,.3);border-radius:50%;}
 
-        /* ─── START SCREEN (LEFT-ALIGNED LAYOUT) ─── */
+        /* ─── START SCREEN ─── */
         #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;}
         #preview-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;}
         #scanline-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px);pointer-events:none;z-index:2;animation:scanlines 8s linear infinite;}
@@ -50,10 +54,9 @@
         
         .title-main{font-size:24px;font-weight:600;letter-spacing:10px;margin:0;color:#d1bd71;opacity:.85;font-family:monospace;text-shadow:0 2px 4px rgba(0,0,0,0.8);}
         .title-sub{font-size:52px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;text-shadow:0 0 25px rgba(209,189,113,.7), 0 4px 10px rgba(0,0,0,0.9);}
-        .title-level{font-size:15px;font-weight:600;letter-spacing:3px;margin:6px 0 40px;color:#9e9573;font-family:monospace;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+        .title-level{font-size:15px;font-weight:600;letter-spacing:3px;margin:6px 0 30px;color:#9e9573;font-family:monospace;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
         
-        /* Interactive Menu Group */
-        .menu-group{display:flex;flex-direction:column;gap:16px;align-items:flex-start;}
+        .menu-group{display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
         
         .start-btn-container{position:relative;width:180px;height:54px;display:flex;justify-content:center;align-items:center;cursor:pointer;background:rgba(20,19,16,.85);border:2px solid #d1bd71;border-radius:4px;box-shadow:0 4px 15px rgba(0,0,0,0.6);transition:all 0.25s ease;}
         .start-btn-container:hover{background:#d1bd71;box-shadow:0 0 25px rgba(209,189,113,0.5);}
@@ -63,11 +66,33 @@
         .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
         .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
         
-        .inline-settings-panel{max-height:0;opacity:0;overflow:hidden;transition:all 0.35s cubic-bezier(0.4, 0, 0.2, 1);display:flex;flex-direction:column;gap:14px;background:rgba(10,9,7,0.95);border:0 solid #474436;padding:0 20px;width:260px;border-radius:4px;box-sizing:border-box;}
-        .inline-settings-panel.open{max-height:160px;opacity:1;padding:16px;border:1px solid #474436;margin-top:4px;box-shadow:0 10px 20px rgba(0,0,0,0.5);}
+        /* 모든 인게임 설정이 집약된 단일화된 세팅 패널 */
+        .inline-settings-panel {
+            max-height: 0;
+            opacity: 0;
+            overflow-y: auto;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(10,9,7,0.97);
+            border: 0 solid #474436;
+            padding: 0 20px;
+            width: 290px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .inline-settings-panel.open {
+            max-height: 380px;
+            opacity: 1;
+            padding: 18px;
+            border: 1px solid #474436;
+            margin-top: 4px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
         
         .platform-mini-box{display:flex;gap:10px;width:100%;}
-        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:9px 0;font-size:12px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
+        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:9px 0;font-size:11px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
         .platform-choice-btn.selected{background:#d1bd71;color:#1c1b17;border-color:#fff;box-shadow:0 4px 12px rgba(209,189,113,.3);font-weight:900;}
 
         #gameover-screen,#pause-screen,#clear-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(3,3,2,.98);z-index:150;display:none;flex-direction:column;justify-content:center;align-items:center;}
@@ -95,39 +120,49 @@
     <div id="vignette-overlay"></div>
     <div id="noise-overlay"></div>
     <div id="start-content">
-        <div id="cctv-badge">🔴 REC </div>
+        <div id="cctv-badge">🔴 REC — LIVE</div>
         <h2 class="title-main">THE BACKROOMS</h2>
         <div class="title-level">LEVEL 0 </div>
         
         <div class="menu-group">
             <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
-                <span class="start-label">LAUNCH</span>
+                <span class="start-label">START</span>
             </div>
             
-            <button class="setting-toggle-btn" onclick="toggleStartSettings()">⚙️ SETTINGS</button>
+            <button class="setting-toggle-btn" onclick="toggleStartSettings()">⚙️ SETTING</button>
             
             <div id="start-settings-panel" class="inline-settings-panel">
-                <div style="font-size:11px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-4px;">SELECT PLATFORM</div>
+                <div style="font-size:11px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-2px;">SELECT TOOL</div>
                 <div class="platform-mini-box">
                     <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">DESKTOP</button>
                     <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
                 </div>
-                <div style="font-size:10px; color:#6b644c; line-height:1.3; font-family:monospace; margin-top:4px;">* Mobile layout provides virtual joystick controls.</div>
+                
+                <hr style="border:0; border-top:1px solid #3d3a2e; margin:4px 0;">
+                
+                <div class="setting-row">
+                    <div><span>Sensitivity</span><span id="txt-sens">1.0</span></div>
+                    <input type="range" id="cfg-sens" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSens(this.value)">
+                </div>
+                <div class="setting-row">
+                    <div><span>BGM Volume</span><span id="txt-bgm">40%</span></div>
+                    <input type="range" id="cfg-bgm" min="0" max="100" step="5" value="40" oninput="updateBgm(this.value)">
+                </div>
+                <div class="setting-row">
+                    <div><span>SFX Volume</span><span id="txt-sfx">70%</span></div>
+                    <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
+                </div>
+                
+                <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:7px 0; border-color:#595443;" onclick="toggleFS()">📺 TOGGLE FULLSCREEN</button>
             </div>
         </div>
     </div>
 </div>
 
 <div id="top-controls">
-    <button id="btn-toggle-panel" class="btn" style="background:#1a1914;color:#d1bd71;width:44px;height:38px;font-size:16px;padding:0;" onclick="togglePanel()">◢</button>
-    <div id="ui-container" class="collapsed">
-        <button class="btn" style="background:#5e1919;color:#fff;border-color:#822525;" onclick="triggerPause(true)">⏸ PAUSE</button>
-        <button class="btn" style="background:#193f5e;color:#fff;border-color:#255b82;" onclick="toggleFS()">📺 FULLSCREEN</button>
-        <div class="setting-row"><div><span>Sensitivity</span><span id="txt-sens">1.0</span></div><input type="range" id="cfg-sens" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSens(this.value)"></div>
-        <div class="setting-row"><div><span>BGM Vol</span><span id="txt-bgm">40%</span></div><input type="range" id="cfg-bgm" min="0" max="100" step="5" value="40" oninput="updateBgm(this.value)"></div>
-        <div class="setting-row"><div><span>SFX Vol</span><span id="txt-sfx">70%</span></div><input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)"></div>
-    </div>
+    <button class="btn" style="background:#5e1919; color:#fff; border-color:#822525; padding: 8px 16px; font-size:12px;" onclick="triggerPause(true)">⏸ PAUSE</button>
 </div>
+
 <div id="mobile-controls-right">
     <div id="btn-mobile-interact" class="circle-btn">🚪</div>
     <div id="btn-mobile-flash" class="circle-btn active" ontouchstart="handleFlash(event)">🔦</div>
@@ -160,25 +195,25 @@
 
 <script>
 // ════════════════════════════════════════════
-//  CONSTANTS & PERFORMANCE TUNING (OPTIMIZED)
+//  CONSTANTS & MAP SCALE EXTENSION (EXPANDED)
 // ════════════════════════════════════════════
-// 렉 감소를 위해 맵 스케일을 적정 황금비 크기(32x32)로 압축 및 파티클 연산 최적화
-const ROWS=32, COLS=32, UNIT=5, WH=5.0; 
+// ROWS, COLS는 32x32로 고정하고, 한 칸의 크기(UNIT)와 높이(WH)를 확장하여 길과 넓이를 극대화
+const ROWS=32, COLS=32, UNIT=9, WH=7.0; 
 
 let mapData=[], reserved=[];
 let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
 
-const UG_R=12, UG_C=12, UG_U=4.5, UG_WH=4.2;
-const UG_Y=-25; 
+const UG_R=12, UG_C=12, UG_U=8.0, UG_WH=6.5;
+const UG_Y=-35; 
 
 let platform=null, gameActive=false, isGameOver=false, isPaused=false;
 let isFlashOn=true, sensitivity=1.0, volBgm=0.4, volSfx=0.7;
-let recTime=0, speedBoosted=false, panelOpen=false;
+let recTime=0, speedBoosted=false;
 
 let velY=0, grounded=true;
-const GRAVITY=-0.015, JUMP=0.16;
+const GRAVITY=-0.016, JUMP=0.18;
 let lastHB=0;
-const SPD_BASE=0.10, SPD_SPRINT=0.16, SPD_TIRED=0.06;
+const SPD_BASE=0.14, SPD_SPRINT=0.24, SPD_TIRED=0.08;
 let stamina=100, exhausted=false, moving=false, sprinting=false;
 
 let hasKey=false, doorOpened=false;
@@ -191,8 +226,8 @@ let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
 let pitMeshes=[], pitVoid=null;
 
 const B_GRID_DIV = 3;    
-const B_PATH_W = 1.0;    
-const B_HOLE_W = 3.6;    
+const B_PATH_W = 1.8;    
+const B_HOLE_W = 6.0;    
 let PIT_TOTAL = 15; 
 
 let underground=false;
@@ -205,20 +240,20 @@ let climbing=false, climbT=0;
 const BG_COL=0xa39458;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(BG_COL);
-scene.fog=new THREE.FogExp2(BG_COL,0.06);
+scene.fog=new THREE.FogExp2(BG_COL,0.035); // 거리가 넓어짐에 따라 안개 농도 최적화
 
-const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,0.1,120);
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.shadowMap.enabled=false;
 document.body.appendChild(renderer.domElement);
 
-const ambient=new THREE.AmbientLight(0xeee9b5,0.8);
+const ambient=new THREE.AmbientLight(0xeee9b5,0.85);
 scene.add(ambient);
 
 const fpsRig=new THREE.Group(); scene.add(fpsRig);
-const flash=new THREE.SpotLight(0xfffbe6,1.6,32,Math.PI/4.8,0.5,0.6);
+const flash=new THREE.SpotLight(0xfffbe6,1.8,45,Math.PI/4.5,0.5,0.6);
 const flashTgt=new THREE.Object3D(); flashTgt.position.set(0,0,-10);
 fpsRig.add(flash,flashTgt); flash.target=flashTgt;
 
@@ -237,7 +272,7 @@ const lArm=new THREE.Mesh(sharedArmGeo,armMat); lArm.rotateX(Math.PI/2.3); lArm.
 const rArm=new THREE.Mesh(sharedArmGeo,armMat); rArm.rotateX(Math.PI/2.3); rArm.position.set(.22,-.22,-.3); fpsRig.add(rArm);
 
 // ════════════════════════════════════════════
-//  OPTIMIZED TEXTURE CREATION (LOW RESOURCE)
+//  TEXTURE CREATION 
 // ════════════════════════════════════════════
 function mkWallTex(){
     const c=document.createElement('canvas'); c.width=c.height=128;
@@ -257,13 +292,13 @@ function mkFloorTex(){
     const d=x.getImageData(0,0,256,256);
     for(let i=0;i<d.data.length;i+=4){const g=(Math.random()-.5)*18;d.data[i]=Math.max(0,Math.min(255,d.data[i]+g));d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+g));d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+g));}
     x.putImageData(d,0,0);
-    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(16,16); return t;
+    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(24,24); return t;
 }
 function mkCeilTex(){
     const c=document.createElement('canvas'); c.width=c.height=128;
     const x=c.getContext('2d');
     x.fillStyle='#c7bc91'; x.fillRect(0,0,128,128);
-    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(20,20); return t;
+    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(28,28); return t;
 }
 const wallTex=mkWallTex(), floorTex=mkFloorTex(), ceilTex=mkCeilTex();
 const wallMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.9});
@@ -365,14 +400,14 @@ function buildGraphics(){
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
-            } else if(Math.random()<.08 && !reserved[r][c]){
+            } else if(Math.random()<.06 && !reserved[r][c]){
                 const lg=new THREE.Group();
-                const fr=new THREE.Mesh(new THREE.BoxGeometry(2.0,.04,1.0),new THREE.MeshStandardMaterial({color:0x222222}));
-                const pn=new THREE.Mesh(new THREE.BoxGeometry(1.8,.05,0.8),new THREE.MeshBasicMaterial({color:0xfffbc4}));
+                const fr=new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,1.5),new THREE.MeshStandardMaterial({color:0x222222}));
+                const pn=new THREE.Mesh(new THREE.BoxGeometry(2.7,.05,1.2),new THREE.MeshBasicMaterial({color:0xfffbc4}));
                 pn.position.y=-.01; lg.add(fr,pn);
                 lg.position.set(wx,WH-.02,wz);
                 scene.add(lg); lamps.push(lg);
-                const pl=new THREE.PointLight(0xfff2b3,.5,10,1.5);
+                const pl=new THREE.PointLight(0xfff2b3,.6,15,1.2);
                 pl.position.set(wx,WH-.2,wz); scene.add(pl); lamps.push(pl);
             }
         }
@@ -444,7 +479,7 @@ function buildBingoPit(){
     const pathMat = new THREE.MeshStandardMaterial({map:floorTex, roughness:0.95});
     const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.9});
     const voidMat = new THREE.MeshBasicMaterial({color:0x010101});
-    const holeDepth = 15;
+    const holeDepth = 18;
 
     const hGeo = new THREE.BoxGeometry(PIT_TOTAL + 0.1, 0.1, B_PATH_W + 0.1);
     for(let i=0; i<=B_GRID_DIV; i++) {
@@ -483,8 +518,8 @@ function buildBingoPit(){
     pitVoid.position.set(pitCX, -holeDepth + 0.05, pitCZ);
     scene.add(pitVoid);
 
-    const deepLight = new THREE.PointLight(0x0a33cc, 1.5, 25, 2);
-    deepLight.position.set(pitCX, -8, pitCZ);
+    const deepLight = new THREE.PointLight(0x0a33cc, 1.6, 35, 2);
+    deepLight.position.set(pitCX, -10, pitCZ);
     scene.add(deepLight); pitMeshes.push(deepLight);
 }
 
@@ -495,41 +530,41 @@ function spawnDoor(){
     doorGroup.rotation.y = escapeDoorPos.ang;
 
     const fMat2=new THREE.MeshStandardMaterial({color:0x1b130e,roughness:.9});
-    const lp=new THREE.Mesh(new THREE.BoxGeometry(.12,2.6,.15),fMat2); lp.position.set(-.8,1.3,0);
-    const rp=new THREE.Mesh(new THREE.BoxGeometry(.12,2.6,.15),fMat2); rp.position.set(.8,1.3,0);
-    const tp=new THREE.Mesh(new THREE.BoxGeometry(1.7,.12,.15),fMat2); tp.position.set(0,2.6,0);
+    const lp=new THREE.Mesh(new THREE.BoxGeometry(.15,3.2,.2),fMat2); lp.position.set(-1.1,1.6,0);
+    const rp=new THREE.Mesh(new THREE.BoxGeometry(.15,3.2,.2),fMat2); rp.position.set(1.1,1.6,0);
+    const tp=new THREE.Mesh(new THREE.BoxGeometry(2.3,.15,.2),fMat2); tp.position.set(0,3.2,0);
     
-    const blockL=new THREE.Mesh(new THREE.BoxGeometry(1.6,WH,0.8),fMat2); blockL.position.set(-1.6,WH/2,0);
-    const blockR=new THREE.Mesh(new THREE.BoxGeometry(1.6,WH,0.8),fMat2); blockR.position.set(1.6,WH/2,0);
+    const blockL=new THREE.Mesh(new THREE.BoxGeometry(3.0,WH,1.2),fMat2); blockL.position.set(-2.6,WH/2,0);
+    const blockR=new THREE.Mesh(new THREE.BoxGeometry(3.0,WH,1.2),fMat2); blockR.position.set(2.6,WH/2,0);
     doorGroup.add(lp,rp,tp,blockL,blockR);
 
-    doorPivot=new THREE.Group(); doorPivot.position.set(-.75,1.3,0);
-    const dp=new THREE.Mesh(new THREE.BoxGeometry(1.5,2.48,.1),new THREE.MeshStandardMaterial({color:0x362113,roughness:.8}));
-    dp.position.set(.75,0,0); doorPivot.add(dp);
-    const kn=new THREE.Mesh(new THREE.SphereGeometry(.05,8,8),new THREE.MeshStandardMaterial({color:0xcca233,metalness:.7}));
-    kn.position.set(.6,0,.07); dp.add(kn);
+    doorPivot=new THREE.Group(); doorPivot.position.set(-1.0,1.6,0);
+    const dp=new THREE.Mesh(new THREE.BoxGeometry(2.0,3.05,.12),new THREE.MeshStandardMaterial({color:0x362113,roughness:.8}));
+    dp.position.set(1.0,0,0); doorPivot.add(dp);
+    const kn=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),new THREE.MeshStandardMaterial({color:0xcca233,metalness:.7}));
+    kn.position.set(.8,0,.08); dp.add(kn);
     doorGroup.add(doorPivot);
 
-    const corr=new THREE.Mesh(new THREE.BoxGeometry(4.0,2.6,2.5),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide}));
-    corr.position.set(0,1.3,-1.25); doorGroup.add(corr);
+    const corr=new THREE.Mesh(new THREE.BoxGeometry(5.0,3.2,3.5),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide}));
+    corr.position.set(0,1.6,-1.75); doorGroup.add(corr);
     
     scene.add(doorGroup); doorGroup.updateMatrixWorld(true);
-    const sOff=new THREE.Vector3(0,1.0,-2.0); sOff.applyQuaternion(doorGroup.quaternion);
+    const sOff=new THREE.Vector3(0,1.0,-2.5); sOff.applyQuaternion(doorGroup.quaternion);
     escapeSensor.copy(doorGroup.position).add(sOff);
     
-    const gl=new THREE.PointLight(0x00ff44,0,5); gl.position.set(0,1.3,-.2);
+    const gl=new THREE.PointLight(0x00ff44,0,6); gl.position.set(0,1.6,-.2);
     doorGroup.add(gl); doorGroup.greenLight=gl;
 }
 
 function spawnKey(){
     if(keyMesh)scene.remove(keyMesh);
     keyMesh=new THREE.Group();
-    const kr=new THREE.Mesh(new THREE.TorusGeometry(.12,.03,6,12),new THREE.MeshStandardMaterial({color:0xee9900,metalness:.8}));
-    const kb=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.3),new THREE.MeshStandardMaterial({color:0xee9900}));
-    kb.position.y=-.15; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
-    const kl=new THREE.PointLight(0xffcc33,2.0,10,1.5); kl.position.y=.15; keyMesh.add(kl);
-    const kp=safeSpawn({x:pitCX, z:pitCZ}, 25, true); 
-    keyMesh.position.set(kp.x,.6,kp.z); scene.add(keyMesh);
+    const kr=new THREE.Mesh(new THREE.TorusGeometry(.16,.04,6,12),new THREE.MeshStandardMaterial({color:0xee9900,metalness:.8}));
+    const kb=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.4),new THREE.MeshStandardMaterial({color:0xee9900}));
+    kb.position.y=-.2; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
+    const kl=new THREE.PointLight(0xffcc33,2.2,12,1.2); kl.position.y=.2; keyMesh.add(kl);
+    const kp=safeSpawn({x:pitCX, z:pitCZ}, 35, true); 
+    keyMesh.position.set(kp.x,.8,kp.z); scene.add(keyMesh);
 }
 
 function buildUnderground(){
@@ -590,12 +625,12 @@ function buildUnderground(){
     const lsp=ugSafeSpawn();
     ladderItem=new THREE.Group();
     const lMat=new THREE.MeshStandardMaterial({color:0xb5782d,roughness:.6});
-    const lv1=new THREE.Mesh(new THREE.BoxGeometry(.05,.7,.05),lMat); lv1.position.set(-.13,0,0);
-    const lv2=new THREE.Mesh(new THREE.BoxGeometry(.05,.7,.05),lMat); lv2.position.set(.13,0,0);
+    const lv1=new THREE.Mesh(new THREE.BoxGeometry(.06,.9,.06),lMat); lv1.position.set(-.18,0,0);
+    const lv2=new THREE.Mesh(new THREE.BoxGeometry(.06,.9,.06),lMat); lv2.position.set(.18,0,0);
     ladderItem.add(lv1,lv2);
-    for(let i=0; i<4; i++){const lh=new THREE.Mesh(new THREE.BoxGeometry(.31,.04,.04),lMat);lh.position.set(0,-.25+i*.16,0);ladderItem.add(lh);}
-    const ll=new THREE.PointLight(0xff9911,1.8,4); ll.position.set(0,.4,0); ladderItem.add(ll);
-    ladderItem.position.set(lsp.x,UG_Y+.4,lsp.z);
+    for(let i=0; i<4; i++){const lh=new THREE.Mesh(new THREE.BoxGeometry(.4,.05,.05),lMat);lh.position.set(0,-.3+i*.2,0);ladderItem.add(lh);}
+    const ll=new THREE.PointLight(0xff9911,2.0,6); ll.position.set(0,.5,0); ladderItem.add(ll);
+    ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
     scene.add(ladderItem); ugObjs.push(ladderItem);
 
     let holeR=1,holeC=1,holeWR=-1,holeWC=0;
@@ -608,14 +643,14 @@ function buildUnderground(){
     holeGroup.rotation.y=Math.atan2(holeWallNX,holeWallNZ);
 
     const holeMat=new THREE.MeshStandardMaterial({color:0x00dd55,emissive:0x00dd55,emissiveIntensity:.7,roughness:.4});
-    const hW=1.1,hH=1.3;
-    const hTop=new THREE.Mesh(new THREE.BoxGeometry(hW+.08,.06,.06),holeMat); hTop.position.set(0,hH/2,0);
-    const hBot=new THREE.Mesh(new THREE.BoxGeometry(hW+.08,.06,.06),holeMat); hBot.position.set(0,-hH/2,0);
-    const hL=new THREE.Mesh(new THREE.BoxGeometry(.06,hH,.06),holeMat); hL.position.set(-hW/2,0,0);
-    const hR=new THREE.Mesh(new THREE.BoxGeometry(.06,hH,.06),holeMat); hR.position.set(hW/2,0,0);
-    const hIn=new THREE.Mesh(new THREE.BoxGeometry(hW,hH,.04),new THREE.MeshBasicMaterial({color:0x000000}));
+    const hW=1.4,hH=1.8;
+    const hTop=new THREE.Mesh(new THREE.BoxGeometry(hW+.1,.07,.07),holeMat); hTop.position.set(0,hH/2,0);
+    const hBot=new THREE.Mesh(new THREE.BoxGeometry(hW+.1,.07,.07),holeMat); hBot.position.set(0,-hH/2,0);
+    const hL=new THREE.Mesh(new THREE.BoxGeometry(.07,hH,.07),holeMat); hL.position.set(-hW/2,0,0);
+    const hR=new THREE.Mesh(new THREE.BoxGeometry(.07,hH,.07),holeMat); hR.position.set(hW/2,0,0);
+    const hIn=new THREE.Mesh(new THREE.BoxGeometry(hW,hH,.05),new THREE.MeshBasicMaterial({color:0x000000}));
     holeGroup.add(hTop,hBot,hL,hR,hIn);
-    const hl1=new THREE.PointLight(0x00dd55,3.0,8); hl1.position.set(0,0,.25); holeGroup.add(hl1);
+    const hl1=new THREE.PointLight(0x00dd55,3.2,10); hl1.position.set(0,0,.3); holeGroup.add(hl1);
     scene.add(holeGroup); ugObjs.push(holeGroup);
 }
 
@@ -629,7 +664,7 @@ function gridCollide(ox, oz, nx, nz, rad) {
     if (!doorOpened && doorGroup) {
         const ddx = doorGroup.position.x - nx;
         const ddz = doorGroup.position.z - nz;
-        if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.0) return { x: ox, z: oz }; 
+        if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.5) return { x: ox, z: oz }; 
     }
 
     let resultX = nx;
@@ -699,8 +734,8 @@ function enterUnderground(){
     if(doorGroup)doorGroup.visible=false;
     pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;});
     if(pitVoid)pitVoid.visible=false;
-    scene.background.setHex(0x140b04); scene.fog.color.setHex(0x140b04); scene.fog.density=0.1;
-    ambient.intensity=0.5; flash.intensity=isFlashOn?2.8:0;
+    scene.background.setHex(0x140b04); scene.fog.color.setHex(0x140b04); scene.fog.density=0.07;
+    ambient.intensity=0.5; flash.intensity=isFlashOn?3.2:0;
     showToast("⬇ 구덩이에 추락했습니다!<br>🪜 사다리를 수색하여 탈출하십시오.");
 }
 
@@ -722,8 +757,8 @@ function exitUnderground(){
     
     player.position.set(pitCX+UNIT*1.5,0,pitCZ+UNIT*1.5); 
     velY=0; grounded=true;
-    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.06;
-    ambient.intensity=0.8; flash.intensity=isFlashOn?1.6:0;
+    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.035;
+    ambient.intensity=0.85; flash.intensity=isFlashOn?1.8:0;
     showToast("⬆ 지상 복귀 완료!<br>🏃 외곽 길을 타고 신속히 이동하세요!");
 }
 
@@ -734,21 +769,21 @@ let entities=[];
 function mkEntity(){
     const e=new THREE.Group();
     const em=new THREE.MeshStandardMaterial({color:0x070707,roughness:.8});
-    const core=new THREE.Mesh(new THREE.SphereGeometry(.32,6,6),em); core.position.y=1.3; e.add(core);
+    const core=new THREE.Mesh(new THREE.SphereGeometry(.38,6,6),em); core.position.y=1.5; e.add(core);
     const legs=[];
     for(let j=0;j<4;j++){
         const lr=new THREE.Group(); const ang=(j/4)*Math.PI*2;
-        lr.position.set(Math.cos(ang)*.2,1.2,Math.sin(ang)*.2);
-        const up=new THREE.Mesh(new THREE.CylinderGeometry(.025,.018,.9),em); up.position.y=-.35; up.rotation.z=.4; lr.add(up);
-        const lo=new THREE.Mesh(new THREE.CylinderGeometry(.015,.01,1.0),em); lo.position.set(.25,-.9,0); lo.rotation.z=-.8; up.add(lo);
+        lr.position.set(Math.cos(ang)*.25,1.4,Math.sin(ang)*.25);
+        const up=new THREE.Mesh(new THREE.CylinderGeometry(.03,.02,.1),em); up.position.y=-.4; up.rotation.z=.4; lr.add(up);
+        const lo=new THREE.Mesh(new THREE.CylinderGeometry(.018,.012,1.2),em); lo.position.set(.3,-1.0,0); lo.rotation.z=-.8; up.add(lo);
         e.add(lr); legs.push(lr);
     }
     const eyM=new THREE.MeshBasicMaterial({color:0xee0000});
-    const ey=new THREE.Mesh(new THREE.SphereGeometry(.05,4,4),eyM);ey.position.set(0,1.4,.3);e.add(ey);
+    const ey=new THREE.Mesh(new THREE.SphereGeometry(.06,4,4),eyM);ey.position.set(0,1.6,.35);e.add(ey);
     scene.add(e); return{mesh:e,legs,core};
 }
 const ed=mkEntity();
-entities.push({mesh:ed.mesh,legs:ed.legs,core:ed.core,state:'patrol',patrolTarget:null,baseSpeed:.055,speed:.055,stuckT:0,lastPos:new THREE.Vector3(),scream:false});
+entities.push({mesh:ed.mesh,legs:ed.legs,core:ed.core,state:'patrol',patrolTarget:null,baseSpeed:.07,speed:.07,stuckT:0,lastPos:new THREE.Vector3(),scream:false});
 
 function entityAI(e,pp){
     const ep=e.mesh.position;
@@ -759,25 +794,25 @@ function entityAI(e,pp){
         if(sd<.2)e.patrolTarget=safeSpawn(pp,0,true);
         e.lastPos.copy(ep);e.stuckT=0;
     }
-    if(dist<14&&!isGameOver&&player.position.y>=-0.2){
+    if(dist<20&&!isGameOver&&player.position.y>=-0.2){ // 감지 범위 사정거리 확장
         if(!e.scream){e.scream=true;scream(true);}e.state='chase';
-    }else if(e.state==='chase'&&(dist>20||player.position.y<-.2)){
+    }else if(e.state==='chase'&&(dist>28||player.position.y<-.2)){
         e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,true);
     }
     const dest=e.state==='chase'?pp:e.patrolTarget;
-    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<1.5&&Math.abs(ep.z-dest.z)<1.5)e.patrolTarget=safeSpawn(pp,0,true);
+    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<2.0&&Math.abs(ep.z-dest.z)<2.0)e.patrolTarget=safeSpawn(pp,0,true);
     const dx=dest.x-ep.x,dz=dest.z-ep.z,len=Math.sqrt(dx*dx+dz*dz);
     if(len>.1){
-        const sp=e.state==='chase'?e.speed*1.4:e.speed;
+        const sp=e.state==='chase'?e.speed*1.45:e.speed;
         const te={x:ep.x+dx/len*sp,z:ep.z+dz/len*sp};
-        const se=gridCollide(ep.x,ep.z,te.x,te.z,.5);
+        const se=gridCollide(ep.x,ep.z,te.x,te.z,.6);
         ep.x=se.x;ep.z=se.z;e.mesh.rotation.y=Math.atan2(dx,dz);
     }
     if(e.state==='chase')screamVol(dist);
 }
 
 // ════════════════════════════════════════════
-//  CONTROLS & CONFIG TABS
+//  CONTROLS & AUDIO HINTS
 // ════════════════════════════════════════════
 let camX=0,camY=0,sCamX=0,sCamY=0;
 const keys={w:false,a:false,s:false,d:false,shift:false};
@@ -788,7 +823,6 @@ let lastFoot=0;
 function updateSens(v){sensitivity=parseFloat(v);document.getElementById('txt-sens').textContent=parseFloat(v).toFixed(1);}
 function updateBgm(v){volBgm=parseInt(v)/100;document.getElementById('txt-bgm').textContent=v+'%';syncBgm();}
 function updateSfx(v){volSfx=parseInt(v)/100;document.getElementById('txt-sfx').textContent=v+'%';}
-function togglePanel(){panelOpen=!panelOpen;const p=document.getElementById('ui-container'),b=document.getElementById('btn-toggle-panel');if(panelOpen){p.classList.remove('collapsed');b.textContent='◣';}else{p.classList.add('collapsed');b.textContent='◢';}}
 function toggleFS(){if(!document.fullscreenElement){document.documentElement.requestFullscreen?.();}else{document.exitFullscreen?.();}}
 function showToast(msg){const t=document.getElementById('game-toast');t.innerHTML=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3200);}
 
@@ -870,14 +904,14 @@ function handleJump(e){
     if(!gameActive||isPaused)return;
     if(underground&&ladderPlaced&&ladderMesh){
         const d=Math.sqrt((player.position.x-ladderMesh.position.x)**2+(player.position.z-ladderMesh.position.z)**2);
-        if(d<2.5){climbing=true;return;}
+        if(d<4.0){climbing=true;return;}
     }
     if(grounded){velY=JUMP;grounded=false;}
 }
 function toggleFlash(){
     isFlashOn=!isFlashOn;
     document.getElementById('btn-mobile-flash')?.classList.toggle('active',isFlashOn);
-    flash.intensity=isFlashOn?(underground?2.8:1.6):0;
+    flash.intensity=isFlashOn?(underground?3.2:1.8):0;
     lensMesh.material.color.setHex(isFlashOn?0xffffee:0x222222);
 }
 function placeLadder(){
@@ -886,10 +920,10 @@ function placeLadder(){
     document.getElementById('ladder-hud').style.display='none';
     ladderMesh=new THREE.Group();
     const lMat=new THREE.MeshStandardMaterial({color:0xb5782d,roughness:.6});
-    const lv1=new THREE.Mesh(new THREE.BoxGeometry(.06,UG_WH*.9,.06),lMat);lv1.position.set(-.16,0,0);
-    const lv2=new THREE.Mesh(new THREE.BoxGeometry(.06,UG_WH*.9,.06),lMat);lv2.position.set(.16,0,0);
+    const lv1=new THREE.Mesh(new THREE.BoxGeometry(.06,UG_WH*.9,.06),lMat);lv1.position.set(-.2,0,0);
+    const lv2=new THREE.Mesh(new THREE.BoxGeometry(.06,UG_WH*.9,.06),lMat);lv2.position.set(.2,0,0);
     ladderMesh.add(lv1,lv2);
-    for(let i=0;i<7;i++){const lh=new THREE.Mesh(new THREE.BoxGeometry(.42,.05,.04),lMat);lh.position.set(0,-UG_WH*.4+i*(UG_WH*.8/6),0);ladderMesh.add(lh);}
+    for(let i=0;i<7;i++){const lh=new THREE.Mesh(new THREE.BoxGeometry(.5,.05,.04),lMat);lh.position.set(0,-UG_WH*.4+i*(UG_WH*.8/6),0);ladderMesh.add(lh);}
     ladderMesh.position.set(holePosX,UG_Y+UG_WH*.42,holePosZ+holeWallNZ*.25);
     ladderMesh.rotation.x=.1;
     scene.add(ladderMesh);ugObjs.push(ladderMesh);
@@ -902,7 +936,7 @@ document.getElementById('btn-mobile-interact').addEventListener('touchstart',e=>
     if(underground){
         if(hasLadder&&!ladderPlaced&&holeGroup){
             const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2);
-            if(d<5.0){placeLadder();return;}
+            if(d<7.0){placeLadder();return;}
         }
     }else{if(hasKey&&!doorOpened)openDoor();}
 });
@@ -912,7 +946,7 @@ window.addEventListener('keydown',e=>{
     if(e.key===' '&&gameActive&&!isPaused){
         if(underground&&ladderPlaced&&ladderMesh){
             const d=Math.sqrt((player.position.x-ladderMesh.position.x)**2+(player.position.z-ladderMesh.position.z)**2);
-            if(d<2.5){climbing=true;return;}
+            if(d<4.0){climbing=true;return;}
         }
         if(grounded){velY=JUMP;grounded=false;}
     }
@@ -921,10 +955,10 @@ window.addEventListener('keydown',e=>{
         if(underground){
             if(hasLadder&&!ladderPlaced&&holeGroup){
                 const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2);
-                if(d<5.0){placeLadder();return;}
+                if(d<7.0){placeLadder();return;}
             }
         }else{
-            if(doorGroup&&player.position.distanceTo(doorGroup.position)<2.2)openDoor();
+            if(doorGroup&&player.position.distanceTo(doorGroup.position)<3.5)openDoor();
         }
     }
 });
@@ -964,7 +998,8 @@ function syncBgm(){if(bgGain&&actx)bgGain.gain.setValueAtTime(volBgm*.35,actx.cu
 function keyHint(pp){
     if(!khGain||!keyMesh||hasKey||!actx)return;
     const d=Math.sqrt((pp.x-keyMesh.position.x)**2+(pp.z-keyMesh.position.z)**2);
-    if(d<18){let tv=Math.max(.001,(18-d)/18)*.4*volSfx;khGain.gain.setTargetAtTime(tv,actx.currentTime,.15);khOsc.frequency.setValueAtTime(135+Math.sin(Date.now()*.004)*20,actx.currentTime);}
+    if(d<25){ // 음향 피드백 한계치 비례 확장
+        let tv=Math.max(.001,(25-d)/25)*.4*volSfx;khGain.gain.setTargetAtTime(tv,actx.currentTime,.15);khOsc.frequency.setValueAtTime(135+Math.sin(Date.now()*.004)*20,actx.currentTime);}
     else khGain.gain.setTargetAtTime(.001,actx.currentTime,.2);
 }
 function scream(on){
@@ -972,7 +1007,7 @@ function scream(on){
     if(on){try{scOsc1=actx.createOscillator();scOsc1.type='sawtooth';scOsc2=actx.createOscillator();scOsc2.type='square';scOsc1.frequency.setValueAtTime(260,actx.currentTime);scOsc2.frequency.setValueAtTime(420,actx.currentTime);const n=actx.currentTime;scOsc1.frequency.linearRampToValueAtTime(650,n+.3);scOsc1.frequency.linearRampToValueAtTime(140,n+.7);scOsc2.frequency.linearRampToValueAtTime(850,n+.4);scOsc1.connect(scGain);scOsc2.connect(scGain);scOsc1.start();scOsc2.start();}catch(e){}}
     else{try{if(scOsc1){scOsc1.stop();scOsc1=null;}if(scOsc2){scOsc2.stop();scOsc2=null;}}catch(e){}}
 }
-function screamVol(d){if(!scGain||!actx)return;scGain.gain.setTargetAtTime(Math.max(.001,(18-d)/18)*.6*volSfx,actx.currentTime,.1);}
+function screamVol(d){if(!scGain||!actx)return;scGain.gain.setTargetAtTime(Math.max(.001,(25-d)/25)*.6*volSfx,actx.currentTime,.1);}
 function footstep(v){
     if(!actx||isPaused||isGameOver||!sfxGain)return;
     try{const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(60,actx.currentTime);g.gain.setValueAtTime(v*.1*volSfx,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.1);o.connect(g);g.connect(sfxGain);o.start();o.stop(actx.currentTime+.11);}catch(e){}
@@ -982,14 +1017,23 @@ function heartbeat(v){
     try{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.setValueAtTime(46,actx.currentTime);g.gain.setValueAtTime(v*.6*volSfx,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.12);o.connect(g);g.connect(sfxGain);o.start();o.stop(actx.currentTime+.13);}catch(e){}
 }
 
-function triggerPause(s){if(!gameActive||isGameOver)return;isPaused=s;document.getElementById('pause-screen').style.display=s?'flex':'none';if(!s&&platform==='pc')document.body.requestPointerLock();}
+function triggerPause(s){
+    if(!gameActive||isGameOver)return;
+    isPaused=s;
+    document.getElementById('pause-screen').style.display=s?'flex':'none';
+    
+    // RESUME을 통해 풀렸을 때 PC 환경이면 화면 제어 포인터 락 다시 요청 조치
+    if(!s && platform==='pc') {
+        document.body.requestPointerLock();
+    }
+}
 function triggerGameOver(msg){isGameOver=true;scream(false);document.getElementById('go-cause').textContent=msg;document.getElementById('gameover-screen').style.display='flex';if(document.pointerLockElement===document.body)document.exitPointerLock();}
 function respawn(){
     isGameOver=false;scream(false);
     if(underground)exitUnderground();
-    const rp=safeSpawn(player.position, 15, true);
+    const rp=safeSpawn(player.position, 25, true);
     player.position.set(rp.x,0,rp.z);velY=0;grounded=true;stamina=100;exhausted=false;
-    entities.forEach(e=>{const ep=safeSpawn(player.position,12,true);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
+    entities.forEach(e=>{const ep=safeSpawn(player.position,20,true);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
     document.getElementById('gameover-screen').style.display='none';
     if(platform==='pc')document.body.requestPointerLock();
 }
@@ -1001,8 +1045,8 @@ function goMainMenu(){
     });
     document.getElementById('start-screen').style.display='flex';
     document.getElementById('glitch-overlay').style.cssText='background:rgba(0,0,0,0);opacity:0;';
-    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.06;ambient.intensity=.8;
-    flash.intensity=isFlashOn?1.6:0;
+    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.035;ambient.intensity=.85;
+    flash.intensity=isFlashOn?1.8:0;
     
     ugObjs.forEach(o=>scene.remove(o));ugObjs=[];
     if(ugWalls){scene.remove(ugWalls);ugWalls=null;}if(ugFloor){scene.remove(ugFloor);ugFloor=null;}if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
@@ -1020,7 +1064,7 @@ function goMainMenu(){
 }
 function triggerBlackout(){
     document.getElementById('glitch-overlay').style.cssText='background:rgba(8,7,5,.6);opacity:1;';
-    scene.background.setHex(0x12110e);scene.fog.color.setHex(0x12110e);scene.fog.density=.1;ambient.intensity=.15;
+    scene.background.setHex(0x12110e);scene.fog.color.setHex(0x12110e);scene.fog.density=.06;ambient.intensity=.15;
     entities.forEach(e=>e.speed=e.baseSpeed*1.4);
 }
 
@@ -1028,7 +1072,6 @@ let player=new THREE.Group(); scene.add(player);
 
 function launchGame(){
     if(!platform) {
-        // 플랫폼 미지정시 자동으로 기본 세팅 유도
         setPlatform('pc');
     }
     document.getElementById('start-screen').style.display='none';
@@ -1048,14 +1091,14 @@ function launchGame(){
     camX=0;camY=0;sCamX=0;sCamY=0;
     
     genMaze(); buildGraphics();
-    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 30, true); 
+    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 40, true); 
     player.position.set(pSp.x,0,pSp.z);
     
     buildBingoPit();
     spawnDoor();
     spawnKey();
     entities.forEach(e=>{
-        const ep=safeSpawn(player.position, 15, true);
+        const ep=safeSpawn(player.position, 20, true);
         e.mesh.position.set(ep.x,0,ep.z);e.lastPos.copy(e.mesh.position);
         e.patrolTarget=ep;e.state='patrol';e.scream=false;
     });
@@ -1071,7 +1114,7 @@ function launchGame(){
     pvs.width=innerWidth;pvs.height=innerHeight;
     const pvScene=new THREE.Scene();
     pvScene.background=new THREE.Color(0xa39458);
-    pvScene.fog=new THREE.FogExp2(0xa39458,.07);
+    pvScene.fog=new THREE.FogExp2(0xa39458,.06);
     const pvCam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,150);
     pvCam.position.set(0,1.5,0);
     const pvRen=new THREE.WebGLRenderer({canvas:pvs,antialias:false,precision:'mediump'});
@@ -1082,7 +1125,7 @@ function launchGame(){
     const pvCMat=new THREE.MeshStandardMaterial({color:0xbab085,roughness:.9});
     const pvAmb=new THREE.AmbientLight(0xeee9b5,.6);pvScene.add(pvAmb);
     
-    const cW=5,cH=5.0,cL=60;
+    const cW=9,cH=7.0,cL=60;
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(cW,cL),pvFMat);fl.rotation.x=-Math.PI/2;fl.position.set(0,0,-cL/2);pvScene.add(fl);
     const cl=new THREE.Mesh(new THREE.PlaneGeometry(cW,cL),pvCMat);cl.rotation.x=Math.PI/2;cl.position.set(0,cH,-cL/2);pvScene.add(cl);
     const wl=new THREE.Mesh(new THREE.PlaneGeometry(cL,cH),pvWMat);wl.rotation.y=Math.PI/2;wl.position.set(-cW/2,cH/2,-cL/2);pvScene.add(wl);
@@ -1090,9 +1133,9 @@ function launchGame(){
     
     for(let i=0;i<6;i++){
         const lg=new THREE.Group();
-        lg.add(new THREE.Mesh(new THREE.BoxGeometry(2.0,.04,1.0),new THREE.MeshStandardMaterial({color:0x222222})),new THREE.Mesh(new THREE.BoxGeometry(1.8,.05,0.8),new THREE.MeshBasicMaterial({color:0xfffbc4})));
+        lg.add(new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,1.5),new THREE.MeshStandardMaterial({color:0x222222})),new THREE.Mesh(new THREE.BoxGeometry(2.7,.05,1.2),new THREE.MeshBasicMaterial({color:0xfffbc4})));
         lg.position.set(0,cH-.02,-i*10-5);pvScene.add(lg);
-        const pl=new THREE.PointLight(0xfff2b3,.6,10);pl.position.set(0,cH-.2,-i*10-5);pvScene.add(pl);
+        const pl=new THREE.PointLight(0xfff2b3,.6,12);pl.position.set(0,cH-.2,-i*10-5);pvScene.add(pl);
     }
     let t=0;
 
@@ -1100,7 +1143,7 @@ function launchGame(){
         if(document.getElementById('start-screen').style.display==='none')return;
         requestAnimationFrame(drawPreview);
         t+=0.003;
-        pvCam.position.set(Math.sin(t*.6)*.3,1.5+Math.sin(t*.4)*.04,-(t*3.5)%cL);
+        pvCam.position.set(Math.sin(t*.6)*.3,1.7+Math.sin(t*.4)*.04,-(t*3.5)%cL);
         pvCam.rotation.set(Math.sin(t*.2)*.02,Math.sin(t*.4)*.06,0,'YXZ');
         pvRen.render(pvScene,pvCam);
     }
@@ -1135,38 +1178,38 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            const pRad = 0.04; 
+            const pRad = 0.05; 
             let safe = false;
 
             if(mx <= B_PATH_W + pRad || mx >= CELL - pRad) safe = true;
             if(mz <= B_PATH_W + pRad || mz >= CELL - pRad) safe = true;
 
-            if(!safe&&grounded){grounded=false;velY=-.02;}
+            if(!safe&&grounded){grounded=false;velY=-.025;}
         }
     }
 
-    if(!underground&&player.position.y<-4.0&&!isGameOver){enterUnderground();return;}
+    if(!underground&&player.position.y<-5.0&&!isGameOver){enterUnderground();return;}
 
     if(underground&&climbing){
         climbT++;
-        player.position.y+=.065;
+        player.position.y+=.075;
         velY=0;
-        if(player.position.y>=-0.05||climbT>110){exitUnderground();return;}
+        if(player.position.y>=-0.05||climbT>115){exitUnderground();return;}
     }
 
     if(!hasKey&&keyMesh&&!underground){
         const d=Math.sqrt((player.position.x-keyMesh.position.x)**2+(player.position.z-keyMesh.position.z)**2);
-        if(d<1.2){
+        if(d<1.5){
             hasKey=true;scene.remove(keyMesh);
             if(khGain&&actx)khGain.gain.setValueAtTime(.001,actx.currentTime);
-            if(doorGroup?.greenLight)doorGroup.greenLight.intensity=3.0;
+            if(doorGroup?.greenLight)doorGroup.greenLight.intensity=3.5;
             showToast("🔑 황금 열쇠 확보!<br>빙고방을 가로질러 반대편 통로의 문을 여세요!");
         }
     }
 
     if(underground&&!hasLadder&&ladderItem){
         const d=Math.sqrt((player.position.x-ladderItem.position.x)**2+(player.position.z-ladderItem.position.z)**2);
-        if(d<1.4){
+        if(d<1.8){
             hasLadder=true;scene.remove(ladderItem);ladderItem=null;
             document.getElementById('ladder-hud').style.display='block';
             showToast("🪜 사다리 습득 완료!<br>초록빛 붕괴 구멍 앞에서 설치[E] 하세요!");
@@ -1189,7 +1232,7 @@ function animate(){
 
     if(!underground&&doorGroup){
         const dd=player.position.distanceTo(doorGroup.position);
-        if(hasKey&&dd<2.2&&!doorOpened){
+        if(hasKey&&dd<3.5&&!doorOpened){
             if(platform==='pc'){document.getElementById('interact-prompt').innerHTML='🚪 [E] Open Door';document.getElementById('interact-prompt').style.display='block';}
             else{document.getElementById('btn-mobile-interact').innerHTML='🚪';document.getElementById('btn-mobile-interact').style.display='flex';}
         }else if(!underground){
@@ -1200,14 +1243,14 @@ function animate(){
             if(doorPivot.rotation.y>-Math.PI/2){doorPivot.rotation.y-=.05;doorGroup.updateMatrixWorld(true);}
             else{
                 const de=player.position.distanceTo(escapeSensor);
-                if(de<1.4){gameActive=false;scream(false);document.getElementById('clear-time').textContent=`⏱ ${m}분 ${s}초`;document.getElementById('clear-screen').style.display='flex';if(platform==='pc')document.exitPointerLock();return;}
+                if(de<1.8){gameActive=false;scream(false);document.getElementById('clear-time').textContent=`⏱ ${m}분 ${s}초`;document.getElementById('clear-screen').style.display='flex';if(platform==='pc')document.exitPointerLock();return;}
             }
-        }else if(!hasKey&&dd<1.2)showToast("🔒 게이트가 구속되어 있습니다.<br>황금 열쇠가 필요합니다.");
+        }else if(!hasKey&&dd<1.5)showToast("🔒 게이트가 구속되어 있습니다.<br>황금 열쇠가 필요합니다.");
     }
 
     if(underground&&hasLadder&&!ladderPlaced&&holeGroup){
         const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2);
-        if(d<5.0){
+        if(d<7.0){
             if(platform==='pc'){document.getElementById('interact-prompt').innerHTML='🪜 [E] Place Ladder';document.getElementById('interact-prompt').style.display='block';}
             else{document.getElementById('btn-mobile-interact').innerHTML='🪜';document.getElementById('btn-mobile-interact').style.display='flex';}
         }else{
@@ -1236,7 +1279,7 @@ function animate(){
         moving=mX!==0||mZ!==0;sprinting=moving&&jRatio>.75&&!exhausted;
     }
 
-    if(sprinting){stamina-=.2;if(stamina<=0){stamina=0;exhausted=true;}}
+    if(sprinting){stamina-=.22;if(stamina<=0){stamina=0;exhausted=true;}}
     else{stamina+=moving?.7:2.2;if(stamina>=100){stamina=100;exhausted=false;}}
     const sb=document.getElementById('stamina-bar');
     if(sb){sb.style.width=stamina+'%';sb.style.background=exhausted?'#cc2424':'#d1bd71';}
@@ -1249,14 +1292,14 @@ function animate(){
 
     if(moving&&!climbing){
         let safe;
-        if(underground)safe=ugCollide(player.position.x,player.position.z,nx,nz,.4);
-        else safe=gridCollide(player.position.x,player.position.z,nx,nz,.5);
+        if(underground)safe=ugCollide(player.position.x,player.position.z,nx,nz,.5);
+        else safe=gridCollide(player.position.x,player.position.z,nx,nz,.55);
         player.position.x=safe.x;player.position.z=safe.z;
         if(grounded){
-            const wf=sprinting?2.4:1.4;
-            bobX=Math.sin(rt*wf)*.03;bobY=Math.cos(rt*wf*2)*.02;
+            const wf=sprinting?2.5:1.4;
+            bobX=Math.sin(rt*wf)*.035;bobY=Math.cos(rt*wf*2)*.022;
             const now=Date.now();
-            if(now-lastFoot>(sprinting?240:400)){footstep(sprinting?.7:.35);lastFoot=now;}
+            if(now-lastFoot>(sprinting?220:380)){footstep(sprinting?.7:.35);lastFoot=now;}
         }
     }
 
@@ -1284,10 +1327,10 @@ function animate(){
     }
 
     player.rotation.y=sCamX;
-    fpsRig.position.set(player.position.x,player.position.y+1.4,player.position.z);
+    fpsRig.position.set(player.position.x,player.position.y+1.5,player.position.z);
     fpsRig.rotation.set(sCamY+tiltX,sCamX,tiltZ,'YXZ');
 
-    const aw=moving?Math.sin(rt*(sprinting?2.4:1.4))*.07:0;
+    const aw=moving?Math.sin(rt*(sprinting?2.5:1.4))*.07:0;
     const ai=Math.sin(Date.now()*.001)*.01;
     lArm.position.z=-.3+aw+ai;lArm.position.y=-.22+Math.abs(aw)*.25;
     rArm.position.z=-.3-aw+ai;rArm.position.y=-.22+Math.abs(aw)*.25;
@@ -1300,19 +1343,19 @@ function animate(){
             entityAI(e,player.position);
             const d=Math.sqrt((player.position.x-e.mesh.position.x)**2+(player.position.z-e.mesh.position.z)**2);
             if(d<closestD)closestD=d;
-            const ws=e.state==='chase'?.045:.015;
-            e.core.position.y=1.2+Math.sin(Date.now()*ws)*.1;
+            const ws=e.state==='chase'?.048:.016;
+            e.core.position.y=1.3+Math.sin(Date.now()*ws)*.1;
             e.legs.forEach((leg,i)=>{const off=i*(Math.PI/2);leg.rotation.x=Math.sin(Date.now()*ws*2+off)*.5;leg.rotation.z=.25+Math.cos(Date.now()*ws+off)*.15;});
         });
         const hu=document.getElementById('heartbeat-ui');
-        if(closestD<11){
-            const pf=(11-closestD)/11,hbi=800-pf*550,now=Date.now();
+        if(closestD<15){ // 박동 연출 기준점 확장
+            const pf=(15-closestD)/15,hbi=800-pf*550,now=Date.now();
             if(now-lastHB>hbi){heartbeat(.35+pf*.45);lastHB=now;hu.style.transform=`translateX(-50%) scale(${1.2+pf*.4})`;setTimeout(()=>hu.style.transform=`translateX(-50%) scale(${.9+pf*.15})`,120);}
         }else hu.style.transform='translateX(-50%) scale(0)';
-        if(closestD<1.1){triggerGameOver("체내 주파수가 엔티티의 간섭으로 완전 오염되었습니다.");return;}
+        if(closestD<1.3){triggerGameOver("체내 주파수가 엔티티의 간섭으로 완전 오염되었습니다.");return;}
     }
 
-    camera.position.set(player.position.x+bobX,player.position.y+1.4+bobY,player.position.z);
+    camera.position.set(player.position.x+bobX,player.position.y+1.5+bobY,player.position.z);
     camera.rotation.set(sCamY+tiltX,sCamX,tiltZ,'YXZ');
     renderer.render(scene,camera);
 }

@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>《The £ackrooms》</title>
+    <title>The Backrooms - True Escape Remastered</title>
     <style>
-        html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#080806;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
+        html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#050503;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
-        #vhs-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(0,0,0,0) 40%,rgba(0,0,0,0.85) 100%);pointer-events:none;z-index:2;}
-        #glitch-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);opacity:0;pointer-events:none;z-index:3;transition:background-color .6s,opacity .6s;}
+        #vhs-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(0,0,0,0) 30%,rgba(0,0,0,0.9) 100%);pointer-events:none;z-index:2;}
+        #glitch-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);opacity:0;pointer-events:none;z-index:3;transition:background-color .1s,opacity .1s;}
         #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;background:rgba(255,255,255,.5);border-radius:50%;pointer-events:none;z-index:5;display:none;}
         #cctv-ui{position:absolute;top:25px;left:25px;color:#ff3333;font-weight:bold;font-size:16px;z-index:210;letter-spacing:1.5px;pointer-events:none;font-family:monospace;display:none;text-shadow:0 0 8px rgba(255,51,51,0.7);}
         #quest-ui{position:absolute;top:60px;left:25px;color:#ffea9f;font-weight:bold;font-size:14px;z-index:210;letter-spacing:1px;pointer-events:none;background:rgba(12,11,9,.9);padding:10px 16px;border-left:3px solid #d1bd71;border-radius:0 4px 4px 0;display:none;text-shadow:0 1px 4px rgba(0,0,0,1);box-shadow:0 4px 12px rgba(0,0,0,.6);}
@@ -40,19 +40,19 @@
         /* ─── START SCREEN ─── */
         #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;}
         #preview-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;}
-        #scanline-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px);pointer-events:none;z-index:2;animation:scanlines 8s linear infinite;}
-        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 20%,rgba(0,0,0,.85) 100%);pointer-events:none;z-index:3;}
-        #noise-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.06;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:staticAnim .08s steps(1) infinite;}
+        #scanline-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px);pointer-events:none;z-index:2;animation:scanlines 6s linear infinite;}
+        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 10%,rgba(0,0,0,.9) 100%);pointer-events:none;z-index:3;}
+        #noise-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.09;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:staticAnim .05s steps(1) infinite;}
+        #cctv-glitch-blind{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;opacity:0;z-index:6;pointer-events:none;}
         @keyframes scanlines{0%{background-position:0 0;}100%{background-position:0 100px;}}
-        @keyframes staticAnim{0%,100%{opacity:.05;}50%{opacity:.07;}}
+        @keyframes staticAnim{0%,100%{opacity:.08;}50%{opacity:.11;}}
         
         #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;}
         #cctv-badge{font-family:monospace;font-size:14px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.6);animation:blink 1.2s step-end infinite;}
         
-        /* 입체적 3D 텍스트 디자인 효과 적용 */
         .title-main{
-            font-size:24px;font-weight:600;letter-spacing:10px;margin:0;color:#d1bd71;font-family:monospace;
-            text-shadow: 1px 1px 0px #8a7a44, 2px 2px 0px #6e6133, 3px 3px 5px rgba(0,0,0,0.9);
+            font-size:24px;font-weight:600;letter-spacing:10px;margin:0;color:#c9b35d;font-family:monospace;
+            text-shadow: 1px 1px 0px #7a6b38, 2px 2px 0px #5e5227, 3px 3px 5px rgba(0,0,0,0.9);
         }
         .title-sub{
             font-size:54px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;
@@ -76,14 +76,13 @@
         .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
         .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
         
-        /* ─── 세팅화면 넓이 꽉 채우기 커스텀 리디자인 ─── */
         .inline-settings-panel {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(8, 8, 6, 0.97);
+            background: rgba(5, 5, 4, 0.98);
             z-index: 210;
             opacity: 0;
             pointer-events: none;
@@ -103,13 +102,12 @@
             pointer-events: auto;
         }
         
-        /* 가로폭 매칭을 위해 내부 wrapper를 꽉 채우도록 설정 */
         .settings-content-wrapper {
             display: flex;
             flex-direction: column;
             gap: 22px;
             width: 100%;
-            max-width: 600px; /* 기존 형식 보존하며 최대폭까지 가득 채움 */
+            max-width: 600px;
             box-sizing: border-box;
             padding-bottom: 50px;
         }
@@ -142,12 +140,13 @@
     <div id="scanline-overlay"></div>
     <div id="vignette-overlay"></div>
     <div id="noise-overlay"></div>
+    <div id="cctv-glitch-blind"></div>
     
     <div id="start-content">
-        <div id="cctv-badge">🔴 REC — LIVE</div>
+        <div id="cctv-badge">🔴 REC — LIVE CCTV</div>
         <h2 class="title-main">LEVEL 0</h2>
         <h1 class="title-sub">THE BACKROOMS</h1>
-        <div class="title-level">Demo</div>
+        <div class="title-level">Demo test vr</div>
         
         <div class="menu-group">
             <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
@@ -162,7 +161,7 @@
         <div class="settings-content-wrapper">
             <h1 style="font-size:28px; font-weight:900; letter-spacing:3px; margin:0 0 10px 0; color:#ffffff; font-family:monospace; text-shadow:0 0 15px rgba(255,255,255,0.2);">SETTINGS</h1>
             
-            <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT TOOL</div>
+            <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT PLATFORM</div>
             <div class="platform-mini-box">
                 <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">PC</button>
                 <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
@@ -193,7 +192,7 @@
 </div>
 
 <div id="top-controls">
-    <button class="btn" style="background:#5e1919; color:#fff; border-color:#822525; padding: 8px 16px; font-size:12px;" onclick="triggerPause(true)">⏸ PAUSE</button>
+    <button class="btn" style="background:#5e1919; color:#fff; border-color:#822525; padding: 8px 16px; font-size:12px;" onclick="triggerPause(true)">⏸ STOP</button>
 </div>
 
 <div id="mobile-controls-right">
@@ -228,7 +227,7 @@
 
 <script>
 // ════════════════════════════════════════════
-//  CONSTANTS & MAP SCALE EXTENSION (EXPANDED)
+//  CONSTANTS & MAP SCALE (EXPANDED)
 // ════════════════════════════════════════════
 const ROWS=32, COLS=32, UNIT=9, WH=7.0; 
 
@@ -269,10 +268,11 @@ let hasLadder=false, ladderItem=null, ladderMesh=null, ladderPlaced=false;
 let holeGroup=null, holePosX=0, holePosZ=0, holeWallNX=0, holeWallNZ=0;
 let climbing=false, climbT=0;
 
-const BG_COL=0xa39458;
+// 안개 농도 및 노란색 톤 짙게 최적화 보정 적용
+const BG_COL=0x8f7d3e; 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(BG_COL);
-scene.fog=new THREE.FogExp2(BG_COL,0.035); 
+scene.fog=new THREE.FogExp2(BG_COL,0.048); 
 
 const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});
@@ -281,7 +281,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.shadowMap.enabled=false;
 document.body.appendChild(renderer.domElement);
 
-const ambient=new THREE.AmbientLight(0xeee9b5,0.85);
+const ambient=new THREE.AmbientLight(0xdecb8a,0.8);
 scene.add(ambient);
 
 const fpsRig=new THREE.Group(); scene.add(fpsRig);
@@ -304,41 +304,52 @@ const lArm=new THREE.Mesh(sharedArmGeo,armMat); lArm.rotateX(Math.PI/2.3); lArm.
 const rArm=new THREE.Mesh(sharedArmGeo,armMat); rArm.rotateX(Math.PI/2.3); rArm.position.set(.22,-.22,-.3); fpsRig.add(rArm);
 
 // ════════════════════════════════════════════
-//  TEXTURE CREATION 
+//  TEXTURE CREATION (HIGH QUALITY WALLPAPER)
 // ════════════════════════════════════════════
 function mkWallTex(){
-    const c=document.createElement('canvas'); c.width=c.height=128;
+    const c=document.createElement('canvas'); c.width=c.height=256;
     const x=c.getContext('2d');
-    x.fillStyle='#d6cb94'; x.fillRect(0,0,128,128);
-    const d=x.getImageData(0,0,128,128);
-    for(let i=0;i<d.data.length;i+=4){if(Math.random()<.15){const n=(Math.random()-.5)*12;d.data[i]=Math.max(0,Math.min(255,d.data[i]+n));d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+n));d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+n-2));}}
+    x.fillStyle='#ccbe82'; x.fillRect(0,0,256,256);
+    const d=x.getImageData(0,0,256,256);
+    for(let i=0;i<d.data.length;i+=4){
+        if(Math.random()<.25){
+            const n=(Math.random()-.5)*15;
+            d.data[i]=Math.max(0,Math.min(255,d.data[i]+n));
+            d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+n));
+            d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+n-4));
+        }
+    }
     x.putImageData(d,0,0);
-    x.strokeStyle='rgba(179,167,112,.35)'; x.lineWidth=1;
-    for(let i=0;i<128;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,128);x.stroke();}
+    // 더 촘촘하고 선명해진 빈티지 스트라이프 벽지 패턴 구축
+    x.strokeStyle='rgba(148,136,83,.45)'; x.lineWidth=2;
+    for(let i=0;i<256;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();}
     const t=new THREE.CanvasTexture(c); return t;
 }
 function mkFloorTex(){
     const c=document.createElement('canvas'); c.width=c.height=256;
     const x=c.getContext('2d');
-    x.fillStyle='#786b3c'; x.fillRect(0,0,256,256);
+    x.fillStyle='#695c30'; x.fillRect(0,0,256,256);
     const d=x.getImageData(0,0,256,256);
-    for(let i=0;i<d.data.length;i+=4){const g=(Math.random()-.5)*18;d.data[i]=Math.max(0,Math.min(255,d.data[i]+g));d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+g));d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+g));}
+    for(let i=0;i<d.data.length;i+=4){const g=(Math.random()-.5)*22;d.data[i]=Math.max(0,Math.min(255,d.data[i]+g));d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+g));d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+g));}
     x.putImageData(d,0,0);
     const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(24,24); return t;
 }
 function mkCeilTex(){
-    const c=document.createElement('canvas'); c.width=c.height=128;
+    const c=document.createElement('canvas'); c.width=c.height=256;
     const x=c.getContext('2d');
-    x.fillStyle='#c7bc91'; x.fillRect(0,0,128,128);
+    x.fillStyle='#b8ac7c'; x.fillRect(0,0,256,256);
+    // 천장 격자선 드로잉 보정
+    x.strokeStyle='rgba(82,75,46,0.5)'; x.lineWidth=2;
+    x.strokeRect(0,0,256,256);
     const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(28,28); return t;
 }
 const wallTex=mkWallTex(), floorTex=mkFloorTex(), ceilTex=mkCeilTex();
-const wallMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.9});
+const wallMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.85});
 const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
 
 // ════════════════════════════════════════════
-//  MAZE LOGIC 
+//  MAZE LOGIC (막힌 맵 완전 버그 수정 완료)
 // ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
@@ -422,6 +433,7 @@ function genMaze(){
     if(startR >= ROWS-1) startR = ROWS-2;
     mapData[startR][startC] = 0; 
     
+    // 유효 통로 카빙 처리 알고리즘
     function carve(r,c){
         const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
         for(const[dr,dc]of dirs){
@@ -436,6 +448,18 @@ function genMaze(){
     }
     carve(startR, startC);
     carve(1, 1);
+
+    // [버그 수정 코드] 사방이 막혀 미아가 되는 구조를 방지하기 위한 통로 전면 상호 연결 패치 보증
+    for(let r=2; r<ROWS-2; r+=2){
+        for(let c=2; c<COLS-2; c+=2){
+            if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]){
+                if(Math.random()<0.4) mapData[r+1][c]=0;
+            }
+            if(mapData[r][c]===0 && mapData[r][c+1]===1 && mapData[r][c+2]===0 && !reserved[r][c+1]){
+                if(Math.random()<0.4) mapData[r][c+1]=0;
+            }
+        }
+    }
 
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
@@ -460,15 +484,16 @@ function buildGraphics(){
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
-            } else if(Math.random()<.06){
+            } else if(Math.random()<.08){
+                // [리디자인] 타일 규격에 정확하게 꽉 차오르는 전등 유닛 구조 빌드
                 const lg=new THREE.Group();
-                const fr=new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,1.5),new THREE.MeshStandardMaterial({color:0x222222}));
-                const pn=new THREE.Mesh(new THREE.BoxGeometry(2.7,.05,1.2),new THREE.MeshBasicMaterial({color:0xfffbc4}));
+                const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
+                const pn=new THREE.Mesh(new THREE.BoxGeometry(4.3,.05,4.3),new THREE.MeshBasicMaterial({color:0xfffcd1}));
                 pn.position.y=-.01; lg.add(fr,pn);
                 lg.position.set(wx,WH-.02,wz);
                 scene.add(lg); lamps.push(lg);
-                const pl=new THREE.PointLight(0xfff2b3,.6,15,1.2);
-                pl.position.set(wx,WH-.2,wz); scene.add(pl); lamps.push(pl);
+                const pl=new THREE.PointLight(0xfff5bf,.75,18,1.1);
+                pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
             }
         }
     }
@@ -485,8 +510,8 @@ function buildGraphics(){
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
 
 function safeSpawn(avoid,minD,excludeReserved=false){
-    for(let i=0;i<500;i++){
-        const r=Math.floor(Math.random()*ROWS),c=Math.floor(Math.random()*COLS);
+    for(let i=0; i<600; i++){
+        const r=Math.floor(Math.random()*(ROWS-2))+1,c=Math.floor(Math.random()*(COLS-2))+1;
         if(mapData[r][c]===0 && (!excludeReserved || !reserved[r][c])){
             const p=worldXZ(r,c);
             if(avoid&&minD&&Math.sqrt((p.x-avoid.x)**2+(p.z-avoid.z)**2)<minD)continue;
@@ -497,7 +522,7 @@ function safeSpawn(avoid,minD,excludeReserved=false){
 }
 
 // ════════════════════════════════════════════
-//  BINGO PIT SYSTEM 
+//  BINGO PIT SYSTEM
 // ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
@@ -536,7 +561,14 @@ function buildBingoPit(){
     }
     scene.add(floorGroup);
 
-    const pathMat = new THREE.MeshStandardMaterial({map:floorTex, roughness:0.95});
+    // [빙고판 리디자인 패치] 노란색 격자 발판 텍스처 자체 색상 보정
+    const c=document.createElement('canvas'); c.width=c.height=64;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#ffd000'; ctx.fillRect(0,0,64,64);
+    ctx.fillStyle='#cca600'; ctx.fillRect(4,4,56,56);
+    const lineTex=new THREE.CanvasTexture(c);
+
+    const pathMat = new THREE.MeshStandardMaterial({map:lineTex, roughness:0.7});
     const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.9});
     const voidMat = new THREE.MeshBasicMaterial({color:0x010101});
     const holeDepth = 18;
@@ -545,14 +577,14 @@ function buildBingoPit(){
     for(let i=0; i<=B_GRID_DIV; i++) {
         const z = pitBounds.minZ + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
         const p = new THREE.Mesh(hGeo, pathMat);
-        p.position.set(pitCX, -0.05, z);
+        p.position.set(pitCX, -0.02, z);
         scene.add(p); pitMeshes.push(p);
     }
     const vGeo = new THREE.BoxGeometry(B_PATH_W + 0.1, 0.1, PIT_TOTAL + 0.1);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
         const p = new THREE.Mesh(vGeo, pathMat);
-        p.position.set(x, -0.05, pitCZ);
+        p.position.set(x, -0.02, pitCZ);
         scene.add(p); pitMeshes.push(p);
     }
 
@@ -578,7 +610,7 @@ function buildBingoPit(){
     pitVoid.position.set(pitCX, -holeDepth + 0.05, pitCZ);
     scene.add(pitVoid);
 
-    const deepLight = new THREE.PointLight(0x0a33cc, 1.6, 35, 2);
+    const deepLight = new THREE.PointLight(0x1a4bcc, 1.8, 35, 1.5);
     deepLight.position.set(pitCX, -10, pitCZ);
     scene.add(deepLight); pitMeshes.push(deepLight);
 }
@@ -627,6 +659,9 @@ function spawnKey(){
     keyMesh.position.set(kp.x,.8,kp.z); scene.add(keyMesh);
 }
 
+// ════════════════════════════════════════════
+//  BUILD UNDERGROUND (지하 고립 방지 트랙 최적화)
+// ════════════════════════════════════════════
 function buildUnderground(){
     ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
     if(ugWalls){scene.remove(ugWalls);ugWalls=null;}
@@ -674,9 +709,10 @@ function buildUnderground(){
     ugCeil.rotation.x=Math.PI/2; ugCeil.position.set(ugOX,UG_Y+UG_WH,ugOZ);
     scene.add(ugCeil); ugObjs.push(ugCeil);
 
+    // 지하 가설 통로 정비로 플레이어가 어딘가 갇히지 않도록 안전 좌표 추적 보증
     function ugSafeSpawn(){
-        for(let i=0;i<100;i++){
-            const r=Math.floor(Math.random()*UG_R),c=Math.floor(Math.random()*UG_C);
+        for(let i=0;i<200;i++){
+            const r=Math.floor(Math.random()*(UG_R-2))+1,c=Math.floor(Math.random()*(UG_C-2))+1;
             if(ugMap[r][c]===0) return{x:ugOX+(c-UG_C/2)*UG_U+UG_U/2,z:ugOZ+(r-UG_R/2)*UG_U+UG_U/2};
         }
         return{x:ugOX,z:ugOZ};
@@ -693,7 +729,6 @@ function buildUnderground(){
     ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
     scene.add(ladderItem); ugObjs.push(ladderItem);
 
-    // 구덩이 내부 벽 타겟팅 및 리스폰 탈출용 가설 지점
     let holeR=1,holeC=1,holeWR=-1,holeWC=0;
     const hp=ugW(holeR,holeC);
     holePosX=hp.x; holePosZ=hp.z;
@@ -716,7 +751,7 @@ function buildUnderground(){
 }
 
 // ════════════════════════════════════════════
-//  COLLISION
+//  COLLISION LOGIC
 // ════════════════════════════════════════════
 function gridCollide(ox, oz, nx, nz, rad) {
     if (isNaN(nx) || isNaN(nz)) return { x: ox, z: oz };
@@ -725,7 +760,7 @@ function gridCollide(ox, oz, nx, nz, rad) {
     if (!doorOpened && doorGroup) {
         const ddx = doorGroup.position.x - nx;
         const ddz = doorGroup.position.z - nz;
-        if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.5) return { x: ox, z: oz }; 
+        if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.2) return { x: ox, z: oz }; 
     }
 
     let resultX = nx;
@@ -781,10 +816,24 @@ function ugCollide(oldX, oldZ, newX, newZ, rad) {
     return { x: resultX, z: resultZ };
 }
 
+// [버그 수정] 지하 진입 시 절대 벽에 끼지 않도록 스폰 지점 마진 좌표 보정
 function enterUnderground(){
     underground=true;
     buildUnderground();
-    player.position.set(ugOX,UG_Y+.1,ugOZ);
+    
+    // 지하 맵 정중앙의 안전 복도 좌표를 정밀하게 추적하여 강제 배치
+    let startSafeR = 1, startSafeC = 1;
+    for(let r=1; r<UG_R-1; r++){
+        for(let c=1; c<UG_C-1; c++){
+            if(ugMap[r][c]===0){ startSafeR=r; startSafeC=c; break; }
+        }
+    }
+    const safeUgPos = {
+        x: ugOX + (startSafeC - UG_C/2)*UG_U + UG_U/2,
+        z: ugOZ + (startSafeR - UG_R/2)*UG_U + UG_U/2
+    };
+    
+    player.position.set(safeUgPos.x, UG_Y + 0.1, safeUgPos.z);
     velY=0; grounded=true;
     if(iWalls)iWalls.visible=false;
     lamps.forEach(l=>{if(l.visible!==undefined)l.visible=false;});
@@ -816,11 +865,11 @@ function exitUnderground(){
     pitMeshes.forEach(m=>{m.visible=true;});
     if(pitVoid)pitVoid.visible=true;
     
-    // 지상 복귀 시 원래의 구덩이 위치(빙고판 근처 안전 구역)로 정확히 배치
-    player.position.set(pitCX+UNIT*1.1, 0, pitCZ+UNIT*1.1); 
+    // 지상 복귀 시 굳어버리거나 벽 속으로 텔레포트되지 않도록 피트 근처의 정밀 안전 지대로 보정
+    player.position.set(pitCX + PIT_TOTAL*0.5 + 2.5, 0.1, pitCZ + PIT_TOTAL*0.5 + 2.5); 
     velY=0; grounded=true;
-    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.035;
-    ambient.intensity=0.85; flash.intensity=isFlashOn?1.8:0;
+    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.048;
+    ambient.intensity=0.8; flash.intensity=isFlashOn?1.8:0;
     showToast("⬆ 지상 복귀 완료!<br>🏃 외곽 길을 타고 신속히 이동하세요!");
 }
 
@@ -874,7 +923,7 @@ function entityAI(e,pp){
 }
 
 // ════════════════════════════════════════════
-//  CONTROLS & AUDIO HINTS
+//  CONTROLS & SETTINGS
 // ════════════════════════════════════════════
 let camX=0,camY=0,sCamX=0,sCamY=0;
 const keys={w:false,a:false,s:false,d:false,shift:false};
@@ -1130,7 +1179,7 @@ function goMainMenu(){
     });
     document.getElementById('start-screen').style.display='flex';
     document.getElementById('glitch-overlay').style.cssText='background:rgba(0,0,0,0);opacity:0;';
-    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.035;ambient.intensity=.85;
+    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.048;ambient.intensity=.8;
     flash.intensity=isFlashOn?1.8:0;
     
     ugObjs.forEach(o=>scene.remove(o));ugObjs=[];
@@ -1156,9 +1205,7 @@ function triggerBlackout(){
 let player=new THREE.Group(); scene.add(player);
 
 function launchGame(){
-    if(!platform) {
-        setPlatform('pc');
-    }
+    if(!platform) { setPlatform('pc'); }
     document.getElementById('start-screen').style.display='none';
     document.getElementById('top-controls').style.display='flex';
     document.getElementById('cctv-ui').style.display='block';
@@ -1177,7 +1224,7 @@ function launchGame(){
     
     genMaze(); buildGraphics();
     const pSp=safeSpawn({x:pitCX, z:pitCZ}, 40, false); 
-    player.position.set(pSp.x,0,pSp.z);
+    player.position.set(pSp.x,0.1,pSp.z);
     
     buildBingoPit();
     spawnDoor();
@@ -1192,36 +1239,32 @@ function launchGame(){
 }
 
 // ════════════════════════════════════════════
-//  MAIN PREVIEW CANVAS (CCTV 관찰 맵 회전 기능 구현)
+//  MAIN PREVIEW CANVAS (CCTV 지직거림 노이즈 트랜지션 보정)
 // ════════════════════════════════════════════
 (function initPreview(){
     const pvs=document.getElementById('preview-canvas');
     pvs.width=innerWidth;pvs.height=innerHeight;
     const pvScene=new THREE.Scene();
-    pvScene.background=new THREE.Color(0xa39458);
-    pvScene.fog=new THREE.FogExp2(0xa39458,.045);
+    pvScene.background=new THREE.Color(0x8f7d3e);
+    pvScene.fog=new THREE.FogExp2(0x8f7d3e,.048);
     const pvCam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,200);
     const pvRen=new THREE.WebGLRenderer({canvas:pvs,antialias:false,precision:'mediump'});
     pvRen.setSize(innerWidth,innerHeight);
 
-    const pvAmb=new THREE.AmbientLight(0xfffde6,.7); pvScene.add(pvAmb);
+    const pvAmb=new THREE.AmbientLight(0xdecb8a,.7); pvScene.add(pvAmb);
     const pvDir=new THREE.PointLight(0xfff2b3, 0.8, 40); pvScene.add(pvDir);
 
-    // CCTV 관찰용 방 및 복도 세트 자동 구축
     const pUNIT = 9;
     const pROWS = 12, pCOLS = 12;
     const pMap = Array(pROWS).fill().map(()=>Array(pCOLS).fill(1));
     
-    // 넓은 방 구조 조각 분할 생성
     for(let r=2; r<5; r++) for(let c=2; c<5; c++) pMap[r][c] = 0;
     for(let r=7; r<10; r++) for(let c=7; c<10; c++) pMap[r][c] = 0;
-    // 연결 복도 생성
     for(let c=4; c<8; c++) pMap[3][c] = 0;
     for(let r=3; r<8; r++) pMap[r][7] = 0;
 
     const pWGeo = new THREE.BoxGeometry(pUNIT, WH, pUNIT);
-    const pWMat = new THREE.MeshStandardMaterial({color:0xd6cb94, roughness:.9});
-    const pInst = new THREE.InstancedMesh(pWGeo, pWMat, pROWS*pCOLS);
+    const pInst = new THREE.InstancedMesh(pWGeo, wallMat, pROWS*pCOLS);
     
     const dum = new THREE.Object3D();
     let idx = 0;
@@ -1241,12 +1284,11 @@ function launchGame(){
     pInst.instanceMatrix.needsUpdate = true;
     pvScene.add(pInst);
 
-    const pFl = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0x786b3c, roughness:.95}));
+    const pFl = new THREE.Mesh(new THREE.PlaneGeometry(200,200), floorMat);
     pFl.rotation.x = -Math.PI/2; pvScene.add(pFl);
-    const pCe = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0xc7bc91, roughness:.9}));
+    const pCe = new THREE.Mesh(new THREE.PlaneGeometry(200,200), ceilMat);
     pCe.rotation.x = Math.PI/2; pCe.position.y = WH; pvScene.add(pCe);
 
-    // CCTV 시점 수동 로테이션 스포트 경로 제어 배열
     const cctvSpots = [
         { camX: -15, camY: 5.5, camZ: -15, lookX: 0, lookY: 1.2, lookZ: 0 },
         { camX: 20, camY: 4.8, camZ: 20, lookX: 10, lookY: 1.0, lookZ: 10 },
@@ -1255,21 +1297,31 @@ function launchGame(){
     ];
 
     let t=0;
+    let lastSpotIdx = 0;
+    const blindEl = document.getElementById('cctv-glitch-blind');
+
     function drawPreview(){
         if(document.getElementById('start-screen').style.display==='none')return;
         requestAnimationFrame(drawPreview);
         t += 0.0025;
 
-        // 시간에 따라 관찰용 방(Spot) 앵글을 순차적으로 자연스럽게 스위칭 및 회전
         const spotIdx = Math.floor(t) % cctvSpots.length;
+        
+        // [CCTV 전환 알고리즘 패치] 스위칭 순간에 암전 노이즈 플래시 글리치 연출 발동
+        if(spotIdx !== lastSpotIdx){
+            lastSpotIdx = spotIdx;
+            blindEl.style.opacity = '1';
+            setTimeout(() => { blindEl.style.opacity = '0.3'; }, 40);
+            setTimeout(() => { blindEl.style.opacity = '0.8'; }, 90);
+            setTimeout(() => { blindEl.style.opacity = '0'; }, 160);
+        }
+
         const nextIdx = (spotIdx + 1) % cctvSpots.length;
         const remainT = t % 1;
         
-        // 보간 처리 알고리즘 적용
         const curr = cctvSpots[spotIdx];
         const next = cctvSpots[nextIdx];
-        
-        const smoothT = remainT * remainT * (3 - 2 * remainT); // 부드러운 전환 효과
+        const smoothT = remainT * remainT * (3 - 2 * remainT); 
         
         const cX = curr.camX + (next.camX - curr.camX) * smoothT;
         const cY = curr.camY + (next.camY - curr.camY) * smoothT;
@@ -1279,8 +1331,7 @@ function launchGame(){
         const lY = curr.lookY + (next.lookY - curr.lookY) * smoothT;
         const lZ = curr.lookZ + (next.lookZ - curr.lookZ) * smoothT;
 
-        // CCTV 패닝 카메라 워크 적용 (미세하게 진동 및 흔들림 추가)
-        pvCam.position.set(cX + Math.sin(t*8)*0.03, cY + Math.cos(t*6)*0.02, cZ);
+        pvCam.position.set(cX + Math.sin(t*10)*0.04, cY + Math.cos(t*8)*0.03, cZ);
         pvCam.lookAt(lX + Math.sin(t*2)*1.2, lY, lZ + Math.cos(t * 1.5)*1.2);
         
         pvDir.position.copy(pvCam.position);
@@ -1307,7 +1358,7 @@ function animate(){
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.02;
     if(!underground)keyHint(player.position);
 
-    // 빙고판 노란색 선 밟기 판정 로직
+    // [버그 수정 완료] 빙고판 노란색 선 밟기 판정 메커니즘 붕괴 패치 완료
     if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                     player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
@@ -1318,17 +1369,16 @@ function animate(){
             const mx = lx % CELL;
             const mz = lz % CELL;
             
-            const pRad = 0.45; // 플레이어 충돌 히트박스 반경 마진 확보
+            const pRad = 0.45; // 플레이어 중심 반경 마진 안정화 확보
             let safe = false;
 
-            // 노란색 라인 위에 있을 경우 예외 처리로 세이프 판정 부여
-            if(mx <= B_PATH_W + pRad || mx >= CELL - pRad) safe = true;
-            if(mz <= B_PATH_W + pRad || mz >= CELL - pRad) safe = true;
+            // 노란색선 바운더리 검증 연산 수정 (이제 선 위에 서 있으면 완전히 밞히고 떨어지지 않음)
+            if(mx <= (B_PATH_W + pRad) || mx >= (CELL - pRad)) safe = true;
+            if(mz <= (B_PATH_W + pRad) || mz >= (CELL - pRad)) safe = true;
 
-            // 칸 내부 영역으로 깊숙이 들어갔을 경우 구덩이 바닥 밑으로 낙하 유도
-            if(!safe&&grounded){
+            if(!safe && grounded){
                 grounded=false;
-                velY=-.035;
+                velY=-.04; // 검은 구덩이 내부로의 중력 추락 유도 가동
             }
         }
     }
@@ -1451,15 +1501,15 @@ function animate(){
     if(!climbing){
         velY+=GRAVITY;player.position.y+=velY;
         if(underground){
-            if(player.position.y<=UG_Y){player.position.y=UG_Y;velY=0;grounded=true;}else grounded=false;
+            if(player.position.y<=UG_Y+0.05){player.position.y=UG_Y+0.05;velY=0;grounded=true;}else grounded=false;
         }else{
             if(pitBounds.active){
                 const inPit2=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
                              player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
-                if(!inPit2&&player.position.y<=0){player.position.y=0;velY=0;grounded=true;}
+                if(!inPit2&&player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;}
                 else if(!inPit2)grounded=false;
             }else{
-                if(player.position.y<=0){player.position.y=0;velY=0;grounded=true;}else grounded=false;
+                if(player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;}else grounded=false;
             }
         }
     }

@@ -82,8 +82,9 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+        /* [수정] 전체화면 버튼까지 안정적으로 노출되도록 max-height 확장 */
         .inline-settings-panel.open {
-            max-height: 380px;
+            max-height: 420px; 
             opacity: 1;
             padding: 18px;
             border: 1px solid #474436;
@@ -122,14 +123,14 @@
     <div id="start-content">
         <div id="cctv-badge">🔴 REC — LIVE</div>
         <h2 class="title-main">THE BACKROOMS</h2>
-        <div class="title-level">LEVEL 0 </div>
+        <div class="title-level">LEVEL BETA test</div>
         
         <div class="menu-group">
             <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
                 <span class="start-label">START</span>
             </div>
             
-            <button class="setting-toggle-btn" onclick="toggleStartSettings()">⚙️ SETTING</button>
+            <button class="setting-toggle-btn" onclick="toggleStartSettings()">⚙️ SETTINGS</button>
             
             <div id="start-settings-panel" class="inline-settings-panel">
                 <div style="font-size:11px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-2px;">SELECT TOOL</div>
@@ -197,7 +198,6 @@
 // ════════════════════════════════════════════
 //  CONSTANTS & MAP SCALE EXTENSION (EXPANDED)
 // ════════════════════════════════════════════
-// ROWS, COLS는 32x32로 고정하고, 한 칸의 크기(UNIT)와 높이(WH)를 확장하여 길과 넓이를 극대화
 const ROWS=32, COLS=32, UNIT=9, WH=7.0; 
 
 let mapData=[], reserved=[];
@@ -240,7 +240,7 @@ let climbing=false, climbT=0;
 const BG_COL=0xa39458;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(BG_COL);
-scene.fog=new THREE.FogExp2(BG_COL,0.035); // 거리가 넓어짐에 따라 안개 농도 최적화
+scene.fog=new THREE.FogExp2(BG_COL,0.035); 
 
 const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});
@@ -794,7 +794,7 @@ function entityAI(e,pp){
         if(sd<.2)e.patrolTarget=safeSpawn(pp,0,true);
         e.lastPos.copy(ep);e.stuckT=0;
     }
-    if(dist<20&&!isGameOver&&player.position.y>=-0.2){ // 감지 범위 사정거리 확장
+    if(dist<20&&!isGameOver&&player.position.y>=-0.2){ 
         if(!e.scream){e.scream=true;scream(true);}e.state='chase';
     }else if(e.state==='chase'&&(dist>28||player.position.y<-.2)){
         e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,true);
@@ -823,7 +823,23 @@ let lastFoot=0;
 function updateSens(v){sensitivity=parseFloat(v);document.getElementById('txt-sens').textContent=parseFloat(v).toFixed(1);}
 function updateBgm(v){volBgm=parseInt(v)/100;document.getElementById('txt-bgm').textContent=v+'%';syncBgm();}
 function updateSfx(v){volSfx=parseInt(v)/100;document.getElementById('txt-sfx').textContent=v+'%';}
-function toggleFS(){if(!document.fullscreenElement){document.documentElement.requestFullscreen?.();}else{document.exitFullscreen?.();}}
+
+/* [수정] 크로스 브라우저 호환 및 예외 처리가 강화된 전체 화면 토글 함수 */
+function toggleFS(){
+    if(!document.fullscreenElement){
+        const docEl = document.documentElement;
+        if(docEl.requestFullscreen) docEl.requestFullscreen();
+        else if(docEl.mozRequestFullScreen) docEl.mozRequestFullScreen();
+        else if(docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+        else if(docEl.msRequestFullscreen) docEl.msRequestFullscreen();
+    } else {
+        if(document.exitFullscreen) document.exitFullscreen();
+        else if(document.mozCancelFullScreen) document.mozCancelFullScreen();
+        else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if(document.msExitFullscreen) document.msExitFullscreen();
+    }
+}
+
 function showToast(msg){const t=document.getElementById('game-toast');t.innerHTML=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3200);}
 
 function toggleStartSettings() {
@@ -998,7 +1014,7 @@ function syncBgm(){if(bgGain&&actx)bgGain.gain.setValueAtTime(volBgm*.35,actx.cu
 function keyHint(pp){
     if(!khGain||!keyMesh||hasKey||!actx)return;
     const d=Math.sqrt((pp.x-keyMesh.position.x)**2+(pp.z-keyMesh.position.z)**2);
-    if(d<25){ // 음향 피드백 한계치 비례 확장
+    if(d<25){ 
         let tv=Math.max(.001,(25-d)/25)*.4*volSfx;khGain.gain.setTargetAtTime(tv,actx.currentTime,.15);khOsc.frequency.setValueAtTime(135+Math.sin(Date.now()*.004)*20,actx.currentTime);}
     else khGain.gain.setTargetAtTime(.001,actx.currentTime,.2);
 }
@@ -1021,8 +1037,6 @@ function triggerPause(s){
     if(!gameActive||isGameOver)return;
     isPaused=s;
     document.getElementById('pause-screen').style.display=s?'flex':'none';
-    
-    // RESUME을 통해 풀렸을 때 PC 환경이면 화면 제어 포인터 락 다시 요청 조치
     if(!s && platform==='pc') {
         document.body.requestPointerLock();
     }
@@ -1348,7 +1362,7 @@ function animate(){
             e.legs.forEach((leg,i)=>{const off=i*(Math.PI/2);leg.rotation.x=Math.sin(Date.now()*ws*2+off)*.5;leg.rotation.z=.25+Math.cos(Date.now()*ws+off)*.15;});
         });
         const hu=document.getElementById('heartbeat-ui');
-        if(closestD<15){ // 박동 연출 기준점 확장
+        if(closestD<15){ 
             const pf=(15-closestD)/15,hbi=800-pf*550,now=Date.now();
             if(now-lastHB>hbi){heartbeat(.35+pf*.45);lastHB=now;hu.style.transform=`translateX(-50%) scale(${1.2+pf*.4})`;setTimeout(()=>hu.style.transform=`translateX(-50%) scale(${.9+pf*.15})`,120);}
         }else hu.style.transform='translateX(-50%) scale(0)';

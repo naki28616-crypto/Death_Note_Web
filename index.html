@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>《BACKROOM》</title>
+    <title>《BACKROOMS》</title>
     <style>
         html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#080806;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
@@ -19,9 +19,9 @@
         .btn{background:#1a1914;color:#d1bd71;border:1px solid #474436;padding:9px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;white-space:nowrap;transition:all .2s;text-align:center;box-sizing:border-box;}
         .btn:hover{background:#2e2b21;color:#ffea9f;border-color:#615d4a;}
         
-        .setting-row{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;}
-        .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;}
-        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:2px;cursor:pointer;}
+        .setting-row{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;}
+        .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;font-size:14px;}
+        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:4px;cursor:pointer;height:8px;}
         
         #mobile-controls-right{position:absolute;bottom:30px;right:30px;display:none;flex-direction:column;gap:15px;z-index:220;}
         .circle-btn{width:64px;height:64px;background:rgba(20,19,16,.95);border:2px solid #544e3e;border-radius:50%;color:#e8e4cf;font-size:24px;display:flex;justify-content:center;align-items:center;cursor:pointer;touch-action:none;box-shadow:0 6px 14px rgba(0,0,0,.8);}
@@ -46,7 +46,7 @@
         @keyframes scanlines{0%{background-position:0 0;}100%{background-position:0 100px;}}
         @keyframes staticAnim{0%,100%{opacity:.05;}50%{opacity:.07;}}
         
-        #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;}
+        #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;}
         #cctv-badge{font-family:monospace;font-size:14px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.6);animation:blink 1.2s step-end infinite;}
         @keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
         
@@ -64,38 +64,38 @@
         .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
         .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
         
-        /* 스크롤바 최적화 및 안정적인 높이 제어 구현 */
+        /* ─── FULLSCREEN SETTINGS PANEL (전체 화면 모달형태로 리네이밍 및 변경) ─── */
         .inline-settings-panel {
-            max-height: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(8, 8, 6, 0.93);
+            z-index: 10;
             opacity: 0;
-            overflow-y: auto;
-            overflow-x: hidden;
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            background: rgba(10,9,7,0.97);
-            border: 0 solid #474436;
-            padding: 0 20px;
-            width: 290px;
-            border-radius: 4px;
+            justify-content: center;
+            align-items: flex-start;
+            padding-left: 8%;
             box-sizing: border-box;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .inline-settings-panel.open {
-            max-height: 260px; /* 내부 스크롤 보장을 위한 조절 */
             opacity: 1;
-            padding: 18px;
-            border: 1px solid #474436;
-            margin-top: 4px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            pointer-events: auto;
         }
-        .inline-settings-panel::-webkit-scrollbar { width: 6px; }
-        .inline-settings-panel::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-        .inline-settings-panel::-webkit-scrollbar-thumb { background: #474436; border-radius: 3px; }
-        .inline-settings-panel::-webkit-scrollbar-thumb:hover { background: #d1bd71; }
+        .settings-content-wrapper {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
         
         .platform-mini-box{display:flex;gap:10px;width:100%;}
-        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:9px 0;font-size:11px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
+        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:11px 0;font-size:12px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
         .platform-choice-btn.selected{background:#d1bd71;color:#1c1b17;border-color:#fff;box-shadow:0 4px 12px rgba(209,189,113,.3);font-weight:900;}
 
         #gameover-screen,#pause-screen,#clear-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(3,3,2,.98);z-index:150;display:none;flex-direction:column;justify-content:center;align-items:center;}
@@ -122,42 +122,51 @@
     <div id="scanline-overlay"></div>
     <div id="vignette-overlay"></div>
     <div id="noise-overlay"></div>
+    
     <div id="start-content">
         <div id="cctv-badge">🔴 REC — LIVE</div>
         <h2 class="title-main">THE BACKROOMS</h2>
-        <div class="title-level">LEVEL 0 DEMO vr</div>
+        <div class="title-level">LEVEL 0 — DEMO</div>
         
         <div class="menu-group">
             <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
                 <span class="start-label">START</span>
             </div>
             
-            <button class="setting-toggle-btn" onclick="toggleStartSettings()">⚙️ SETTINGS</button>
+            <button class="setting-toggle-btn" onclick="toggleStartSettings(true)">⚙️ SETTING</button>
+        </div>
+    </div>
+
+    <div id="start-settings-panel" class="inline-settings-panel">
+        <div class="settings-content-wrapper">
+            <h1 style="font-size:28px; font-weight:900; letter-spacing:3px; margin:0 0 10px 0; color:#ffffff; font-family:monospace; text-shadow:0 0 15px rgba(255,255,255,0.2);">SETTINGS</h1>
             
-            <div id="start-settings-panel" class="inline-settings-panel">
-                <div style="font-size:11px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-2px;">SELECT TOOL</div>
-                <div class="platform-mini-box">
-                    <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">DESKTOP</button>
-                    <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
-                </div>
-                
-                <hr style="border:0; border-top:1px solid #3d3a2e; margin:4px 0;">
-                
-                <div class="setting-row">
-                    <div><span>Sensitivity</span><span id="txt-sens">1.0</span></div>
-                    <input type="range" id="cfg-sens" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSens(this.value)">
-                </div>
-                <div class="setting-row">
-                    <div><span>BGM Volume</span><span id="txt-bgm">40%</span></div>
-                    <input type="range" id="cfg-bgm" min="0" max="100" step="5" value="40" oninput="updateBgm(this.value)">
-                </div>
-                <div class="setting-row">
-                    <div><span>SFX Volume</span><span id="txt-sfx">70%</span></div>
-                    <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
-                </div>
-                
-                <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:7px 0; border-color:#595443;" onclick="toggleFS()">FULL</button>
+            <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT Tool</div>
+            <div class="platform-mini-box">
+                <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">DESKTOP</button>
+                <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
             </div>
+            
+            <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
+            
+            <div class="setting-row">
+                <div><span>Sensitivity</span><span id="txt-sens">1.0</span></div>
+                <input type="range" id="cfg-sens" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSens(this.value)">
+            </div>
+            <div class="setting-row">
+                <div><span>BGM Volume</span><span id="txt-bgm">40%</span></div>
+                <input type="range" id="cfg-bgm" min="0" max="100" step="5" value="40" oninput="updateBgm(this.value)">
+            </div>
+            <div class="setting-row">
+                <div><span>SFX Volume</span><span id="txt-sfx">70%</span></div>
+                <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
+            </div>
+            
+            <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:10px 0; border-color:#595443;" onclick="toggleFS()">FULL</button>
+            
+            <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
+            
+            <button class="platform-choice-btn" style="width:100%; background:#21201c; color:#ffea9f; border-color:#d1bd71; font-weight:900; font-size:13px; letter-spacing:2px;" onclick="toggleStartSettings(false)">↩ BACK</button>
         </div>
     </div>
 </div>
@@ -782,7 +791,7 @@ function exitUnderground(){
     if(ceilM)ceilM.visible=true;
     if(!hasKey&&keyMesh)keyMesh.visible=true;
     if(doorGroup)doorGroup.visible=true;
-    pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=true;});
+    pitMeshes.forEach(m=>{m.visible=true;});
     if(pitVoid)pitVoid.visible=true;
     
     player.position.set(pitCX+UNIT*1.5,0,pitCZ+UNIT*1.5); 
@@ -854,7 +863,6 @@ function updateSens(v){sensitivity=parseFloat(v);document.getElementById('txt-se
 function updateBgm(v){volBgm=parseInt(v)/100;document.getElementById('txt-bgm').textContent=v+'%';syncBgm();}
 function updateSfx(v){volSfx=parseInt(v)/100;document.getElementById('txt-sfx').textContent=v+'%';}
 
-/* 크로스 브라우저 호환 및 예외 처리가 강화된 전체 화면 토글 함수 */
 function toggleFS(){
     if(!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement){
         const docEl = document.documentElement;
@@ -872,9 +880,19 @@ function toggleFS(){
 
 function showToast(msg){const t=document.getElementById('game-toast');t.innerHTML=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3200);}
 
-function toggleStartSettings() {
+/* 대형 전체화면 인터페이스 전환을 위한 함수 수정 */
+function toggleStartSettings(isOpen) {
     const panel = document.getElementById('start-settings-panel');
-    panel.classList.toggle('open');
+    const mainContent = document.getElementById('start-content');
+    if (isOpen) {
+        panel.classList.add('open');
+        mainContent.style.opacity = '0';
+        mainContent.style.pointerEvents = 'none';
+    } else {
+        panel.classList.remove('open');
+        mainContent.style.opacity = '1';
+        mainContent.style.pointerEvents = 'auto';
+    }
 }
 
 function setPlatform(t){
@@ -892,7 +910,7 @@ function calcJoy(cx,cy){
 }
 
 window.addEventListener('touchstart',e=>{
-    if(e.target.closest('#btn-mobile-interact')||e.target.closest('#top-controls')||e.target.closest('#mobile-controls-right')||e.target.closest('#pause-screen')||e.target.closest('.menu-group'))return;
+    if(e.target.closest('#btn-mobile-interact')||e.target.closest('#top-controls')||e.target.closest('#mobile-controls-right')||e.target.closest('#pause-screen')||e.target.closest('.menu-group')||e.target.closest('#start-settings-panel'))return;
     if(!gameActive||isGameOver||isPaused||platform!=='mobile')return;
     for(let i=0;i<e.changedTouches.length;i++){
         const t=e.changedTouches[i];
@@ -1175,7 +1193,7 @@ function launchGame(){
     const wl=new THREE.Mesh(new THREE.PlaneGeometry(cL,cH),pvWMat);wl.rotation.y=Math.PI/2;wl.position.set(-cW/2,cH/2,-cL/2);pvScene.add(wl);
     const wr=new THREE.Mesh(new THREE.PlaneGeometry(cL,cH),pvWMat);wr.rotation.y=-Math.PI/2;wr.position.set(cW/2,cH/2,-cL/2);pvScene.add(wr);
     
-    for(let i=0;i<6;i++){
+    for(let i=0; i<6; i++){
         const lg=new THREE.Group();
         lg.add(new THREE.Mesh(new THREE.BoxGeometry(3.0,.04,1.5),new THREE.MeshStandardMaterial({color:0x222222})),new THREE.Mesh(new THREE.BoxGeometry(2.7,.05,1.2),new THREE.MeshBasicMaterial({color:0xfffbc4})));
         lg.position.set(0,cH-.02,-i*10-5);pvScene.add(lg);

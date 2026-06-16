@@ -648,7 +648,8 @@ function buildBingoPit(){
     const vGeo = new THREE.BoxGeometry(B_PATH_W + 0.1, 0.1, PIT_TOTAL + 0.1);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
-        const p = new Mesh(vGeo, pathMat);
+        // ▼ 여기서 발생하던 오류를 수정했습니다! (new Mesh -> new THREE.Mesh)
+        const p = new THREE.Mesh(vGeo, pathMat);
         p.position.set(x, -0.02, pitCZ);
         scene.add(p); pitMeshes.push(p);
     }

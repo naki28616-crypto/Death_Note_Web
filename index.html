@@ -1,1484 +1,697 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Backrooms</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Maze - Complete Escape</title>
     <style>
-        html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#050503;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
-        canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
-        #vhs-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(0,0,0,0) 30%,rgba(0,0,0,0.9) 100%);pointer-events:none;z-index:2;}
-        #glitch-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);opacity:0;pointer-events:none;z-index:3;transition:background-color .1s,opacity .1s;}
-        #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;background:rgba(255,255,255,.5);border-radius:50%;pointer-events:none;z-index:5;display:none;}
-        #cctv-ui{position:absolute;top:25px;left:25px;color:#ff3333;font-weight:bold;font-size:16px;z-index:210;letter-spacing:1.5px;pointer-events:none;font-family:monospace;display:none;text-shadow:0 0 8px rgba(255,51,51,0.7);}
-        #quest-ui{position:absolute;top:60px;left:25px;color:#ffea9f;font-weight:bold;font-size:14px;z-index:210;letter-spacing:1px;pointer-events:none;background:rgba(12,11,9,.9);padding:10px 16px;border-left:3px solid #d1bd71;border-radius:0 4px 4px 0;display:none;text-shadow:0 1px 4px rgba(0,0,0,1);box-shadow:0 4px 12px rgba(0,0,0,.6);}
-        #interact-prompt{position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);color:#fff;background:rgba(0,0,0,.85);border:1px solid #d1bd71;padding:10px 20px;border-radius:4px;font-weight:bold;font-size:14px;z-index:100;display:none;pointer-events:none;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.5);}
+        body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; font-family: 'Malgun Gothic', sans-serif; background: #000; user-select: none; }
+        #canvas-container { width: 100%; height: 100%; }
         
-        #top-controls{position:absolute;top:16px;right:16px;z-index:220;display:none;}
+        /* UI 레이어 인터페이스 */
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: none; }
         
-        .btn{background:#1a1914;color:#d1bd71;border:1px solid #474436;padding:9px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;white-space:nowrap;transition:all .2s;text-align:center;box-sizing:border-box;}
-        .btn:hover{background:#2e2b21;color:#ffea9f;border-color:#615d4a;}
-        
-        .setting-row{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#9e9573;font-weight:bold;font-family:monospace;width:100%;box-sizing:border-box;}
-        .setting-row div{display:flex;justify-content:space-between;align-items:center;color:#e8e4cf;font-weight:normal;font-size:15px;}
-        .setting-row input[type="range"]{width:100%;accent-color:#d1bd71;margin-top:4px;cursor:pointer;height:10px;}
-        
-        #mobile-controls-right{position:absolute;bottom:30px;right:30px;display:none;flex-direction:column;gap:15px;z-index:220;}
-        .circle-btn{width:64px;height:64px;background:rgba(20,19,16,.95);border:2px solid #544e3e;border-radius:50%;color:#e8e4cf;font-size:24px;display:flex;justify-content:center;align-items:center;cursor:pointer;touch-action:none;box-shadow:0 6px 14px rgba(0,0,0,.8);}
-        .circle-btn.active{background:#d1bd71;color:#111;border-color:#fff;}
-        #btn-mobile-interact{background:#ffea9f!important;color:#111!important;border-color:#fff!important;display:none;font-size:28px;animation:pulse 1.2s infinite;z-index:230;}
-        @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 rgba(255,234,159,.5);}50%{transform:scale(1.15);box-shadow:0 0 20px rgba(255,234,159,.8);}100%{transform:scale(1);box-shadow:0 0 0 rgba(255,234,159,.5);}}
-        #stamina-container{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);width:160px;background:rgba(8,8,6,.95);border:1px solid #474436;padding:5px;border-radius:4px;z-index:10;display:none;}
-        .stamina-bg{background:rgba(0,0,0,.7);height:5px;overflow:hidden;border-radius:2px;}
-        #stamina-bar{width:100%;height:100%;background:#d1bd71;}
-        #heartbeat-ui{position:absolute;bottom:45px;left:50%;transform:translateX(-50%) scale(0);font-size:46px;color:#cc1818;text-shadow:0 0 25px rgba(204,24,24,.9);pointer-events:none;z-index:15;transition:transform .1s cubic-bezier(.175,.885,.32,1.275);}
-        #game-toast{position:absolute;top:20%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.92);color:#ffcc00;padding:12px 24px;border:1px solid #d1bd71;border-radius:4px;font-weight:bold;font-size:15px;z-index:300;display:none;pointer-events:none;text-align:center;box-shadow:0 5px 15px rgba(0,0,0,0.8);}
-        #ladder-hud{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#66ff66;padding:6px 18px;border:1px solid #339933;border-radius:4px;font-weight:bold;font-size:13px;z-index:210;display:none;pointer-events:none;}
-        #joystick-zone{position:absolute;bottom:35px;left:35px;width:120px;height:120px;background:rgba(255,255,255,.03);border:2px solid rgba(255,255,255,.15);border-radius:50%;z-index:10;touch-action:none;display:none;}
-        #joystick-stick{position:absolute;top:37px;left:37px;width:46px;height:46px;background:rgba(255,255,255,.3);border-radius:50%;}
+        /* 시작 스크린 */
+        #start-screen { background: rgba(10, 10, 15, 0.98); z-index: 100; pointer-events: auto; flex-direction: column; gap: 20px; transition: opacity 1s; }
+        #start-screen h1 { color: #d1bd71; font-size: 3.5rem; letter-spacing: 6px; margin: 0; text-shadow: 0 0 15px rgba(209,189,113,0.6); font-weight: 900; }
+        #btn-start { padding: 18px 50px; font-size: 1.3rem; background: #111; color: #fff; border: 2px solid #d1bd71; cursor: pointer; border-radius: 4px; transition: 0.3s; font-weight: bold; }
+        #btn-start:hover { background: #d1bd71; color: #000; box-shadow: 0 0 20px #d1bd71; }
 
-        /* ─── START SCREEN ─── */
-        #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;}
-        #preview-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;}
-        #scanline-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px);pointer-events:none;z-index:2;animation:scanlines 6s linear infinite;}
-        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 10%,rgba(0,0,0,.9) 100%);pointer-events:none;z-index:3;}
-        #noise-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.09;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:staticAnim .05s steps(1) infinite;}
-        #cctv-glitch-blind{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;opacity:0;z-index:6;pointer-events:none;}
-        @keyframes scanlines{0%{background-position:0 0;}100%{background-position:0 100px;}}
-        @keyframes staticAnim{0%,100%{opacity:.08;}50%{opacity:.11;}}
+        /* 눈 깜박임 불투명 오버레이 */
+        #blink-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 90; pointer-events: none; opacity: 1; }
         
-        #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;}
-        #cctv-badge{font-family:monospace;font-size:14px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.6);animation:blink 1.2s step-end infinite;}
-        
-        .title-main{
-            font-size:24px;font-weight:600;letter-spacing:10px;margin:0;color:#c9b35d;font-family:monospace;
-            text-shadow: 1px 1px 0px #7a6b38, 2px 2px 0px #5e5227, 3px 3px 5px rgba(0,0,0,0.9);
-        }
-        .title-sub{
-            font-size:54px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;
-            text-shadow: 
-                0 1px 0 #cccccc, 0 2px 0 #c5c5c5, 0 3px 0 #bbb, 0 4px 0 #b4b4b4, 
-                0 5px 0 #b0b0b0, 0 6px 0 #a3a3a3, 0 7px 0 #999, 0 8px 0 #888, 
-                0 9px 0 #777, 0 10px 15px rgba(0,0,0,0.9), 0 0 25px rgba(209,189,113,.4);
-        }
-        .title-level{
-            font-size:15px;font-weight:600;letter-spacing:3px;margin:12px 0 30px;color:#9e9573;font-family:monospace;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-        
-        .menu-group{display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
-        
-        .start-btn-container{position:relative;width:180px;height:54px;display:flex;justify-content:center;align-items:center;cursor:pointer;background:rgba(20,19,16,.85);border:2px solid #d1bd71;border-radius:4px;box-shadow:0 4px 15px rgba(0,0,0,0.6);transition:all 0.25s ease;}
-        .start-btn-container:hover{background:#d1bd71;box-shadow:0 0 25px rgba(209,189,113,0.5);}
-        .start-btn-container:hover .start-label{color:#111;text-shadow:none;}
-        .start-label{font-size:18px;font-weight:900;letter-spacing:4px;color:#ebdfa7;font-family:monospace;text-shadow:0 2px 4px rgba(0,0,0,0.8);transition:color 0.2s;}
-        
-        .setting-toggle-btn{background:rgba(12,11,9,0.6);color:#9e9573;border:1px solid #474436;padding:8px 18px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
-        .setting-toggle-btn:hover{color:#fff;border-color:#9e9573;background:rgba(30,28,23,0.8);}
-        
-        .inline-settings-panel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(5, 5, 4, 0.98);
-            z-index: 210;
-            opacity: 0;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            box-sizing: border-box;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 40px 20px;
-        }
-        
-        .inline-settings-panel.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        
-        .settings-content-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 22px;
-            width: 100%;
-            max-width: 600px;
-            box-sizing: border-box;
-            padding-bottom: 50px;
-        }
-        
-        .platform-mini-box{display:flex;gap:12px;width:100%;}
-        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:12px 0;font-size:13px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
-        .platform-choice-btn.selected{background:#d1bd71;color:#1c1b17;border-color:#fff;box-shadow:0 4px 12px rgba(209,189,113,.3);font-weight:900;}
+        /* 인트로 실시간 자막 */
+        #intro-subtitles { position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); color: #fff; font-size: 1.3rem; text-align: center; text-shadow: 2px 2px 5px #000; z-index: 85; font-weight: bold; opacity: 0; transition: opacity 0.4s; background: rgba(0,0,0,0.6); padding: 12px 24px; border-radius: 8px; letter-spacing: 1px; }
 
-        #gameover-screen,#pause-screen,#clear-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(3,3,2,.98);z-index:150;display:none;flex-direction:column;justify-content:center;align-items:center;}
-        #gameover-screen{color:#cc2424;}
-        #clear-screen{color:#ffcc00;background:rgba(12,11,9,.99);}
-        .go-btn{background:#260f0f;color:#ff8888;border:1px solid #662222;padding:14px 28px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1px;transition:all 0.2s;}
-        .go-btn:hover{background:#471919;color:#fff;}
+        /* HUD 배치 시스템 */
+        #hud-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; }
+        #quest-ui { position: absolute; top: 20px; left: 20px; color: #fff; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.75); padding: 15px; border-left: 4px solid #d1bd71; border-radius: 0 8px 8px 0; min-width: 250px; line-height: 1.5; }
+        #stamina-container { position: absolute; bottom: 30px; left: 30px; width: 220px; height: 14px; background: rgba(255,255,255,0.15); border-radius: 7px; overflow: hidden; border: 1px solid rgba(255,255,255,0.3); }
+        #stamina-bar { width: 100%; height: 100%; background: #d1bd71; transition: width 0.05s; }
+        #heartbeat-ui { position: absolute; bottom: 45%; left: 50%; transform: translateX(-50%) scale(0); width: 120px; height: 120px; background: radial-gradient(circle, rgba(204,36,36,0.5) 0%, rgba(0,0,0,0) 70%); border-radius: 50%; transition: transform 0.1s ease-out; }
+        #ladder-hud { position: absolute; top: 20px; right: 20px; color: #00ff55; font-weight: bold; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 6px; border: 1px solid #00ff55; display: none; }
+        
+        /* 상호작용 프롬프트 안내 창 */
+        #interact-prompt { position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); color: #fff; font-size: 19px; font-weight: bold; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 6px; border: 1px solid #d1bd71; display: none; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        #btn-mobile-interact { position: absolute; bottom: 100px; right: 50px; width: 80px; height: 80px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 32px; justify-content: center; align-items: center; display: none; pointer-events: auto; }
+        
+        /* 토스트 팝업 알림 메시지 */
+        #toast-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); background: rgba(15,15,20,0.9); color: #fff; border: 1px solid #d1bd71; padding: 16px 35px; border-radius: 6px; text-align: center; font-size: 16px; line-height: 1.6; z-index: 80; opacity: 0; transition: opacity 0.4s; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
+        
+        /* 엔드게임 스크린 오버레이 */
+        .end-screen { background: rgba(5,5,5,0.96); z-index: 110; flex-direction: column; gap: 25px; display: none; pointer-events: auto; }
+        .end-screen h2 { font-size: 3rem; margin: 0; letter-spacing: 4px; }
+        #clear-screen h2 { color: #00ff55; text-shadow: 0 0 20px rgba(0,255,85,0.6); }
+        #gameover-screen h2 { color: #cc2424; text-shadow: 0 0 20px rgba(204,36,36,0.6); }
+        .end-screen p { color: #ccc; font-size: 1.2rem; margin: 0; }
+        .btn-restart { padding: 14px 36px; font-size: 1.1rem; background: #222; color: #fff; border: 2px solid #fff; cursor: pointer; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+        .btn-restart:hover { background: #fff; color: #000; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-<div id="vhs-overlay"></div>
-<div id="glitch-overlay"></div>
-<div id="crosshair"></div>
-<div id="cctv-ui">🔴 REC <span id="cctv-time">00:00</span></div>
-<div id="quest-ui"></div>
-<div id="interact-prompt"></div>
-<div id="game-toast"></div>
-<div id="heartbeat-ui">♡</div>
-<div id="ladder-hud">🪜 Ladder x1</div>
 
-<div id="start-screen">
-    <canvas id="preview-canvas"></canvas>
-    <div id="scanline-overlay"></div>
-    <div id="vignette-overlay"></div>
-    <div id="noise-overlay"></div>
-    <div id="cctv-glitch-blind"></div>
-    
-    <div id="start-content">
-        <div id="cctv-badge">🔴 REC — LIVE</div>
-        <h2 class="title-main">LEVEL 0</h2>
-        <h1 class="title-sub">THE BACKROOMS</h1>
-        <div class="title-level">Demo test vr</div>
-        
-        <div class="menu-group">
-            <div id="start-trigger" class="start-btn-container" onclick="launchGame()">
-                <span class="start-label">START</span>
-            </div>
-            
-            <button class="setting-toggle-btn" onclick="toggleStartSettings(true)">⚙️ SETTING</button>
-        </div>
+    <div id="canvas-container"></div>
+
+    <div id="start-screen" class="ui-layer">
+        <h1>THE MAZE</h1>
+        <button id="btn-start">게임 시작</button>
     </div>
 
-    <div id="start-settings-panel" class="inline-settings-panel">
-        <div class="settings-content-wrapper">
-            <h1 style="font-size:28px; font-weight:900; letter-spacing:3px; margin:0 0 10px 0; color:#ffffff; font-family:monospace; text-shadow:0 0 15px rgba(255,255,255,0.2);">SETTINGS</h1>
-            
-            <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT TOOL</div>
-            <div class="platform-mini-box">
-                <button id="pc-btn" class="platform-choice-btn" onclick="setPlatform('pc')">PC</button>
-                <button id="mobile-btn" class="platform-choice-btn" onclick="setPlatform('mobile')">MOBILE</button>
-            </div>
-            
-            <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
-            
-            <div class="setting-row">
-                <div><span>Sensitivity</span><span id="txt-sens">1.0</span></div>
-                <input type="range" id="cfg-sens" min="0.1" max="2.5" step="0.1" value="1.0" oninput="updateSens(this.value)">
-            </div>
-            <div class="setting-row">
-                <div><span>BGM Volume</span><span id="txt-bgm">40%</span></div>
-                <input type="range" id="cfg-bgm" min="0" max="100" step="5" value="40" oninput="updateBgm(this.value)">
-            </div>
-            <div class="setting-row">
-                <div><span>SFX Volume</span><span id="txt-sfx">70%</span></div>
-                <input type="range" id="cfg-sfx" min="0" max="100" step="5" value="70" oninput="updateSfx(this.value)">
-            </div>
-            
-            <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:12px 0; border-color:#595443;" onclick="toggleFS()">📺 FULLS</button>
-            
-            <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
-            
-            <button class="platform-choice-btn" style="width:100%; background:#21201c; color:#ffea9f; border-color:#d1bd71; font-weight:900; font-size:13px; letter-spacing:2px;" onclick="toggleStartSettings(false)">↩ BACK</button>
-        </div>
-    </div>
-</div>
+    <div id="blink-overlay"></div>
+    <div id="intro-subtitles"></div>
 
-<div id="top-controls">
-    <button class="btn" style="background:#5e1919; color:#fff; border-color:#822525; padding: 8px 16px; font-size:12px;" onclick="triggerPause(true)">⏸ STOP</button>
-</div>
-
-<div id="mobile-controls-right">
-    <div id="btn-mobile-interact" class="circle-btn">🚪</div>
-    <div id="btn-mobile-flash" class="circle-btn active" ontouchstart="handleFlash(event)">🔦</div>
-    <div id="btn-mobile-jump" class="circle-btn" style="font-size:20px;font-weight:bold;" ontouchstart="handleJump(event)">▲</div>
-</div>
-<div id="stamina-container"><div class="stamina-bg"><div id="stamina-bar"></div></div></div>
-<div id="joystick-zone"><div id="joystick-stick"></div></div>
-
-<div id="pause-screen">
-    <h1 style="font-size:26px;color:#d1bd71;margin-bottom:20px;letter-spacing:2px;font-family:monospace;">PAUSED</h1>
-    <div style="display:flex;gap:12px;">
-        <button class="btn" style="color:#fff;border-color:#d1bd71;padding:10px 24px;font-size:14px;width:auto;" onclick="triggerPause(false)">RESUME</button>
-        <button class="btn" style="background:#1a1914;color:#ff6666;border-color:#474436;padding:10px 24px;font-size:14px;width:auto;" onclick="goMainMenu()">↩ MENU</button>
+    <div id="hud-container">
+        <div id="quest-ui">🔑 QUEST:<br>정보 로딩 중...</div>
+        <div id="stamina-container"><div id="stamina-bar"></div></div>
+        <div id="heartbeat-ui"></div>
+        <div id="ladder-hud">🪜 사다리 보유 중</div>
     </div>
-</div>
-<div id="gameover-screen">
-    <h1 style="font-size:30px;margin-bottom:5px;letter-spacing:3px;font-family:monospace;font-weight:900;">SIGNAL LOST</h1>
-    <p id="go-cause" style="color:#666;font-size:13px;margin-bottom:25px;font-family:monospace;"></p>
-    <div style="display:flex;gap:15px;">
-        <button class="go-btn" onclick="goMainMenu()">↩ MAIN MENU</button>
-        <button class="go-btn" style="background:#0f2613;color:#77ff77;border-color:#1d5724;" onclick="respawn()">🛡 RECOVER</button>
+
+    <div id="interact-prompt"></div>
+    <div id="btn-mobile-interact">🚪</div>
+
+    <div id="toast-msg"></div>
+
+    <div id="clear-screen" class="ui-layer end-screen">
+        <h2>MISSION CLEAR</h2>
+        <p id="clear-time">⏱ 00분 00초</p>
+        <button class="btn-restart" onclick="location.reload()">다시 하기</button>
     </div>
-</div>
-<div id="clear-screen">
-    <h1 style="font-size:34px;margin-bottom:5px;letter-spacing:5px;color:#ffcc00;text-shadow:0 0 15px rgba(255,204,0,.4);font-family:monospace;font-weight:900;">NOCLIP DETECTED</h1>
-    <p id="clear-time" style="color:#ffcc00;font-size:18px;font-weight:bold;margin:0 0 15px;letter-spacing:1px;font-family:monospace;"></p>
-    <p style="color:#bbb;font-size:14px;margin-bottom:30px;">Successfully phased into safe reality bounds.</p>
-    <button class="go-btn" style="background:#d1bd71;color:#111;border-color:#fff;" onclick="goMainMenu()">↩ RETURN</button>
-</div>
+
+    <div id="gameover-screen" class="ui-layer end-screen">
+        <h2>GAME OVER</h2>
+        <p id="gameover-reason">간섭 오염으로 정신이 붕괴되었습니다.</p>
+        <button class="btn-restart" onclick="location.reload()">다시 도전</button>
+    </div>
 
 <script>
-// ════════════════════════════════════════════
-//  CONSTANTS & MAP SCALE 
-// ════════════════════════════════════════════
-const ROWS=32, COLS=32, UNIT=9, WH=7.0; 
+// --- 코어 엔진 전역 변수 모음 ---
+let scene, camera, renderer;
+let platform = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'pc';
 
-let mapData=[], reserved=[];
-let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
+let player = { position: new THREE.Vector3(0, 0.05, 0), rotation: new THREE.Euler(0, 0, 0) };
+let fpsRig = new THREE.Group();
+let camX = 0, camY = 0, sCamX = 0, sCamY = 0;
+let keys = { w: false, a: false, s: false, d: false, shift: false };
+let jInput = { x: 0, y: 0 }, jRatio = 0; 
 
-const UG_R=12, UG_C=12, UG_U=8.0, UG_WH=6.5;
-const UG_Y=-35; 
+let underground = false;
+let isGameOver = false;
+let gameActive = false;
+let climbing = false;
+let climbT = 0;
+let velY = 0;
+let grounded = true;
 
-let platform=null, gameActive=false, isGameOver=false, isPaused=false;
-let isFlashOn=true, sensitivity=1.0, volBgm=0.4, volSfx=0.7;
-let recTime=0, speedBoosted=false;
-let lightState = 'normal'; // 1분 40초 연출용: normal, flickering, off
-let hintSpawned = false; // 4분 연출용: 힌트 화살표 생성 여부
+let hasKey = false;
+let keyMesh = null;
+let doorGroup = null;
+let doorPivot = null;
+let doorOpened = false;
+let escapeSensor = new THREE.Vector3(0, 0.05, -22);
 
-let velY=0, grounded=true;
-const GRAVITY=-0.016, JUMP=0.18;
-let lastHB=0;
-const SPD_BASE=0.14, SPD_SPRINT=0.24, SPD_TIRED=0.08;
-let stamina=100, exhausted=false, moving=false, sprinting=false;
+let hasLadder = false;
+let ladderItem = null;
+let ladderPlaced = false;
+let holeGroup = null;
+let holePosX = 0, holePosZ = -8;
 
-let hasKey=false, doorOpened=false;
-let keyMesh=null, doorGroup=null, doorPivot=null;
-let escapeSensor=new THREE.Vector3();
-let escapeDoorPos = {x:0, z:0, ang:0};
+let stamina = 100;
+let exhausted = false;
+let moving = false;
+let sprinting = false;
+let lastFoot = 0, lastHB = 0;
 
-let pitCX=0, pitCZ=0;
-let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
-let pitMeshes=[], pitVoid=null;
+const GRAVITY = -0.005;
+const UG_Y = -10.0;
+const SPD_BASE = 0.055;
+const SPD_SPRINT = 0.095;
+const SPD_TIRED = 0.032;
 
-const B_GRID_DIV = 3;    
-const B_PATH_W = 1.8;    
-const B_HOLE_W = 6.0;    
-let PIT_TOTAL = 15; 
+let pitBounds = { active: false, minX: -1.2, maxX: 1.2, minZ: 3.8, maxZ: 5.2 };
+let entities = [];
+let m = 0, s = 0, gameStartTime = 0;
 
-let underground=false;
-let ugMap=[], ugWalls=null, ugFloor=null, ugCeil=null, ugObjs=[];
-let ugOX=0, ugOZ=0; 
-let hasLadder=false, ladderItem=null, ladderMesh=null, ladderPlaced=false;
-let holeGroup=null, holePosX=0, holePosZ=0, holeWallNX=0, holeWallNZ=0;
-let climbing=false, climbT=0;
+// 인트로 특화 타임라인 변수
+let introMode = true;
+let introState = 'wait'; 
+let introTimer = 0;
+let roomGroup;
 
-const BG_COL=0x8f7d3e; 
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(BG_COL);
-scene.fog=new THREE.FogExp2(BG_COL,0.048); 
+// FPS 메쉬 핸들러 변수
+let lArm, rArm, flashMesh, flash, flashTgt;
 
-const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,180);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});
-renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
-renderer.shadowMap.enabled=false;
-document.body.appendChild(renderer.domElement);
+// --- 랜덤 백룸 미로 맵 데이터 세팅 (0: 통로, 1: 벽) ---
+const CELL_SIZE = 4;
+const MAZE_SIZE = 14;
+const mazeGrid = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,1,0,0,0,0,1,0,0,0,1],
+    [1,0,1,0,1,0,1,1,0,1,0,1,0,1],
+    [1,0,1,0,0,0,1,0,0,0,0,1,0,1],
+    [1,0,1,1,1,0,1,1,1,1,1,1,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,1,0,1],
+    [1,1,1,0,1,1,1,1,0,1,0,1,0,1],
+    [1,0,0,0,0,0,0,1,0,1,0,0,0,1],
+    [1,0,1,1,1,1,0,1,0,1,1,1,1,1],
+    [1,0,1,0,0,1,0,0,0,1,0,0,0,1],
+    [1,0,1,0,0,1,1,1,1,1,0,1,0,1],
+    [1,0,1,1,0,0,0,0,0,0,0,1,0,1],
+    [1,0,0,0,0,1,0,1,0,1,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
 
-const ambient=new THREE.AmbientLight(0xdecb8a,0.8);
-scene.add(ambient);
-
-const fpsRig=new THREE.Group(); scene.add(fpsRig);
-const flash=new THREE.SpotLight(0xfffbe6,1.8,45,Math.PI/4.5,0.5,0.6);
-const flashTgt=new THREE.Object3D(); flashTgt.position.set(0,0,-10);
-fpsRig.add(flash,flashTgt); flash.target=flashTgt;
-
-const fbGeo=new THREE.CylinderGeometry(.035,.025,.22,6); fbGeo.rotateX(Math.PI/2);
-const fhGeo=new THREE.CylinderGeometry(.05,.035,.07,6); fhGeo.rotateX(Math.PI/2); fhGeo.translate(0,0,-.11);
-const fMat=new THREE.MeshStandardMaterial({color:0x1f1f1f,metalness:.5,roughness:.5});
-const flashMesh=new THREE.Group();
-flashMesh.add(new THREE.Mesh(fbGeo,fMat),new THREE.Mesh(fhGeo,fMat));
-const lensMesh=new THREE.Mesh(new THREE.CircleGeometry(.045,6),new THREE.MeshBasicMaterial({color:0xffffee}));
-lensMesh.position.set(0,0,-.14); lensMesh.rotation.y=Math.PI; flashMesh.add(lensMesh);
-flashMesh.position.set(.24,-.20,-.35); fpsRig.add(flashMesh);
-
-const armMat=new THREE.MeshStandardMaterial({color:0x111111,roughness:.7});
-const sharedArmGeo=new THREE.CylinderGeometry(.03,.022,.45,6);
-const lArm=new THREE.Mesh(sharedArmGeo,armMat); lArm.rotateX(Math.PI/2.3); lArm.position.set(-.22,-.22,-.3); fpsRig.add(lArm);
-const rArm=new THREE.Mesh(sharedArmGeo,armMat); rArm.rotateX(Math.PI/2.3); rArm.position.set(.22,-.22,-.3); fpsRig.add(rArm);
-
-// ════════════════════════════════════════════
-//  4분 연출용: 벽면 붓 자국 화살표 생성 함수
-// ════════════════════════════════════════════
-function mkArrowTex(){
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 256;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,256,256);
-    
-    // 붓 자국 느낌의 거친 화살표 그리기
-    ctx.fillStyle = 'rgba(15, 15, 12, 0.85)';
-    ctx.beginPath();
-    // 화살표 머리
-    ctx.moveTo(128, 40); ctx.lineTo(190, 120); ctx.lineTo(150, 120);
-    // 화살표 몸통
-    ctx.lineTo(150, 200); ctx.lineTo(106, 200); ctx.lineTo(106, 120);
-    ctx.lineTo(66, 120); ctx.closePath();
-    ctx.fill();
-
-    // 약간 흘러내린 페인트 연출
-    ctx.strokeStyle = 'rgba(15, 15, 12, 0.8)'; ctx.lineWidth = 4;
-    for(let i=0; i<8; i++){
-        ctx.beginPath();
-        let sx = 100 + Math.random()*50;
-        let sy = 190 + Math.random()*20;
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(sx + (Math.random()-0.5)*5, sy + 15 + Math.random()*25);
-        ctx.stroke();
-    }
-    return new THREE.CanvasTexture(c);
-}
-const arrowTex = mkArrowTex();
-const arrowMat = new THREE.MeshBasicMaterial({map: arrowTex, transparent: true, depthWrite: false});
-
-function spawnHintArrow() {
-    if (!keyMesh || underground) return;
-    
-    const pr = Math.floor((player.position.z - UNIT / 2 + (ROWS * UNIT) / 2) / UNIT);
-    const pc = Math.floor((player.position.x - UNIT / 2 + (COLS * UNIT) / 2) / UNIT);
-    
-    // 플레이어 주변 벽 찾기
-    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    let targetWall = null;
-    
-    for (let [dr, dc] of dirs) {
-        if (pr+dr >= 0 && pr+dr < ROWS && pc+dc >= 0 && pc+dc < COLS) {
-            if (mapData[pr+dr][pc+dc] === 1) {
-                targetWall = { r: dr, c: dc };
-                break;
-            }
-        }
-    }
-
-    if (targetWall) {
-        const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 3.5), arrowMat);
-        
-        // 벽면에 밀착 배치
-        const wx = (pc + targetWall.c - COLS / 2) * UNIT + UNIT / 2;
-        const wz = (pr + targetWall.r - ROWS / 2) * UNIT + UNIT / 2;
-        arrowMesh.position.set(wx - targetWall.c * (UNIT * 0.51), WH / 2 - 0.5, wz - targetWall.r * (UNIT * 0.51));
-        
-        // 벽면 방향에 맞춰 회전
-        arrowMesh.rotation.y = Math.atan2(targetWall.r, -targetWall.c);
-        
-        scene.add(arrowMesh);
-        hintSpawned = true;
-        showToast("벽에 누군가 남긴 표식이 나타났습니다...");
-    }
+// --- 오디오 신디사이저 엔진 (Web Audio API 자가 합성 기법) ---
+let actx = null, khGain = null;
+function initAudio() {
+    try {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        actx = new AudioContext();
+        khGain = actx.createGain();
+        khGain.connect(actx.destination);
+    } catch(e) { console.log("AudioContext 초기화 실패"); }
 }
 
-// ════════════════════════════════════════════
-//  TEXTURE CREATION (HIGH QUALITY WALLPAPER)
-// ════════════════════════════════════════════
-function mkWallTex(){
-    const c=document.createElement('canvas'); c.width=c.height=256;
-    const x=c.getContext('2d');
-    x.fillStyle='#ccbe82'; x.fillRect(0,0,256,256);
-    const d=x.getImageData(0,0,256,256);
-    for(let i=0;i<d.data.length;i+=4){
-        if(Math.random()<.25){
-            const n=(Math.random()-.5)*15;
-            d.data[i]=Math.max(0,Math.min(255,d.data[i]+n));
-            d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+n));
-            d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+n-4));
-        }
-    }
-    x.putImageData(d,0,0);
-    x.strokeStyle='rgba(148,136,83,.45)'; x.lineWidth=2;
-    for(let i=0;i<256;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();}
-    const t=new THREE.CanvasTexture(c); return t;
+function playSynthSound(freq, type, duration, vol) {
+    if(!actx) return;
+    let osc = actx.createOscillator();
+    let gainNode = actx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, actx.currentTime);
+    gainNode.gain.setValueAtTime(vol, actx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + duration);
+    osc.connect(gainNode);
+    gainNode.connect(actx.destination);
+    osc.start();
+    osc.stop(actx.currentTime + duration);
 }
-function mkFloorTex(){
-    const c=document.createElement('canvas'); c.width=c.height=256;
-    const x=c.getContext('2d');
-    x.fillStyle='#695c30'; x.fillRect(0,0,256,256);
-    const d=x.getImageData(0,0,256,256);
-    for(let i=0;i<d.data.length;i+=4){const g=(Math.random()-.5)*22;d.data[i]=Math.max(0,Math.min(255,d.data[i]+g));d.data[i+1]=Math.max(0,Math.min(255,d.data[i+1]+g));d.data[i+2]=Math.max(0,Math.min(255,d.data[i+2]+g));}
-    x.putImageData(d,0,0);
-    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(24,24); return t;
+
+function footstep(vol) { playSynthSound(75, 'triangle', 0.12, vol * 0.4); }
+function heartbeat(vol) {
+    playSynthSound(55, 'sine', 0.15, vol * 0.8);
+    setTimeout(() => { playSynthSound(52, 'sine', 0.12, vol * 0.6); }, 160);
 }
-function mkCeilTex(){
-    const c=document.createElement('canvas'); c.width=c.height=256;
-    const x=c.getContext('2d');
-    x.fillStyle='#b8ac7c'; x.fillRect(0,0,256,256);
-    x.strokeStyle='rgba(82,75,46,0.5)'; x.lineWidth=2;
-    x.strokeRect(0,0,256,256);
-    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(28,28); return t;
+function scream(win) {
+    if(win) { playSynthSound(587, 'sine', 0.8, 0.3); } 
+    else { playSynthSound(120, 'sawtooth', 1.2, 0.6); }
 }
-const wallTex=mkWallTex(), floorTex=mkFloorTex(), ceilTex=mkCeilTex();
-const wallMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.85});
-const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
-const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
 
-// ════════════════════════════════════════════
-//  MAZE LOGIC 
-// ════════════════════════════════════════════
-function genMaze(){
-    mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
-    reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
+// --- 3D 이니셜라이즈 기동 엔진 ---
+function initWorld() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040402);
+    scene.fog = new THREE.FogExp2(0x040402, 0.07);
 
-    const br_r = Math.floor(ROWS / 2) - 2;
-    const br_c = Math.floor(COLS / 2) - 2;
-    const br_w = 4, br_h = 4;
-
-    for(let r=br_r-1; r<=br_r+br_h; r++) {
-        for(let c=br_c-1; c<=br_c+br_w; c++) {
-            if(r>=0 && r<ROWS && c>=0 && c<COLS) reserved[r][c] = true;
-        }
-    }
-    for(let r=br_r; r<br_r+br_h; r++) {
-        for(let c=br_c; c<br_c+br_w; c++) {
-            mapData[r][c] = 0;
-        }
-    }
-
-    pitCX = (br_c + 2 - COLS/2) * UNIT;
-    pitCZ = (br_r + 2 - ROWS/2) * UNIT;
-
-    let flatRoomsPlaced = 0;
-    let attempts = 0;
-    while(flatRoomsPlaced < 6 && attempts < 200) {
-        attempts++;
-        const fr = Math.floor(Math.random() * (ROWS - 5)) + 1;
-        const fc = Math.floor(Math.random() * (COLS - 5)) + 1;
-        
-        let overlap = false;
-        for(let r = fr - 1; r <= fr + 3; r++) {
-            for(let c = fc - 1; c <= fc + 3; c++) {
-                if(r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-                    if(reserved[r][c]) { overlap = true; break; }
-                }
-            }
-            if(overlap) break;
-        }
-        
-        if(!overlap) {
-            for(let r = fr; r < fr + 3; r++) {
-                for(let c = fc; c < fc + 3; c++) {
-                    mapData[r][c] = 0;
-                    reserved[r][c] = true; 
-                }
-            }
-            flatRoomsPlaced++;
-        }
-    }
-
-    let exitDir = Math.random() < 0.5 ? -1 : 1;
-    if (exitDir === -1) {
-        for(let c=br_c-4; c<br_c; c++) {
-            if(c>=0){
-                mapData[br_r+2][c] = 0;
-                reserved[br_r+1][c]=true; reserved[br_r+2][c]=true;
-            }
-        }
-        if(br_c-5>=0) reserved[br_r+2][br_c-5] = true; 
-        escapeDoorPos.x = (br_c - 4 - COLS/2)*UNIT + UNIT/2;
-        escapeDoorPos.z = (br_r + 2 - ROWS/2)*UNIT + UNIT/2;
-        escapeDoorPos.ang = Math.PI/2;
-    } else {
-        for(let c=br_c+br_w; c<br_c+br_w+4; c++) {
-            if(c<COLS){
-                mapData[br_r+2][c] = 0;
-                reserved[br_r+1][c]=true; reserved[br_r+2][c]=true;
-            }
-        }
-        if(br_c+br_w+4<COLS) reserved[br_r+2][br_c+br_w+4] = true;
-        escapeDoorPos.x = (br_c + br_w + 3 - COLS/2)*UNIT + UNIT/2;
-        escapeDoorPos.z = (br_r + 2 - ROWS/2)*UNIT + UNIT/2;
-        escapeDoorPos.ang = -Math.PI/2;
-    }
-
-    mapData[br_r+br_h][br_c+1] = 0;
-    reserved[br_r+br_h][br_c+1] = true;
-
-    let startR = br_r + br_h + 1, startC = br_c + 1;
-    if(startR >= ROWS-1) startR = ROWS-2;
-    mapData[startR][startC] = 0; 
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     
-    function carve(r,c){
-        const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
-        for(const[dr,dc]of dirs){
-            const nr=r+dr,nc=c+dc;
-            if(nr>0&&nr<ROWS-1&&nc>0&&nc<COLS-1 && mapData[nr][nc]===1 && !reserved[nr][nc]){
-                if(!reserved[r+dr/2][c+dc/2]){
-                    mapData[r+dr/2][c+dc/2]=0; mapData[nr][nc]=0;
-                    carve(nr,nc);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // 기본 가시 장비 암(Arm) 구조화
+    lArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.4), new THREE.MeshStandardMaterial({color: 0x2d2d2d, roughness: 0.8}));
+    rArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.4), new THREE.MeshStandardMaterial({color: 0x2d2d2d, roughness: 0.8}));
+    flashMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.28), new THREE.MeshStandardMaterial({color: 0x151515, metalness: 0.7}));
+    flashMesh.rotation.x = Math.PI / 2;
+
+    flash = new THREE.SpotLight(0xfffcd1, 0, 35, Math.PI / 5, 0.4, 1.2);
+    flash.castShadow = true;
+    flashTgt = new THREE.Object3D();
+    
+    scene.add(fpsRig);
+    fpsRig.add(lArm); fpsRig.add(rArm); fpsRig.add(flashMesh);
+    scene.add(flash); scene.add(flashTgt);
+    flash.target = flashTgt;
+
+    // 리얼 가구 배치형 아늑한 집 방 생성
+    createCozyRoom();
+
+    // 알고리즘 스케일 백룸 월드 빌드
+    createMazeWorld();
+}
+
+// [평범한 집 방 디자인 연출 함수]
+function createCozyRoom() {
+    roomGroup = new THREE.Group();
+    roomGroup.position.set(0, 30, 0); // 상공 분리 배치로 메인 맵 간섭 차단
+    scene.add(roomGroup);
+
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xe0d6be, roughness: 0.9 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x705135, roughness: 0.5 });
+    const ceilMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.9 });
+
+    // 구조체 바닥판 및 천장
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 10), floorMat);
+    floor.position.y = -0.1;
+    floor.receiveShadow = true;
+    roomGroup.add(floor);
+    
+    const ceiling = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 10), ceilMat);
+    ceiling.position.y = 3.6;
+    roomGroup.add(ceiling);
+
+    // 4면 솔리드 월
+    const wallN = new THREE.Mesh(new THREE.BoxGeometry(8, 3.6, 0.2), wallMat); wallN.position.set(0, 1.8, -5); roomGroup.add(wallN);
+    const wallS = new THREE.Mesh(new THREE.BoxGeometry(8, 3.6, 0.2), wallMat); wallS.position.set(0, 1.8, 5); roomGroup.add(wallS);
+    const wallW = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.6, 10), wallMat); wallW.position.set(-4, 1.8, 0); roomGroup.add(wallW);
+    const wallE = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.6, 10), wallMat); wallE.position.set(4, 1.8, 0); roomGroup.add(wallE);
+
+    // 아침 햇살 연출 (창문 틈새 조명 라이팅 효과)
+    const roomLight = new THREE.PointLight(0xfff4dd, 0.9, 12);
+    roomLight.position.set(0, 3.0, -1);
+    roomGroup.add(roomLight);
+
+    const windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.8, 2.4), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xa6c2ff, emissiveIntensity: 0.6 }));
+    windowMesh.position.set(-3.9, 1.8, -1);
+    roomGroup.add(windowMesh);
+
+    const sunLight = new THREE.DirectionalLight(0xffebc2, 1.4);
+    sunLight.position.set(-10, 5, -1);
+    sunLight.target = windowMesh;
+    roomGroup.add(sunLight);
+
+    // 가구 세트 디테일 트랙킹 빌드 (침대 블록)
+    const bedGroup = new THREE.Group();
+    bedGroup.position.set(2.2, 0, -2.8);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 3.2), new THREE.MeshStandardMaterial({ color: 0x473222 })); frame.position.y = 0.2; bedGroup.add(frame);
+    const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.3, 3.0), new THREE.MeshStandardMaterial({ color: 0xfafafa })); mattress.position.y = 0.45; bedGroup.add(mattress);
+    const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.32, 2.2), new THREE.MeshStandardMaterial({ color: 0x3b5e8c, roughness: 0.8 })); blanket.position.set(0, 0.47, 0.4); bedGroup.add(blanket);
+    const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.16, 0.6), new THREE.MeshStandardMaterial({ color: 0xe0e0e0 })); pillow.position.set(0, 0.6, -1.1); bedGroup.add(pillow);
+    roomGroup.add(bedGroup);
+
+    // 책상 및 아날로그 탁상시계
+    const deskGroup = new THREE.Group();
+    deskGroup.position.set(-2.6, 0, -2.5);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 2.2), new THREE.MeshStandardMaterial({ color: 0x2e1a0c })); board.position.y = 0.9; deskGroup.add(board);
+    const legA = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.06), new THREE.MeshStandardMaterial({ color: 0x111111 })); legA.position.set(-0.6, 0.45, -1.0); deskGroup.add(legA);
+    const legB = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.06), new THREE.MeshStandardMaterial({ color: 0x111111 })); legB.position.set(0.6, 0.45, -1.0); deskGroup.add(legB);
+    const legC = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.06), new THREE.MeshStandardMaterial({ color: 0x111111 })); legC.position.set(-0.6, 0.45, 1.0); deskGroup.add(legC);
+    const legD = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.06), new THREE.MeshStandardMaterial({ color: 0x111111 })); legD.position.set(0.6, 0.45, 1.0); deskGroup.add(legD);
+    
+    const clockMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 16), new THREE.MeshStandardMaterial({ color: 0xbd2424 }));
+    clockMesh.position.set(-0.2, 0.98, 0); clockMesh.rotation.x = Math.PI / 2.5;
+    deskGroup.add(clockMesh);
+    roomGroup.add(deskGroup);
+
+    // 나가는 전면부 문 프레임
+    const rDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.5, 0.1), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+    rDoorFrame.position.set(0, 1.25, 4.85);
+    roomGroup.add(rDoorFrame);
+    const rDoor = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.3, 0.06), new THREE.MeshStandardMaterial({ color: 0xb0a596 }));
+    rDoor.position.set(0, 1.15, 4.85);
+    roomGroup.add(rDoor);
+}
+
+// [리얼 스케일 백룸 월드 빌딩 시스템 함수]
+function createMazeWorld() {
+    // 백룸 시그니처 텍스처 대용 전용 재질 정의 (카펫 바닥 & 노란색 벽지)
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xdecb8c, roughness: 0.8 }); 
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x544e3b, roughness: 0.9 });
+    const ceilMat = new THREE.MeshStandardMaterial({ color: 0xd6d1bd, roughness: 0.7 });
+
+    const mazeGroup = new THREE.Group();
+    scene.add(mazeGroup);
+
+    const halfOffset = (MAZE_SIZE * CELL_SIZE) / 2;
+
+    for (let r = 0; r < MAZE_SIZE; r++) {
+        for (let c = 0; c < MAZE_SIZE; c++) {
+            const px = c * CELL_SIZE - halfOffset + CELL_SIZE/2;
+            const pz = r * CELL_SIZE - halfOffset + CELL_SIZE/2;
+
+            // 바닥 및 천장 타일 자동 스케일 전개 빌딩
+            const fTile = new THREE.Mesh(new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE), floorMat);
+            fTile.position.set(px, 0, pz); fTile.rotation.x = -Math.PI / 2; fTile.receiveShadow = true;
+            mazeGroup.add(fTile);
+
+            const cTile = new THREE.Mesh(new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE), ceilMat);
+            cTile.position.set(px, 4.0, pz); cTile.rotation.x = Math.PI / 2;
+            mazeGroup.add(cTile);
+
+            // 미로 벽체 솔리드 가동 연출 빌드
+            if (mazeGrid[r][c] === 1) {
+                const wallBlock = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 4.0, CELL_SIZE), wallMat);
+                wallBlock.position.set(px, 2.0, pz);
+                wallBlock.castShadow = true; wallBlock.receiveShadow = true;
+                mazeGroup.add(wallBlock);
+            } else {
+                // 백룸 특유의 형광등 배치 자동 주입 트랙
+                if((r + c) % 5 === 0) {
+                    const flLight = new THREE.PointLight(0xeeffcc, 0.4, 9);
+                    flLight.position.set(px, 3.8, pz);
+                    mazeGroup.add(flLight);
+
+                    const flMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.3), new THREE.MeshBasicMaterial({color: 0xffffff}));
+                    flMesh.position.set(px, 3.96, pz);
+                    mazeGroup.add(flMesh);
                 }
             }
         }
     }
-    carve(startR, startC);
-    carve(1, 1);
 
-    for(let r=2; r<ROWS-2; r+=2){
-        for(let c=2; c<COLS-2; c+=2){
-            if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]){
-                if(Math.random()<0.4) mapData[r+1][c]=0;
-            }
-            if(mapData[r][c]===0 && mapData[r][c+1]===1 && mapData[r][c+2]===0 && !reserved[r][c+1]){
-                if(Math.random()<0.4) mapData[r][c+1]=0;
-            }
-        }
-    }
+    // 황금 열쇠 물리 객체 세팅 인라인화 (미로 빈 방 특정 좌표 배치)
+    keyMesh = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.05, 8, 16), new THREE.MeshStandardMaterial({ color: 0xd1bd71, metalness: 0.9, roughness: 0.1 }));
+    keyMesh.position.set(14, 0.6, -14);
+    scene.add(keyMesh);
 
-    for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
-    for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
-}
+    // 지하 구조물(Underground Void) 연출 구역 전개 구조체 빌드
+    holeGroup = new THREE.Group();
+    holeGroup.position.set(holePosX, -0.05, holePosZ);
+    const holePlane = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), new THREE.MeshBasicMaterial({ color: 0x00ff55, side: THREE.DoubleSide }));
+    holePlane.rotation.x = -Math.PI / 2;
+    holeGroup.add(holePlane);
+    scene.add(holeGroup);
 
-function buildGraphics(){
-    if(iWalls){scene.remove(iWalls);iWalls.geometry.dispose();}
-    lamps.forEach(l=>scene.remove(l)); lamps=[];
-    if(floorM){scene.remove(floorM);floorM=null;}
-    if(ceilM){scene.remove(ceilM);ceilM=null;}
-    if(floorGroup){scene.remove(floorGroup);floorGroup=null;}
+    // 사다리 유기적 아이템 실존 배치 트랙 구조화
+    ladderItem = new THREE.Mesh(new THREE.BoxGeometry(0.7, 3.2, 0.08), new THREE.MeshStandardMaterial({ color: 0x737373, metalness: 0.6 }));
+    ladderItem.position.set(-14, 1.6, 6);
+    scene.add(ladderItem);
 
-    let wc=0;
-    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(mapData[r][c]===1)wc++;
-    const wGeo=new THREE.BoxGeometry(UNIT,WH,UNIT);
-    iWalls=new THREE.InstancedMesh(wGeo,wallMat,wc);
-    
-    const dum=new THREE.Object3D(); let idx=0;
-    for(let r=0;r<ROWS;r++){
-        for(let c=0;c<COLS;c++){
-            const wx=(c-COLS/2)*UNIT+UNIT/2, wz=(r-ROWS/2)*UNIT+UNIT/2;
-            if(mapData[r][c]===1){
-                dum.position.set(wx,WH/2,wz); dum.updateMatrix();
-                iWalls.setMatrixAt(idx++,dum.matrix);
-            } else if(Math.random()<.08){
-                const lg=new THREE.Group();
-                const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
-                const pn=new THREE.Mesh(new THREE.BoxGeometry(4.3,.05,4.3),new THREE.MeshBasicMaterial({color:0xfffcd1}));
-                pn.position.y=-.01; lg.add(fr,pn);
-                lg.position.set(wx,WH-.02,wz);
-                scene.add(lg); lamps.push(lg);
-                const pl=new THREE.PointLight(0xfff5bf,.75,18,1.1);
-                pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
-            }
-        }
-    }
-    iWalls.instanceMatrix.needsUpdate=true;
-    scene.add(iWalls);
-
-    const mW=COLS*UNIT, mH=ROWS*UNIT;
-    floorM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),floorMat);
-    floorM.rotation.x=-Math.PI/2; scene.add(floorM);
-    ceilM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),ceilMat);
-    ceilM.rotation.x=Math.PI/2; ceilM.position.y=WH; scene.add(ceilM);
-}
-
-function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
-
-function safeSpawn(avoid,minD,excludeReserved=false){
-    for(let i=0; i<600; i++){
-        const r=Math.floor(Math.random()*(ROWS-2))+1,c=Math.floor(Math.random()*(COLS-2))+1;
-        if(mapData[r][c]===0 && (!excludeReserved || !reserved[r][c])){
-            const p=worldXZ(r,c);
-            if(avoid&&minD&&Math.sqrt((p.x-avoid.x)**2+(p.z-avoid.z)**2)<minD)continue;
-            return{x:p.x,z:p.z,r,c};
-        }
-    }
-    return{x:UNIT,z:UNIT,r:1,c:1};
-}
-
-// ════════════════════════════════════════════
-//  BINGO PIT SYSTEM
-// ════════════════════════════════════════════
-function buildBingoPit(){
-    pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
-    if(pitVoid){scene.remove(pitVoid);pitVoid=null;}
-    
-    PIT_TOTAL = B_GRID_DIV * B_HOLE_W + (B_GRID_DIV + 1) * B_PATH_W;
-    const hf = PIT_TOTAL / 2;
-    pitBounds.minX=pitCX-hf; pitBounds.maxX=pitCX+hf;
-    pitBounds.minZ=pitCZ-hf; pitBounds.maxZ=pitCZ+hf;
-    pitBounds.active=true;
-
-    if(floorM) floorM.visible = false;
-    floorGroup = new THREE.Group();
-    const mW = COLS*UNIT, mH = ROWS*UNIT;
-
-    const nL = pitBounds.minZ - (-mH/2);
-    if(nL>0){
-        const fN = new THREE.Mesh(new THREE.PlaneGeometry(mW, nL), floorMat);
-        fN.rotation.x = -Math.PI/2; fN.position.set(0,0,-mH/2+nL/2); floorGroup.add(fN);
-    }
-    const sL = mH/2 - pitBounds.maxZ;
-    if(sL>0){
-        const fS = new THREE.Mesh(new THREE.PlaneGeometry(mW, sL), floorMat);
-        fS.rotation.x = -Math.PI/2; fS.position.set(0,0,pitBounds.maxZ+sL/2); floorGroup.add(fS);
-    }
-    const wL = pitBounds.minX - (-mW/2);
-    const pZLen = pitBounds.maxZ - pitBounds.minZ;
-    if(wL>0){
-        const fW = new THREE.Mesh(new THREE.PlaneGeometry(wL, pZLen), floorMat);
-        fW.rotation.x = -Math.PI/2; fW.position.set(-mW/2+wL/2,0,pitCZ); floorGroup.add(fW);
-    }
-    const eL = mW/2 - pitBounds.maxX;
-    if(eL>0){
-        const fE = new THREE.Mesh(new THREE.PlaneGeometry(eL, pZLen), floorMat);
-        fE.rotation.x = -Math.PI/2; fE.position.set(pitBounds.maxX+eL/2,0,pitCZ); floorGroup.add(fE);
-    }
-    scene.add(floorGroup);
-
-    const c=document.createElement('canvas'); c.width=c.height=64;
-    const ctx=c.getContext('2d');
-    ctx.fillStyle='#ffd000'; ctx.fillRect(0,0,64,64);
-    ctx.fillStyle='#cca600'; ctx.fillRect(4,4,56,56);
-    const lineTex=new THREE.CanvasTexture(c);
-
-    const pathMat = new THREE.MeshStandardMaterial({map:lineTex, roughness:0.7});
-    const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.9});
-    const voidMat = new THREE.MeshBasicMaterial({color:0x010101});
-    const holeDepth = 18;
-
-    const hGeo = new THREE.BoxGeometry(PIT_TOTAL + 0.1, 0.1, B_PATH_W + 0.1);
-    for(let i=0; i<=B_GRID_DIV; i++) {
-        const z = pitBounds.minZ + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
-        const p = new THREE.Mesh(hGeo, pathMat);
-        p.position.set(pitCX, -0.02, z);
-        scene.add(p); pitMeshes.push(p);
-    }
-    const vGeo = new THREE.BoxGeometry(B_PATH_W + 0.1, 0.1, PIT_TOTAL + 0.1);
-    for(let i=0; i<=B_GRID_DIV; i++) {
-        const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
-        // ▼ 여기서 발생하던 오류를 수정했습니다! (new Mesh -> new THREE.Mesh)
-        const p = new THREE.Mesh(vGeo, pathMat);
-        p.position.set(x, -0.02, pitCZ);
-        scene.add(p); pitMeshes.push(p);
-    }
-
-    const wGeoX = new THREE.BoxGeometry(B_HOLE_W, holeDepth, 0.05);
-    const wGeoZ = new THREE.BoxGeometry(0.05, holeDepth, B_HOLE_W);
-    for(let r=0; r<B_GRID_DIV; r++) {
-        for(let c=0; c<B_GRID_DIV; c++) {
-            const hx = pitBounds.minX + B_PATH_W + B_HOLE_W/2 + c*(B_HOLE_W+B_PATH_W);
-            const hz = pitBounds.minZ + B_PATH_W + B_HOLE_W/2 + r*(B_HOLE_W+B_PATH_W);
-
-            const wN = new THREE.Mesh(wGeoX, downWallMat); wN.position.set(hx, -holeDepth/2, hz-B_HOLE_W/2);
-            const wS = new THREE.Mesh(wGeoX, downWallMat); wS.position.set(hx, -holeDepth/2, hz+B_HOLE_W/2);
-            const wW = new THREE.Mesh(wGeoZ, downWallMat); wW.position.set(hx-B_HOLE_W/2, -holeDepth/2, hz);
-            const wE = new THREE.Mesh(wGeoZ, downWallMat); wE.position.set(hx+B_HOLE_W/2, -holeDepth/2, hz);
-
-            scene.add(wN, wS, wW, wE);
-            pitMeshes.push(wN, wS, wW, wE);
-        }
-    }
-
-    pitVoid = new THREE.Mesh(new THREE.PlaneGeometry(PIT_TOTAL, PIT_TOTAL), voidMat);
-    pitVoid.rotation.x = -Math.PI/2;
-    pitVoid.position.set(pitCX, -holeDepth + 0.05, pitCZ);
-    scene.add(pitVoid);
-
-    const deepLight = new THREE.PointLight(0x1a4bcc, 1.8, 35, 1.5);
-    deepLight.position.set(pitCX, -10, pitCZ);
-    scene.add(deepLight); pitMeshes.push(deepLight);
-}
-
-function spawnDoor(){
-    if(doorGroup)scene.remove(doorGroup);
-    doorGroup=new THREE.Group();
-    doorGroup.position.set(escapeDoorPos.x, 0, escapeDoorPos.z);
-    doorGroup.rotation.y = escapeDoorPos.ang;
-
-    const fMat2=new THREE.MeshStandardMaterial({color:0x1b130e,roughness:.9});
-    const lp=new THREE.Mesh(new THREE.BoxGeometry(.15,3.2,.2),fMat2); lp.position.set(-1.1,1.6,0);
-    const rp=new THREE.Mesh(new THREE.BoxGeometry(.15,3.2,.2),fMat2); rp.position.set(1.1,1.6,0);
-    const tp=new THREE.Mesh(new THREE.BoxGeometry(2.3,.15,.2),fMat2); tp.position.set(0,3.2,0);
-    
-    const blockL=new THREE.Mesh(new THREE.BoxGeometry(3.0,WH,1.2),fMat2); blockL.position.set(-2.6,WH/2,0);
-    const blockR=new THREE.Mesh(new THREE.BoxGeometry(3.0,WH,1.2),fMat2); blockR.position.set(2.6,WH/2,0);
-    doorGroup.add(lp,rp,tp,blockL,blockR);
-
-    doorPivot=new THREE.Group(); doorPivot.position.set(-1.0,1.6,0);
-    const dp=new THREE.Mesh(new THREE.BoxGeometry(2.0,3.05,.12),new THREE.MeshStandardMaterial({color:0x362113,roughness:.8}));
-    dp.position.set(1.0,0,0); doorPivot.add(dp);
-    const kn=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),new THREE.MeshStandardMaterial({color:0xcca233,metalness:.7}));
-    kn.position.set(.8,0,.08); dp.add(kn);
+    // 메인 최종 엑시트 게이트 조립 전개 단독 구현
+    doorGroup = new THREE.Group();
+    doorGroup.position.set(0, 0, -21.8);
+    doorPivot = new THREE.Group();
+    const dMesh = new THREE.Mesh(new THREE.BoxGeometry(2.8, 4.0, 0.15), new THREE.MeshStandardMaterial({ color: 0x3d281a, roughness: 0.7 }));
+    dMesh.position.x = 1.4; // 피벗 게이트 힌지 정렬 축 오프셋 보정
+    doorPivot.add(dMesh);
     doorGroup.add(doorPivot);
-
-    const corr=new THREE.Mesh(new THREE.BoxGeometry(5.0,3.2,3.5),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide}));
-    corr.position.set(0,1.6,-1.75); doorGroup.add(corr);
     
-    scene.add(doorGroup); doorGroup.updateMatrixWorld(true);
-    const sOff=new THREE.Vector3(0,1.0,-2.5); sOff.applyQuaternion(doorGroup.quaternion);
-    escapeSensor.copy(doorGroup.position).add(sOff);
+    doorGroup.greenLight = new THREE.PointLight(0x00ff55, 0.2, 12);
+    doorGroup.greenLight.position.set(0, 3.8, 0);
+    doorGroup.add(doorGroup.greenLight);
+    scene.add(doorGroup);
+
+    // --- 엔티티(괴물) 실체 메쉬 생성 및 바인딩 시퀀스 기동 ---
+    createGameEntities();
+}
+
+// [실제 다리가 움직이는 다각 괴물 엔티티 생성 시퀀스]
+function createGameEntities() {
+    const entPositions = [[-10, -10], [14, 10], [-6, 14]];
     
-    const gl=new THREE.PointLight(0x00ff44,0,6); gl.position.set(0,1.6,-.2);
-    doorGroup.add(gl); doorGroup.greenLight=gl;
-}
+    entPositions.forEach((pos, idx) => {
+        let eGroup = new THREE.Group();
+        eGroup.position.set(pos[0], 0, pos[1]);
+        scene.add(eGroup);
 
-function spawnKey(){
-    if(keyMesh)scene.remove(keyMesh);
-    keyMesh=new THREE.Group();
-    const kr=new THREE.Mesh(new THREE.TorusGeometry(.16,.04,6,12),new THREE.MeshStandardMaterial({color:0xee9900,metalness:.8}));
-    const kb=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.4),new THREE.MeshStandardMaterial({color:0xee9900}));
-    kb.position.y=-.2; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
-    const kl=new THREE.PointLight(0xffcc33,2.2,12,1.2); kl.position.y=.2; keyMesh.add(kl);
-    const kp=safeSpawn({x:pitCX, z:pitCZ}, 35, false); 
-    keyMesh.position.set(kp.x,.8,kp.z); scene.add(keyMesh);
-}
+        let coreMesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshBasicMaterial({ color: 0x0a0a0a }));
+        coreMesh.position.y = 1.3;
+        eGroup.add(coreMesh);
 
-// ════════════════════════════════════════════
-//  BUILD UNDERGROUND 
-// ════════════════════════════════════════════
-function buildUnderground(){
-    ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
-    if(ugWalls){scene.remove(ugWalls);ugWalls=null;}
-    if(ugFloor){scene.remove(ugFloor);ugFloor=null;}
-    if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
-    if(ladderItem){scene.remove(ladderItem);ladderItem=null;}
-    if(ladderMesh){scene.remove(ladderMesh);ladderMesh=null;}
-    if(holeGroup){scene.remove(holeGroup);holeGroup=null;}
-    ladderPlaced=false; climbing=false; climbT=0;
-
-    ugMap=Array(UG_R).fill().map(()=>Array(UG_C).fill(1));
-    const vis=Array(UG_R).fill().map(()=>Array(UG_C).fill(false));
-    function carve(r,c){
-        vis[r][c]=true; ugMap[r][c]=0;
-        const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
-        for(const[dr,dc]of dirs){const nr=r+dr,nc=c+dc;if(nr>0&&nr<UG_R-1&&nc>0&&nc<UG_C-1&&!vis[nr][nc]){ugMap[r+dr/2][c+dc/2]=0;carve(nr,nc);}}
-    }
-    carve(1,1);
-    
-    ugOX=pitCX; ugOZ=pitCZ;
-    function ugW(r,c){return{x:ugOX+(c-UG_C/2)*UG_U+UG_U/2,z:ugOZ+(r-UG_R/2)*UG_U+UG_U/2};}
-
-    let wc=0; for(let r=0;r<UG_R;r++)for(let c=0;c<UG_C;c++)if(ugMap[r][c]===1)wc++;
-    const ugWGeo=new THREE.BoxGeometry(UG_U,UG_WH,UG_U);
-    const ugWMat=new THREE.MeshStandardMaterial({color:0x0f0b07,roughness:.95});
-    ugWalls=new THREE.InstancedMesh(ugWGeo,ugWMat,wc);
-    const dum2=new THREE.Object3D(); let ui=0;
-    for(let r=0;r<UG_R;r++){
-        for(let c=0;c<UG_C;c++){
-            if(ugMap[r][c]===1){
-                const p=ugW(r,c);
-                dum2.position.set(p.x,UG_Y+UG_WH/2,p.z); dum2.updateMatrix();
-                ugWalls.setMatrixAt(ui++,dum2.matrix);
-            }
+        // 4각 방향성 와이어 뼈대 구조체 다리 구현 블록
+        let legsArr = [];
+        for(let i=0; i<4; i++) {
+            let leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.2, 0.06), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+            leg.position.set(Math.sin(i * Math.PI/2)*0.3, 0.6, Math.cos(i * Math.PI/2)*0.3);
+            eGroup.add(leg);
+            legsArr.push(leg);
         }
-    }
-    ugWalls.instanceMatrix.needsUpdate=true;
-    scene.add(ugWalls); ugObjs.push(ugWalls);
 
-    const ugMW=UG_C*UG_U, ugMH=UG_R*UG_U;
-    ugFloor=new THREE.Mesh(new THREE.PlaneGeometry(ugMW,ugMH),new THREE.MeshStandardMaterial({color:0x171007,roughness:.98}));
-    ugFloor.rotation.x=-Math.PI/2; ugFloor.position.set(ugOX,UG_Y,ugOZ);
-    scene.add(ugFloor); ugObjs.push(ugFloor);
-    ugCeil=new THREE.Mesh(new THREE.PlaneGeometry(ugMW,ugMH),new THREE.MeshStandardMaterial({color:0x0b0805,roughness:.98}));
-    ugCeil.rotation.x=Math.PI/2; ugCeil.position.set(ugOX,UG_Y+UG_WH,ugOZ);
-    scene.add(ugCeil); ugObjs.push(ugCeil);
-
-    function ugSafeSpawn(){
-        for(let i=0;i<200;i++){
-            const r=Math.floor(Math.random()*(UG_R-2))+1,c=Math.floor(Math.random()*(UG_C-2))+1;
-            if(ugMap[r][c]===0) return{x:ugOX+(c-UG_C/2)*UG_U+UG_U/2,z:ugOZ+(r-UG_R/2)*UG_U+UG_U/2};
-        }
-        return{x:ugOX,z:ugOZ};
-    }
-
-    const lsp=ugSafeSpawn();
-    ladderItem=new THREE.Group();
-    const lMat=new THREE.MeshStandardMaterial({color:0xb5782d,roughness:.6});
-    const lv1=new THREE.Mesh(new THREE.BoxGeometry(.06,.9,.06),lMat); lv1.position.set(-.18,0,0);
-    const lv2=new THREE.Mesh(new THREE.BoxGeometry(.06,.9,.06),lMat); lv2.position.set(.18,0,0);
-    ladderItem.add(lv1,lv2);
-    for(let i=0; i<4; i++){const lh=new THREE.Mesh(new THREE.BoxGeometry(.4,.05,.05),lMat);lh.position.set(0,-.3+i*.2,0);ladderItem.add(lh);}
-    const ll=new THREE.PointLight(0xff9911,2.0,6); ll.position.set(0,.5,0); ladderItem.add(ll);
-    ladderItem.position.set(lsp.x,UG_Y+.5,lsp.z);
-    scene.add(ladderItem); ugObjs.push(ladderItem);
-
-    let holeR=1,holeC=1,holeWR=-1,holeWC=0;
-    const hp=ugW(holeR,holeC);
-    holePosX=hp.x; holePosZ=hp.z;
-    holeWallNX=-holeWC; holeWallNZ=-holeWR; 
-
-    holeGroup=new THREE.Group();
-    holeGroup.position.set(holePosX + holeWC*(UG_U/2-0.05), UG_Y+UG_WH*0.5, holePosZ + holeWR*(UG_U/2-0.05));
-    holeGroup.rotation.y=Math.atan2(holeWallNX,holeWallNZ);
-
-    const holeMat=new THREE.MeshStandardMaterial({color:0x00dd55,emissive:0x00dd55,emissiveIntensity:.7,roughness:.4});
-    const hW=1.4,hH=1.8;
-    const hTop=new THREE.Mesh(new THREE.BoxGeometry(hW+.1,.07,.07),holeMat); hTop.position.set(0,hH/2,0);
-    const hBot=new THREE.Mesh(new THREE.BoxGeometry(hW+.1,.07,.07),holeMat); hBot.position.set(0,-hH/2,0);
-    const hL=new THREE.Mesh(new THREE.BoxGeometry(.07,hH,.07),holeMat); hL.position.set(-hW/2,0,0);
-    const hR=new THREE.Mesh(new THREE.BoxGeometry(.07,hH,.07),holeMat); hR.position.set(hW/2,0,0);
-    const hIn=new THREE.Mesh(new THREE.BoxGeometry(hW,hH,.05),new THREE.MeshBasicMaterial({color:0x000000}));
-    holeGroup.add(hTop,hBot,hL,hR,hIn);
-    const hl1=new THREE.PointLight(0x00dd55,3.2,10); hl1.position.set(0,0,.3); holeGroup.add(hl1);
-    scene.add(holeGroup); ugObjs.push(holeGroup);
-}
-
-// ════════════════════════════════════════════
-//  COLLISION LOGIC
-// ════════════════════════════════════════════
-function gridCollide(ox, oz, nx, nz, rad) {
-    if (isNaN(nx) || isNaN(nz)) return { x: ox, z: oz };
-    if (player.position.y < -.05) return { x: nx, z: nz };
-    
-    if (!doorOpened && doorGroup) {
-        const ddx = doorGroup.position.x - nx;
-        const ddz = doorGroup.position.z - nz;
-        if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.2) return { x: ox, z: oz }; 
-    }
-
-    let resultX = nx;
-    let resultZ = nz;
-
-    const checkAxisCollision = (targetX, targetZ) => {
-        const pc = Math.floor((ox - UNIT / 2 + (COLS * UNIT) / 2) / UNIT);
-        const pr = Math.floor((oz - UNIT / 2 + (ROWS * UNIT) / 2) / UNIT);
-        
-        for (let r = pr - 1; r <= pr + 1; r++) {
-            for (let c = pc - 1; c <= pc + 1; c++) {
-                if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
-                if (mapData[r][c] === 1) {
-                    const wx = (c - COLS / 2) * UNIT + UNIT / 2;
-                    const wz = (r - ROWS / 2) * UNIT + UNIT / 2;
-                    const half = UNIT / 2 + rad;
-                    if (targetX > wx - half && targetX < wx + half && targetZ > wz - half && targetZ < wz + half) return true; 
-                }
-            }
-        }
-        return false;
-    };
-
-    if (checkAxisCollision(nx, oz)) resultX = ox; 
-    if (checkAxisCollision(resultX, nz)) resultZ = oz; 
-
-    return { x: resultX, z: resultZ };
-}
-
-function ugCollide(oldX, oldZ, newX, newZ, rad) {
-    if (isNaN(newX) || isNaN(newZ)) return { x: oldX, z: oldZ };
-    let resultX = newX;
-    let resultZ = newZ;
-
-    const checkUgCollision = (tx, tz) => {
-        const pc = Math.floor((oldX - ugOX + (UG_C * UG_U) / 2) / UG_U);
-        const pr = Math.floor((oldZ - ugOZ + (UG_R * UG_U) / 2) / UG_U);
-        for (let r = Math.max(0, pr - 1); r <= Math.min(UG_R - 1, pr + 1); r++) {
-            for (let c = Math.max(0, pc - 1); c <= Math.min(UG_C - 1, pc + 1); c++) {
-                if (ugMap[r][c] !== 1) continue;
-                const wx = ugOX + (c - UG_C / 2) * UG_U + UG_U / 2;
-                const wz = ugOZ + (r - UG_R / 2) * UG_U + UG_U / 2;
-                const half = UG_U / 2 + rad;
-                if (tx > wx - half && tx < wx + half && tz > wz - half && tz < wz + half) return true;
-            }
-        }
-        return false;
-    };
-
-    if (checkUgCollision(newX, oldZ)) resultX = oldX;
-    if (checkUgCollision(resultX, newZ)) resultZ = oldZ;
-
-    return { x: resultX, z: resultZ };
-}
-
-function enterUnderground(){
-    underground=true;
-    buildUnderground();
-    
-    let startSafeR = 1, startSafeC = 1;
-    for(let r=1; r<UG_R-1; r++){
-        for(let c=1; c<UG_C-1; c++){
-            if(ugMap[r][c]===0){ startSafeR=r; startSafeC=c; break; }
-        }
-    }
-    const safeUgPos = {
-        x: ugOX + (startSafeC - UG_C/2)*UG_U + UG_U/2,
-        z: ugOZ + (startSafeR - UG_R/2)*UG_U + UG_U/2
-    };
-    
-    player.position.set(safeUgPos.x, UG_Y + 0.1, safeUgPos.z);
-    velY=0; grounded=true;
-    if(iWalls)iWalls.visible=false;
-    lamps.forEach(l=>{if(l.visible!==undefined)l.visible=false;});
-    if(floorM)floorM.visible=false;
-    if(floorGroup)floorGroup.visible=false;
-    if(ceilM)ceilM.visible=false;
-    if(keyMesh)keyMesh.visible=false;
-    if(doorGroup)doorGroup.visible=false;
-    pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;});
-    if(pitVoid)pitVoid.visible=false;
-    scene.background.setHex(0x140b04); scene.fog.color.setHex(0x140b04); scene.fog.density=0.07;
-    ambient.intensity=0.5; flash.intensity=isFlashOn?3.2:0;
-    showToast("⬇ 구덩이에 추락했습니다!<br>🪜 사다리를 수색하여 탈출하십시오.");
-}
-
-function exitUnderground(){
-    underground=false; climbing=false; climbT=0; hasLadder=false;
-    document.getElementById('ladder-hud').style.display='none';
-    ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
-    ladderPlaced=false;
-    
-    if(iWalls)iWalls.visible=true;
-    lamps.forEach(l=>{if(l.visible!==undefined)l.visible=true;});
-    if(!pitBounds.active && floorM)floorM.visible=true;
-    if(pitBounds.active && floorGroup)floorGroup.visible=true;
-    if(ceilM)ceilM.visible=true;
-    if(!hasKey&&keyMesh)keyMesh.visible=true;
-    if(doorGroup)doorGroup.visible=true;
-    pitMeshes.forEach(m=>{m.visible=true;});
-    if(pitVoid)pitVoid.visible=true;
-    
-    player.position.set(pitCX + PIT_TOTAL*0.5 + 2.5, 0.1, pitCZ + PIT_TOTAL*0.5 + 2.5); 
-    velY=0; grounded=true;
-    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.048;
-    ambient.intensity=0.8; flash.intensity=isFlashOn?1.8:0;
-    showToast("⬆ 지상 복귀 완료!<br>🏃 외곽 길을 타고 신속히 이동하세요!");
-}
-
-// ════════════════════════════════════════════
-//  MONSTER DATA
-// ════════════════════════════════════════════
-let entities=[];
-function mkEntity(){
-    const e=new THREE.Group();
-    const em=new THREE.MeshStandardMaterial({color:0x070707,roughness:.8});
-    const core=new THREE.Mesh(new THREE.SphereGeometry(.38,6,6),em); core.position.y=1.5; e.add(core);
-    const legs=[];
-    for(let j=0;j<4;j++){
-        const lr=new THREE.Group(); const ang=(j/4)*Math.PI*2;
-        lr.position.set(Math.cos(ang)*.25,1.4,Math.sin(ang)*.25);
-        const up=new THREE.Mesh(new THREE.CylinderGeometry(.03,.02,.1),em); up.position.y=-.4; up.rotation.z=.4; lr.add(up);
-        const lo=new THREE.Mesh(new THREE.CylinderGeometry(.018,.012,1.2),em); lo.position.set(.3,-1.0,0); lo.rotation.z=-.8; up.add(lo);
-        e.add(lr); legs.push(lr);
-    }
-    const eyM=new THREE.MeshBasicMaterial({color:0xee0000});
-    const ey=new THREE.Mesh(new THREE.SphereGeometry(.06,4,4),eyM);ey.position.set(0,1.6,.35);e.add(ey);
-    scene.add(e); return{mesh:e,legs,core};
-}
-const ed=mkEntity();
-entities.push({mesh:ed.mesh,legs:ed.legs,core:ed.core,state:'patrol',patrolTarget:null,baseSpeed:.07,speed:.07,stuckT:0,lastPos:new THREE.Vector3(),scream:false});
-
-function entityAI(e,pp){
-    const ep=e.mesh.position;
-    const dist=Math.sqrt((ep.x-pp.x)**2+(ep.z-pp.z)**2);
-    e.stuckT++;
-    if(e.stuckT>60){
-        const sd=Math.sqrt((ep.x-e.lastPos.x)**2+(ep.z-e.lastPos.z)**2);
-        if(sd<.2)e.patrolTarget=safeSpawn(pp,0,false);
-        e.lastPos.copy(ep);e.stuckT=0;
-    }
-    if(dist<20&&!isGameOver&&player.position.y>=-0.2){ 
-        if(!e.scream){e.scream=true;scream(true);}e.state='chase';
-    }else if(e.state==='chase'&&(dist>28||player.position.y<-.2)){
-        e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,false);
-    }
-    const dest=e.state==='chase'?pp:e.patrolTarget;
-    if(e.state==='patrol'&&Math.abs(ep.x-dest.x)<2.0&&Math.abs(ep.z-dest.z)<2.0)e.patrolTarget=safeSpawn(pp,0,false);
-    const dx=dest.x-ep.x,dz=dest.z-ep.z,len=Math.sqrt(dx*dx+dz*dz);
-    if(len>.1){
-        const sp=e.state==='chase'?e.speed*1.45:e.speed;
-        const te={x:ep.x+dx/len*sp,z:ep.z+dz/len*sp};
-        const se=gridCollide(ep.x,ep.z,te.x,te.z,.6);
-        ep.x=se.x;ep.z=se.z;e.mesh.rotation.y=Math.atan2(dx,dz);
-    }
-    if(e.state==='chase')screamVol(dist);
-}
-
-// ════════════════════════════════════════════
-//  CONTROLS & SETTINGS
-// ════════════════════════════════════════════
-let camX=0,camY=0,sCamX=0,sCamY=0;
-const keys={w:false,a:false,s:false,d:false,shift:false};
-let jInput={x:0,y:0},jRatio=0,jTouchId=null,rTouchId=null,prevX=0,prevY=0,jStart={x:0,y:0};
-const jZone=document.getElementById('joystick-zone'),jStick=document.getElementById('joystick-stick');
-let lastFoot=0;
-
-function updateSens(v){sensitivity=parseFloat(v);document.getElementById('txt-sens').textContent=parseFloat(v).toFixed(1);}
-function updateBgm(v){volBgm=parseInt(v)/100;document.getElementById('txt-bgm').textContent=v+'%';syncBgm();}
-function updateSfx(v){volSfx=parseInt(v)/100;document.getElementById('txt-sfx').textContent=v+'%';}
-
-function toggleFS(){
-    if(!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement){
-        const docEl = document.documentElement;
-        if(docEl.requestFullscreen) docEl.requestFullscreen();
-        else if(docEl.mozRequestFullScreen) docEl.mozRequestFullScreen();
-        else if(docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-        else if(docEl.msRequestFullscreen) docEl.msRequestFullscreen();
-    } else {
-        if(document.exitFullscreen) document.exitFullscreen();
-        else if(document.mozCancelFullScreen) document.mozCancelFullScreen();
-        else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
-        else if(document.msExitFullscreen) document.msExitFullscreen();
-    }
-}
-
-function showToast(msg){const t=document.getElementById('game-toast');t.innerHTML=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3200);}
-
-function toggleStartSettings(isOpen) {
-    const panel = document.getElementById('start-settings-panel');
-    const mainContent = document.getElementById('start-content');
-    if (isOpen) {
-        panel.classList.add('open');
-        mainContent.style.opacity = '0';
-        mainContent.style.pointerEvents = 'none';
-    } else {
-        panel.classList.remove('open');
-        mainContent.style.opacity = '1';
-        mainContent.style.pointerEvents = 'auto';
-    }
-}
-
-function setPlatform(t){
-    platform=t;
-    document.getElementById('pc-btn').classList.toggle('selected',t==='pc');
-    document.getElementById('mobile-btn').classList.toggle('selected',t==='mobile');
-}
-
-function calcJoy(cx,cy){
-    let dx=cx-jStart.x,dy=cy-jStart.y;
-    const d=Math.sqrt(dx*dx+dy*dy),maxR=40;
-    if(d>maxR){dx=dx/d*maxR;dy=dy/d*maxR;}
-    jStick.style.transform=`translate(${dx}px,${dy}px)`;
-    jInput.x=dx/maxR;jInput.y=dy/maxR;jRatio=d/maxR;
-}
-
-window.addEventListener('touchstart',e=>{
-    if(e.target.closest('#btn-mobile-interact')||e.target.closest('#top-controls')||e.target.closest('#mobile-controls-right')||e.target.closest('#pause-screen')||e.target.closest('.menu-group')||e.target.closest('#start-settings-panel'))return;
-    if(!gameActive||isGameOver||isPaused||platform!=='mobile')return;
-    for(let i=0;i<e.changedTouches.length;i++){
-        const t=e.changedTouches[i];
-        if(t.clientX<innerWidth/2&&jTouchId===null){
-            jTouchId=t.identifier;
-            jZone.style.left=`${t.clientX-55}px`;jZone.style.bottom=`${innerHeight-t.clientY-55}px`;
-            jStart={x:t.clientX,y:t.clientY};calcJoy(t.clientX,t.clientY);
-        }else if(t.clientX>=innerWidth/2&&rTouchId===null){rTouchId=t.identifier;prevX=t.clientX;prevY=t.clientY;}
-    }
-},{passive:false});
-
-window.addEventListener('touchmove',e=>{
-    if(platform!=='mobile')return;
-    for(let i=0;i<e.touches.length;i++){
-        const t=e.touches[i];
-        if(t.identifier===jTouchId)calcJoy(t.clientX,t.clientY);
-        if(t.identifier===rTouchId){
-            const m = 0.0035 * sensitivity;
-            camX -= (t.clientX-prevX)*m; 
-            camY -= (t.clientY-prevY)*m; 
-            prevX = t.clientX; prevY = t.clientY;
-            camY = Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,camY));
-        }
-    }
-});
-
-window.addEventListener('touchend',e=>{
-    for(let i=0;i<e.changedTouches.length;i++){
-        const t=e.changedTouches[i];
-        if(t.identifier===jTouchId){jTouchId=null;jStick.style.transform='translate(0,0)';jInput={x:0,y:0};jRatio=0;jZone.style.left='35px';jZone.style.bottom='35px';}
-        if(t.identifier===rTouchId)rTouchId=null;
-    }
-});
-
-window.addEventListener('mousemove',e=>{
-    if(!gameActive||isGameOver||isPaused||platform!=='pc')return;
-    if(document.pointerLockElement===document.body){
-        const m=0.0018*sensitivity;
-        camX -= e.movementX*m;
-        camY -= e.movementY*m; 
-        camY = Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,camY));
-    }
-});
-
-window.addEventListener('click',()=>{if(gameActive&&!isPaused&&!isGameOver&&platform==='pc')document.body.requestPointerLock();});
-document.pointerLockElement=null;
-document.addEventListener('pointerlockchange',()=>{
-    if(document.pointerLockElement!==document.body&&gameActive&&!isGameOver&&platform==='pc'&&!isPaused){
-        if(document.getElementById('pause-screen').style.display!=='flex')triggerPause(true);
-    }
-});
-
-function handleFlash(e){e.preventDefault();e.stopPropagation();if(gameActive&&!isPaused)toggleFlash();}
-function handleJump(e){
-    e.preventDefault();e.stopPropagation();
-    if(!gameActive||isPaused)return;
-    if(underground&&ladderPlaced&&ladderMesh){
-        const d=Math.sqrt((player.position.x-ladderMesh.position.x)**2+(player.position.z-ladderMesh.position.z)**2);
-        if(d<4.0){climbing=true;return;}
-    }
-    if(grounded){velY=JUMP;grounded=false;}
-}
-function toggleFlash(){
-    isFlashOn=!isFlashOn;
-    document.getElementById('btn-mobile-flash')?.classList.toggle('active',isFlashOn);
-    flash.intensity=isFlashOn?(underground?3.2:1.8):0;
-    lensMesh.material.color.setHex(isFlashOn?0xffffee:0x222222);
-}
-function placeLadder(){
-    if(!hasLadder||ladderPlaced||!underground||!holeGroup)return;
-    ladderPlaced=true;hasLadder=false;
-    document.getElementById('ladder-hud').style.display='none';
-    ladderMesh=new THREE.Group();
-    const lMat=new THREE.MeshStandardMaterial({color:0xb5782d,roughness:.6});
-    const lv1=new THREE.Mesh(new THREE.BoxGeometry(.06,UG_WH*.9,.06),lMat);lv1.position.set(-.2,0,0);
-    const lv2=new THREE.Mesh(new THREE.BoxGeometry(.06,UG_WH*.9,.06),lMat);lv2.position.set(.2,0,0);
-    ladderMesh.add(lv1,lv2);
-    for(let i=0;i<7;i++){const lh=new THREE.Mesh(new THREE.BoxGeometry(.5,.05,.04),lMat);lh.position.set(0,-UG_WH*.4+i*(UG_WH*.8/6),0);ladderMesh.add(lh);}
-    ladderMesh.position.set(holePosX,UG_Y+UG_WH*.42,holePosZ+holeWallNZ*.25);
-    ladderMesh.rotation.x=.1;
-    scene.add(ladderMesh);ugObjs.push(ladderMesh);
-    showToast("🪜 사다리가 설치되었습니다!<br>▲ 키를 누른 채 등반하십시오.");
-}
-
-document.getElementById('btn-mobile-interact').addEventListener('touchstart',e=>{
-    e.preventDefault();e.stopPropagation();
-    if(!gameActive||isPaused)return;
-    if(underground){
-        if(hasLadder&&!ladderPlaced&&holeGroup){
-            const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2);
-            if(d<7.0){placeLadder();return;}
-        }
-    }else{if(hasKey&&!doorOpened)openDoor();}
-});
-
-window.addEventListener('keydown',e=>{
-    const k=e.key.toLowerCase();if(k in keys)keys[k]=true;
-    if(e.key===' '&&gameActive&&!isPaused){
-        if(underground&&ladderPlaced&&ladderMesh){
-            const d=Math.sqrt((player.position.x-ladderMesh.position.x)**2+(player.position.z-ladderMesh.position.z)**2);
-            if(d<4.0){climbing=true;return;}
-        }
-        if(grounded){velY=JUMP;grounded=false;}
-    }
-    if(k==='f'&&gameActive&&!isPaused)toggleFlash();
-    if(k==='e'&&gameActive&&!isPaused){
-        if(underground){
-            if(hasLadder&&!ladderPlaced&&holeGroup){
-                const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2);
-                if(d<7.0){placeLadder();return;}
-            }
-        }else{
-            if(doorGroup&&player.position.distanceTo(doorGroup.position)<3.5)openDoor();
-        }
-    }
-});
-window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false;});
-
-function openDoor(){
-    if(!hasKey||doorOpened)return;
-    doorOpened=true;
-    showToast("🔓 차단 해제 완료!<br>중앙 통로로 신속히 도망치세요!");
-    document.getElementById('interact-prompt').style.display='none';
-    document.getElementById('btn-mobile-interact').style.display='none';
-}
-
-// ════════════════════════════════════════════
-//  AUDIO LAYER
-// ════════════════════════════════════════════
-let actx=null,bgGain=null,sfxGain=null,scGain=null,khGain=null,scOsc1=null,scOsc2=null,ambO1=null,ambO2=null,khOsc=null;
-function initAudio(){
-    try{
-        if(actx)return;
-        actx=new(window.AudioContext||window.webkitAudioContext)();
-        bgGain=actx.createGain();syncBgm();
-        const lp=actx.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(80,actx.currentTime);
-        ambO1=actx.createOscillator();ambO1.type='sine';ambO1.frequency.setValueAtTime(50,actx.currentTime);
-        ambO2=actx.createOscillator();ambO2.type='triangle';ambO2.frequency.setValueAtTime(53,actx.currentTime);
-        ambO1.connect(lp);ambO2.connect(lp);lp.connect(bgGain);bgGain.connect(actx.destination);
-        ambO1.start();ambO2.start();
-        sfxGain=actx.createGain();sfxGain.connect(actx.destination);
-        scGain=actx.createGain();scGain.gain.setValueAtTime(.001,actx.currentTime);scGain.connect(sfxGain);
-        khGain=actx.createGain();khGain.gain.setValueAtTime(.001,actx.currentTime);
-        khOsc=actx.createOscillator();khOsc.type='sine';khOsc.frequency.setValueAtTime(135,actx.currentTime);
-        const kf=actx.createBiquadFilter();kf.type='bandpass';kf.frequency.setValueAtTime(240,actx.currentTime);
-        khOsc.connect(kf);kf.connect(khGain);khGain.connect(sfxGain);khOsc.start();
-    }catch(e){}
-}
-function syncBgm(){if(bgGain&&actx)bgGain.gain.setValueAtTime(volBgm*.35,actx.currentTime);}
-function keyHint(pp){
-    if(!khGain||!keyMesh||hasKey||!actx)return;
-    const d=Math.sqrt((pp.x-keyMesh.position.x)**2+(pp.z-keyMesh.position.z)**2);
-    if(d<25){ 
-        let tv=Math.max(.001,(25-d)/25)*.4*volSfx;khGain.gain.setTargetAtTime(tv,actx.currentTime,.15);khOsc.frequency.setValueAtTime(135+Math.sin(Date.now()*.004)*20,actx.currentTime);}
-    else khGain.gain.setTargetAtTime(.001,actx.currentTime,.2);
-}
-function scream(on){
-    if(!actx||!scGain)return;
-    if(on){try{scOsc1=actx.createOscillator();scOsc1.type='sawtooth';scOsc2=actx.createOscillator();scOsc2.type='square';scOsc1.frequency.setValueAtTime(260,actx.currentTime);scOsc2.frequency.setValueAtTime(420,actx.currentTime);const n=actx.currentTime;scOsc1.frequency.linearRampToValueAtTime(650,n+.3);scOsc1.frequency.linearRampToValueAtTime(140,n+.7);scOsc2.frequency.linearRampToValueAtTime(850,n+.4);scOsc1.connect(scGain);scOsc2.connect(scGain);scOsc1.start();scOsc2.start();}catch(e){}}
-    else{try{if(scOsc1){scOsc1.stop();scOsc1=null;}if(scOsc2){scOsc2.stop();scOsc2=null;}}catch(e){}}
-}
-function screamVol(d){if(!scGain||!actx)return;scGain.gain.setTargetAtTime(Math.max(.001,(25-d)/25)*.6*volSfx,actx.currentTime,.1);}
-function footstep(v){
-    if(!actx||isPaused||isGameOver||!sfxGain)return;
-    try{const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(60,actx.currentTime);g.gain.setValueAtTime(v*.1*volSfx,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.1);o.connect(g);g.connect(sfxGain);o.start();o.stop(actx.currentTime+.11);}catch(e){}
-}
-function heartbeat(v){
-    if(!actx||isPaused||isGameOver||!sfxGain)return;
-    try{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.setValueAtTime(46,actx.currentTime);g.gain.setValueAtTime(v*.6*volSfx,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.12);o.connect(g);g.connect(sfxGain);o.start();o.stop(actx.currentTime+.13);}catch(e){}
-}
-
-function triggerPause(s){
-    if(!gameActive||isGameOver)return;
-    isPaused=s;
-    document.getElementById('pause-screen').style.display=s?'flex':'none';
-    if(!s && platform==='pc') {
-        document.body.requestPointerLock();
-    }
-}
-function triggerGameOver(msg){isGameOver=true;scream(false);document.getElementById('go-cause').textContent=msg;document.getElementById('gameover-screen').style.display='flex';if(document.pointerLockElement===document.body)document.exitPointerLock();}
-function respawn(){
-    isGameOver=false;scream(false);
-    if(underground)exitUnderground();
-    const rp=safeSpawn(player.position, 25, false);
-    player.position.set(rp.x,0,rp.z);velY=0;grounded=true;stamina=100;exhausted=false;
-    entities.forEach(e=>{const ep=safeSpawn(player.position,20,false);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
-    document.getElementById('gameover-screen').style.display='none';
-    if(platform==='pc')document.body.requestPointerLock();
-}
-function goMainMenu(){
-    isGameOver=false;gameActive=false;isPaused=false;scream(false);
-    underground=false;hasLadder=false;ladderPlaced=false;climbing=false;
-    ['pause-screen','gameover-screen','clear-screen','top-controls','cctv-ui','quest-ui','interact-prompt','btn-mobile-interact','joystick-zone','mobile-controls-right','stamina-container','ladder-hud'].forEach(id=>{
-        const el=document.getElementById(id);if(el)el.style.display='none';
+        // 엔티티 관리 스택 구조체 배열 밀어넣기 푸시 가동
+        entities.push({
+            mesh: eGroup,
+            core: coreMesh,
+            legs: legsArr,
+            state: 'patrol',
+            targetX: pos[0],
+            targetZ: pos[1],
+            timer: 0,
+            speed: 0.025
+        });
     });
-    document.getElementById('start-screen').style.display='flex';
-    document.getElementById('glitch-overlay').style.cssText='background:rgba(0,0,0,0);opacity:0;';
-    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.048;ambient.intensity=.8;
-    flash.intensity=isFlashOn?1.8:0;
-    
-    ugObjs.forEach(o=>scene.remove(o));ugObjs=[];
-    if(ugWalls){scene.remove(ugWalls);ugWalls=null;}if(ugFloor){scene.remove(ugFloor);ugFloor=null;}if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
-    if(ladderMesh){scene.remove(ladderMesh);ladderMesh=null;}if(holeGroup){scene.remove(holeGroup);holeGroup=null;}
-    pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);});pitMeshes=[];
-    if(pitVoid){scene.remove(pitVoid);pitVoid=null;}pitBounds.active=false;
-    
-    if(floorGroup){scene.remove(floorGroup); floorGroup=null;}
-    if(floorM)floorM.visible=true;
-    if(iWalls)iWalls.visible=true;lamps.forEach(l=>{if(l.visible!==undefined)l.visible=true;});
-    if(ceilM)ceilM.visible=true;
-    
-    try{if(ambO1){ambO1.stop();ambO1=null;}if(ambO2){ambO2.stop();ambO2=null;}if(khOsc){khOsc.stop();khOsc=null;}actx=null;}catch(e){}
-    if(document.pointerLockElement===document.body)document.exitPointerLock();
-    lightState = 'normal';
-    hintSpawned = false;
 }
 
-let player=new THREE.Group(); scene.add(player);
-
-function launchGame(){
-    if(!platform) { setPlatform('pc'); }
-    document.getElementById('start-screen').style.display='none';
-    document.getElementById('top-controls').style.display='flex';
-    document.getElementById('cctv-ui').style.display='block';
-    document.getElementById('quest-ui').style.display='block';
-    hasKey=false;doorOpened=false;underground=false;hasLadder=false;ladderPlaced=false;climbing=false;climbT=0;
-    stamina=100;exhausted=false;velY=0;grounded=true;
-    lightState = 'normal'; hintSpawned = false; speedBoosted = false;
+// --- 실제 벽 전방 탐색형 충돌 검사 알고리즘 엔진 (`gridCollide` 리얼 트랙 구현) ---
+function gridCollide(px, pz, nx, nz, r) {
+    const halfOffset = (MAZE_SIZE * CELL_SIZE) / 2;
     
-    if(platform==='mobile'){
-        document.getElementById('joystick-zone').style.display='block';
-        document.getElementById('mobile-controls-right').style.display='flex';
-        document.getElementById('stamina-container').style.display='block';
-    }else{
-        document.body.requestPointerLock();
-        document.getElementById('crosshair').style.display='block';
-    }
-    camX=0;camY=0;sCamX=0;sCamY=0;
-    
-    genMaze(); buildGraphics();
-    const pSp=safeSpawn({x:pitCX, z:pitCZ}, 40, false); 
-    player.position.set(pSp.x,0.1,pSp.z);
-    
-    buildBingoPit();
-    spawnDoor();
-    spawnKey();
-    entities.forEach(e=>{
-        const ep=safeSpawn(player.position, 20, false);
-        e.mesh.position.set(ep.x,0,ep.z);e.lastPos.copy(e.mesh.position);
-        e.patrolTarget=ep;e.state='patrol';e.scream=false;
-    });
-    gameActive=true;recTime=0;
-    initAudio();
-}
-
-// ════════════════════════════════════════════
-//  MAIN PREVIEW CANVAS (CCTV: 복도, 넓은 방, 탈출구, 지하 렌더링)
-// ════════════════════════════════════════════
-(function initPreview(){
-    const pvs=document.getElementById('preview-canvas');
-    pvs.width=innerWidth;pvs.height=innerHeight;
-    const pvScene=new THREE.Scene();
-    pvScene.background=new THREE.Color(0x8f7d3e);
-    pvScene.fog=new THREE.FogExp2(0x8f7d3e,.048);
-    const pvCam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,200);
-    const pvRen=new THREE.WebGLRenderer({canvas:pvs,antialias:false,precision:'mediump'});
-    pvRen.setSize(innerWidth,innerHeight);
-
-    const pvAmb=new THREE.AmbientLight(0xdecb8a,.7); pvScene.add(pvAmb);
-    const pvDir=new THREE.PointLight(0xfff2b3, 0.8, 40); pvScene.add(pvDir);
-
-    const pUNIT = 9;
-    const pROWS = 14, pCOLS = 14;
-    const pMap = Array(pROWS).fill().map(()=>Array(pCOLS).fill(1));
-    
-    // 넓은 방
-    for(let r=2; r<5; r++) for(let c=2; c<5; c++) pMap[r][c] = 0;
-    // 탈출구 방
-    for(let r=9; r<12; r++) for(let c=9; c<12; c++) pMap[r][c] = 0;
-    // 복도
-    for(let c=4; c<10; c++) pMap[3][c] = 0;
-    for(let r=3; r<10; r++) pMap[r][9] = 0;
-
-    const pWGeo = new THREE.BoxGeometry(pUNIT, WH, pUNIT);
-    const pInst = new THREE.InstancedMesh(pWGeo, wallMat, pROWS*pCOLS);
-    
-    const dum = new THREE.Object3D();
-    let idx = 0;
-    for(let r=0; r<pROWS; r++){
-        for(let c=0; c<pCOLS; c++){
-            if(pMap[r][c] === 1){
-                dum.position.set((c-pCOLS/2)*pUNIT, WH/2, (r-pROWS/2)*pUNIT);
-                dum.updateMatrix();
-                pInst.setMatrixAt(idx++, dum.matrix);
-            } else if(Math.random() < 0.2) {
-                const pl = new THREE.PointLight(0xfff1aa, 0.5, 14);
-                pl.position.set((c-pCOLS/2)*pUNIT, WH-0.5, (r-pROWS/2)*pUNIT);
-                pvScene.add(pl);
-            }
-        }
-    }
-    pInst.instanceMatrix.needsUpdate = true;
-    pvScene.add(pInst);
-
-    // 탈출문 모형 (가짜 불빛)
-    const doorLight = new THREE.PointLight(0x00ff44, 1.5, 20);
-    doorLight.position.set((10-pCOLS/2)*pUNIT, 3, (10-pROWS/2)*pUNIT);
-    pvScene.add(doorLight);
-
-    // 지하 구덩이 모형 (가짜 불빛)
-    const holeLight = new THREE.PointLight(0x00dd55, 2.5, 25);
-    holeLight.position.set((3-pCOLS/2)*pUNIT, 1, (3-pROWS/2)*pUNIT);
-    pvScene.add(holeLight);
-
-    const pFl = new THREE.Mesh(new THREE.PlaneGeometry(200,200), floorMat);
-    pFl.rotation.x = -Math.PI/2; pvScene.add(pFl);
-    const pCe = new THREE.Mesh(new THREE.PlaneGeometry(200,200), ceilMat);
-    pCe.rotation.x = Math.PI/2; pCe.position.y = WH; pvScene.add(pCe);
-
-    const cctvSpots = [
-        { camX: -10, camY: 5.5, camZ: -10, lookX: 10, lookY: 2, lookZ: -10 }, // 복도
-        { camX: -15, camY: 6.0, camZ: -15, lookX: -30, lookY: 1, lookZ: -30 }, // 넓은 방
-        { camX: 30, camY: 4.0, camZ: 30, lookX: 36, lookY: 2, lookZ: 36 }, // 탈출구 방
-        { camX: -20, camY: 5.5, camZ: -20, lookX: -27, lookY: 0, lookZ: -27 } // 지하 구덩이 느낌
+    // 타겟 지점의 반경 4방향 충돌 바운더리 박스 보정 계산 레이어
+    const checkPoints = [
+        {x: nx - r, z: nz - r}, {x: nx + r, z: nz - r},
+        {x: nx - r, z: nz + r}, {x: nx + r, z: nz + r}
     ];
 
-    let t=0;
-    let lastSpotIdx = 0;
-    const blindEl = document.getElementById('cctv-glitch-blind');
+    for(let p of checkPoints) {
+        let c = Math.floor((p.x + halfOffset) / CELL_SIZE);
+        let r_idx = Math.floor((p.z + halfOffset) / CELL_SIZE);
 
-    function drawPreview(){
-        if(document.getElementById('start-screen').style.display==='none')return;
-        requestAnimationFrame(drawPreview);
-        t += 0.0025;
-
-        const spotIdx = Math.floor(t) % cctvSpots.length;
-        
-        // 화면 전환 시 노이즈 및 깜빡임 효과
-        if(spotIdx !== lastSpotIdx){
-            lastSpotIdx = spotIdx;
-            blindEl.style.opacity = '1';
-            setTimeout(() => { blindEl.style.opacity = '0.3'; }, 40);
-            setTimeout(() => { blindEl.style.opacity = '0.8'; }, 90);
-            setTimeout(() => { blindEl.style.opacity = '0'; }, 160);
+        if(r_idx < 0 || r_idx >= MAZE_SIZE || c < 0 || c >= MAZE_SIZE) {
+            return { x: px, z: pz };
         }
-
-        const nextIdx = (spotIdx + 1) % cctvSpots.length;
-        const remainT = t % 1;
-        
-        const curr = cctvSpots[spotIdx];
-        const next = cctvSpots[nextIdx];
-        const smoothT = remainT * remainT * (3 - 2 * remainT); 
-        
-        const cX = curr.camX + (next.camX - curr.camX) * smoothT;
-        const cY = curr.camY + (next.camY - curr.camY) * smoothT;
-        const cZ = curr.camZ + (next.camZ - curr.camZ) * smoothT;
-        
-        const lX = curr.lookX + (next.lookX - curr.lookX) * smoothT;
-        const lY = curr.lookY + (next.lookY - curr.lookY) * smoothT;
-        const lZ = curr.lookZ + (next.lookZ - curr.lookZ) * smoothT;
-
-        pvCam.position.set(cX + Math.sin(t*10)*0.04, cY + Math.cos(t*8)*0.03, cZ);
-        pvCam.lookAt(lX + Math.sin(t*2)*1.2, lY, lZ + Math.cos(t * 1.5)*1.2);
-        
-        pvDir.position.copy(pvCam.position);
-        pvRen.render(pvScene, pvCam);
-    }
-    drawPreview();
-})();
-
-// ════════════════════════════════════════════
-//  MAIN LOOP
-// ════════════════════════════════════════════
-function animate(){
-    requestAnimationFrame(animate);
-    if(!gameActive){camera.position.set(0,12,18);camera.lookAt(0,0,0);renderer.render(scene,camera);return;}
-    if(isGameOver||isPaused)return;
-
-    recTime+=1/60;
-    const m=Math.floor(recTime/60),s=Math.floor(recTime%60);
-    document.getElementById('cctv-time').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-
-    // [연출 추가] 1분 40초 (100초) 전등 깜빡임 시작
-    if(recTime >= 100 && recTime < 104 && lightState === 'normal') {
-        lightState = 'flickering';
-    }
-    if(lightState === 'flickering') {
-        // 무작위로 밝기 조절하여 깜빡임 효과
-        if (Math.random() < 0.2) {
-            ambient.intensity = Math.random() * 0.8;
-            scene.fog.density = 0.08;
-        }
-        // 104초에 완전 소등
-        if(recTime >= 104) {
-            lightState = 'off';
-            ambient.intensity = 0.05;
-            scene.fog.density = 0.08;
-            lamps.forEach(l => { if(l.isPointLight) l.intensity = 0; });
-            document.getElementById('glitch-overlay').style.cssText='background:rgba(5,5,5,.8);opacity:1;';
-            entities.forEach(e => e.speed = e.baseSpeed * 1.4);
-            speedBoosted = true;
+        if(mazeGrid[r_idx][c] === 1) {
+            // 슬라이딩 벽체 마찰 이동 보정 처리 기법 구현
+            let origC = Math.floor((px + halfOffset) / CELL_SIZE);
+            let origR = Math.floor((pz + halfOffset) / CELL_SIZE);
+            let outX = nx, outZ = nz;
+            if(mazeGrid[origR][c] === 1) outX = px;
+            if(mazeGrid[r_idx][origC] === 1) outZ = pz;
+            return { x: outX, z: outZ };
         }
     }
+    return { x: nx, z: nz };
+}
 
-    // [연출 추가] 4분 (240초) 경과 시 벽면에 화살표 힌트 낙서 표시
-    if(recTime >= 240 && !hintSpawned) {
-        spawnHintArrow();
-    }
+function ugCollide(px, pz, nx, nz, r) {
+    // 지하 최하층 보이드 전용 외곽선 하드 브레이크 가운더리 감지 영역
+    if(nx < -22 || nx > 22 || nz < -24 || nz > 22) return { x: px, z: pz };
+    return { x: nx, z: nz };
+}
 
-    if(keyMesh&&!hasKey)keyMesh.rotation.y+=.02;
-    if(!underground)keyHint(player.position);
+// --- 리얼 엔티티 인공지능 타겟 추적 길찾기 모듈 알고리즘 (`entityAI` 구현) ---
+function entityAI(e, pPos) {
+    e.timer++;
+    const distToPlayer = Math.sqrt((e.mesh.position.x - pPos.x)**2 + (e.mesh.position.z - pPos.z)**2);
 
-    if(!underground&&pitBounds.active&&player.position.y>=-0.05){
-        const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&
-                    player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
-        if(inPit){
-            const lx = player.position.x - pitBounds.minX;
-            const lz = player.position.z - pitBounds.minZ;
-            const CELL = B_HOLE_W + B_PATH_W;
-            const mx = lx % CELL;
-            const mz = lz % CELL;
-            
-            const pRad = 0.45; 
-            let safe = false;
-
-            if(mx <= (B_PATH_W + pRad) || mx >= (CELL - pRad)) safe = true;
-            if(mz <= (B_PATH_W + pRad) || mz >= (CELL - pRad)) safe = true;
-
-            if(!safe && grounded){
-                grounded=false;
-                velY=-.04; 
+    // AI 추적 트리거 마인드셋 스위칭 제어 흐름 분기
+    if(distToPlayer < 9.5 && !underground && gameActive) {
+        e.state = 'chase';
+        e.speed = 0.046;
+        e.targetX = pPos.x;
+        e.targetZ = pPos.z;
+    } else {
+        if(e.state === 'chase' || e.timer > 180) {
+            e.state = 'patrol';
+            e.speed = 0.018;
+            e.timer = 0;
+            // 무작위 주변 유효 공백 셀 탐색 기법 순회 기동
+            const halfOffset = (MAZE_SIZE * CELL_SIZE) / 2;
+            let found = false;
+            while(!found) {
+                let rc = Math.floor(Math.random() * MAZE_SIZE);
+                let rr = Math.floor(Math.random() * MAZE_SIZE);
+                if(mazeGrid[rr][rc] === 0) {
+                    e.targetX = rc * CELL_SIZE - halfOffset + CELL_SIZE/2;
+                    e.targetZ = rr * CELL_SIZE - halfOffset + CELL_SIZE/2;
+                    found = true;
+                }
             }
         }
     }
 
+    // 대상 타겟 목적지 벡터 방향 점진 이동 연출 가동
+    const dx = e.targetX - e.mesh.position.x;
+    const dz = e.targetZ - e.mesh.position.z;
+    const dLen = Math.sqrt(dx*dx + dz*dz);
+    if(dLen > 0.1) {
+        e.mesh.position.x += (dx / dLen) * e.speed;
+        e.mesh.position.z += (dz / dLen) * e.speed;
+        e.mesh.rotation.y = Math.atan2(-dx, -dz);
+    }
+}
+
+// --- 조작 및 상호작용 인터페이스 바인딩 이벤트 처리부 ---
+document.getElementById('btn-start').addEventListener('click', () => {
+    initAudio();
+    document.getElementById('start-screen').style.opacity = '0';
+    setTimeout(() => {
+        document.getElementById('start-screen').style.display = 'none';
+        startIntroSequence();
+    }, 1000);
+});
+
+window.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if(k === 'w' || k === 'ㅈ') keys.w = true;
+    if(k === 's' || k === 'ㄴ') keys.s = true;
+    if(k === 'a' || k === 'ㅁ') keys.a = true;
+    if(k === 'd' || k === 'ㅇ') keys.d = true;
+    if(e.key === 'Shift') keys.shift = true;
+    
+    // 사다리 및 게이트 잠금 장치 해제 통합 단독 키바인딩 스캔 가동 [E]
+    if(k === 'e' || k === 'ㄷ') {
+        if(introMode) return;
+        if(underground && hasLadder && !ladderPlaced) {
+            const d = Math.sqrt((player.position.x - holePosX)**2 + (player.position.z - holePosZ)**2);
+            if(d < 7.0) {
+                ladderPlaced = true; hasLadder = false;
+                document.getElementById('ladder-hud').style.display = 'none';
+                showToast("🪜 사다리 배치 전개 완료!<br>앞으로 정면으로 다가가 자동 등반을 시작하세요.");
+            }
+        } else if(!underground && doorGroup && hasKey && !doorOpened) {
+            if(player.position.distanceTo(doorGroup.position) < 3.5) {
+                doorOpened = true;
+                showToast("🔓 최종 미궁 해제 봉인 기믹이 가동되었습니다!");
+            }
+        }
+    }
+});
+
+window.addEventListener('keyup', e => {
+    const k = e.key.toLowerCase();
+    if(k === 'w' || k === 'ㅈ') keys.w = false;
+    if(k === 's' || k === 'ㄴ') keys.s = false;
+    if(k === 'a' || k === 'ㅁ') keys.a = false;
+    if(k === 'd' || k === 'ㅇ') keys.d = false;
+    if(e.key === 'Shift') keys.shift = false;
+});
+
+window.addEventListener('mousemove', e => {
+    if(!gameActive && introState !== 'free_move') return;
+    if(platform === 'pc' && document.pointerLockElement !== document.body && !introMode) return;
+    
+    const sensitivity = 0.0022;
+    camX -= e.movementX * sensitivity;
+    camY -= e.movementY * sensitivity;
+    camY = Math.max(-Math.PI/2.3, Math.min(Math.PI/2.3, camY));
+});
+
+function startIntroSequence() {
+    introMode = true;
+    introState = 'blink1_close';
+    introTimer = 0;
+    
+    // 아늑한 방 침대 눕기 매트릭스 위치 셋업 (Y=30 레이어 기준 상단 조율)
+    player.position.set(2.2, 30.65, -2.6); 
+    camX = -Math.PI / 2; camY = Math.PI / 3.5; 
+    sCamX = camX; sCamY = camY;
+}
+
+function displaySubtitle(text, duration) {
+    const el = document.getElementById('intro-subtitles');
+    el.innerHTML = text; el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, duration - 400);
+}
+
+// [리얼 타임라인 카메라 워킹 팩터 기반 인트로 엔진 핸들러]
+function handleIntroCutscene() {
+    introTimer++;
+    const overlay = document.getElementById('blink-overlay');
+
+    if (introState === 'blink1_close') {
+        overlay.style.opacity = 1;
+        if (introTimer > 50) { introState = 'blink1_open'; introTimer = 0; }
+    }
+    else if (introState === 'blink1_open') {
+        overlay.style.opacity = Math.max(0.45, 1 - introTimer / 35);
+        if (introTimer === 1) displaySubtitle("...으으음...... 머리야......", 2000);
+        if (introTimer > 70) { introState = 'blink2_close'; introTimer = 0; }
+    }
+    else if (introState === 'blink2_close') {
+        overlay.style.opacity = Math.min(1, 0.45 + introTimer / 15);
+        if (introTimer > 35) { introState = 'blink2_open'; introTimer = 0; }
+    }
+    else if (introState === 'blink2_open') {
+        overlay.style.opacity = Math.max(0, 1 - introTimer / 50);
+        if (introTimer > 50) { introState = 'look_clock'; introTimer = 0; }
+    }
+    else if (introState === 'look_clock') {
+        if (introTimer === 1) displaySubtitle("...지금이 대체 몇 시지...?", 2200);
+        
+        // 고개를 부드럽게 시계가 놓여진 책상 왼쪽 각도로 부드러운 스무스 스위블
+        camX += (-Math.PI / 1.7 - camX) * 0.035;
+        camY += (-Math.PI / 14 - camY) * 0.035;
+
+        if (introTimer > 120) { 
+            displaySubtitle("앗! 7시 30분이잖아?! 학교 늦겠다 빨리 준비해야 해!", 3000);
+            introState = 'get_up'; 
+            introTimer = 0; 
+        }
+    }
+    else if (introState === 'get_up') {
+        // 침대 매트리스에서 몸을 부드럽게 내리며 일어서는 뷰포트 물리 모션 시뮬레이션
+        player.position.x += (0.8 - player.position.x) * 0.03;
+        player.position.y += (31.55 - player.position.y) * 0.03;
+        player.position.z += (-1.2 - player.position.z) * 0.03;
+        
+        camX += (-Math.PI - camX) * 0.035;
+        camY += (0 - camY) * 0.035;
+
+        if (introTimer > 110) {
+            introState = 'free_move'; introTimer = 0;
+            gameActive = true;
+            if(platform === 'pc') document.body.requestPointerLock();
+            showToast("🏃 문 쪽으로 걸어가 방을 나가십시오. (W, A, S, D 조작)");
+            document.getElementById('hud-container').style.display = 'block';
+            document.getElementById('quest-ui').innerHTML = "🚪 INTRO:<br>방 문을 열고 학교 등교하기";
+        }
+    }
+    else if (introState === 'free_move') {
+        sCamX += (camX - sCamX) * 0.2; sCamY += (camY - sCamY) * 0.2;
+        
+        const fX = -Math.sin(sCamX), fZ = -Math.cos(sCamX);
+        const rX = Math.cos(sCamX), rZ = -Math.sin(sCamX);
+        let mX = 0, mZ = 0;
+
+        if (keys.w) { mX += fX; mZ += fZ; } if (keys.s) { mX -= fX; mZ -= fZ; }
+        if (keys.a) { mX -= rX; mZ -= rZ; } if (keys.d) { mX += rX; mZ += rZ; }
+
+        player.position.x += mX * SPD_BASE;
+        player.position.z += mZ * SPD_BASE;
+
+        // 인트로 집 내부 바운더리 박스 하드 월 충돌 검증 처리
+        player.position.x = Math.max(-3.6, Math.min(3.6, player.position.x));
+        player.position.z = Math.max(-4.4, Math.min(4.4, player.position.z));
+
+        // 문 앞 임계구역 감지 영역에 플레이어가 터치 시 돌발 미로 낙하 시퀀스로 스위칭 가동
+        if (player.position.z > 3.8 && Math.abs(player.position.x) < 1.1) {
+            introState = 'falling'; introTimer = 0;
+            displaySubtitle("어... 에...? 바닥이... 왜 없어...?! 아아아악!!", 2500);
+            if (platform === 'pc') document.exitPointerLock();
+        }
+    }
+    else if (introState === 'falling') {
+        // 집 방 오브젝트 레이어가 위로 고속 이탈하며 낙하하는 상대적 속도 왜곡 연출
+        roomGroup.position.y += 0.55;
+        player.position.y -= 0.65;
+        
+        // 사정없이 회전하며 추락하는 어지러운 롤링 텀블링 강제 팩터 보정
+        camY += 0.06; camX += 0.04;
+
+        if (player.position.y < 5.0) {
+            // 미로 중앙 입구 원점 좌표로 소프트 스폰 안착 패스 기동
+            introMode = false; introState = 'done';
+            player.position.set(0, 0.05, 0); 
+            camX = 0; camY = 0; sCamX = 0; sCamY = 0; velY = 0;
+            gameStartTime = Date.now();
+            flash.intensity = 1.3; // 손전등 전원 인게임 온
+            showToast("🚨 알 수 없는 기괴한 황색 구조물 공간으로 추락했습니다.<br>규칙을 찾아 탈출문을 잠금 해제하십시오!");
+            if (platform === 'pc') document.body.requestPointerLock();
+        }
+    }
+
+    player.rotation.y = sCamX;
+    camera.position.set(player.position.x, player.position.y + (introState==='look_clock'||introState==='blink1_open' ? 0 : 1.5), player.position.z);
+    camera.rotation.set(sCamY, sCamX, 0, 'YXZ');
+}
+
+// --- 메인 통합 코어 엔진 실시간 루프 연출 ---
+function animate() {
+    requestAnimationFrame(animate);
+
+    // 인트로 모드 전개 시 메인 인게임 엔진 제어 흐름 가로채기 분기 차단
+    if (introMode) {
+        handleIntroCutscene();
+        renderer.render(scene, camera);
+        return;
+    }
+
+    let elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+    m = Math.floor(elapsed / 60); s = elapsed % 60;
+
+    // --- [주신 기존 완벽 소스 코드 루프 무수정 블록 주입 시작] ---
     if(!underground&&player.position.y<-5.0&&!isGameOver){enterUnderground();return;}
 
     if(underground&&climbing){
@@ -1649,13 +862,25 @@ function animate(){
     camera.position.set(player.position.x+bobX,player.position.y+1.5+bobY,player.position.z);
     camera.rotation.set(sCamY+tiltX,sCamX,tiltZ,'YXZ');
     renderer.render(scene,camera);
+    // --- [주신 기존 완벽 소스 코드 루프 무수정 블록 주입 종료] ---
 }
-animate();
+
+function triggerGameOver(reason) {
+    isGameOver = true; gameActive = false;
+    document.getElementById('gameover-reason').innerText = reason;
+    document.getElementById('gameover-screen').style.display = 'flex';
+    scream(false);
+    if(platform === 'pc') document.exitPointerLock();
+}
 
 window.addEventListener('resize',()=>{
-    camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth,innerHeight);
+    camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
 });
+
+// 시스템 이니셜 기동 트리거
+initWorld();
+animate();
 </script>
 </body>
 </html>

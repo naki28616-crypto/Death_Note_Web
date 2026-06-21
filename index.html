@@ -229,11 +229,11 @@ let pitCX=0, pitCZ=0;
 let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
 let pitMeshes=[], pitVoid=null;
 
-// 빙고판 사이즈 꽉 채우게 수정 (양옆 우회 불가)
+// 빙고판 사이즈
 const B_GRID_DIV = 3;    
-const B_PATH_W = 3.0; // 밟기 편하게 길 너비를 확충
-const B_HOLE_W = 11.0; // 구멍 크기 (3*11 + 4*3 = 45 단위)
-let PIT_TOTAL = 45.0; // 방 전체 크기 (5칸 * 9 = 45)
+const B_PATH_W = 3.0; // 길 너비
+const B_HOLE_W = 11.0; // 구멍 크기
+let PIT_TOTAL = 45.0; // 방 전체 크기
 
 let underground=false;
 let ugMap=[], ugWalls=null, ugFloor=null, ugCeil=null, ugObjs=[];
@@ -1026,29 +1026,6 @@ function animate(){
 
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.02; if(!underground)keyHint(player.position);
 
-    // 넓어진 길(Path)에 걸맞는 안정적이고 여유로운 밟기 판정
-    if(!underground&&pitBounds.active&&player.position.y>=-0.05){
-        const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
-        if(inPit){
-            const lx = player.position.x - pitBounds.minX; const lz = player.position.z - pitBounds.minZ;
-            const CELL = B_HOLE_W + B_PATH_W; 
-            const mx = lx % CELL; 
-            const mz = lz % CELL;
-            
-            // 테두리나 길에 걸쳤을 때는 안전하게 보호 (margin: 1.0)
-            const margin = 1.0; 
-            const isInsideHoleX = (mx > B_PATH_W + margin) && (mx < CELL - margin);
-            const isInsideHoleZ = (mz > B_PATH_W + margin) && (mz < CELL - margin);
-            
-            if(isInsideHoleX && isInsideHoleZ) {
-                if(grounded) {
-                    grounded = false;
-                    velY = -.045;
-                }
-            }
-        }
-    }
-
     if(!underground&&player.position.y<-5.0){enterUnderground();return;}
 
     if(underground&&climbing){
@@ -1134,14 +1111,37 @@ function animate(){
         }
     }
 
+    // 중력 및 추락/착지 판정 통합 처리
     if(!climbing){
-        velY+=GRAVITY;player.position.y+=velY;
-        if(underground){ if(player.position.y<=UG_Y+0.05){player.position.y=UG_Y+0.05;velY=0;grounded=true;}else grounded=false; }
-        else{
+        velY+=GRAVITY; player.position.y+=velY;
+        if(underground){ 
+            if(player.position.y<=UG_Y+0.05){player.position.y=UG_Y+0.05;velY=0;grounded=true;} else grounded=false; 
+        } else {
             if(pitBounds.active){
                 const inPit2=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
-                if(!inPit2&&player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;} else if(!inPit2)grounded=false;
-            }else{ if(player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;}else grounded=false; }
+                if(inPit2){
+                    const lx = player.position.x - pitBounds.minX; const lz = player.position.z - pitBounds.minZ;
+                    const CELL = B_HOLE_W + B_PATH_W; 
+                    const mx = lx % CELL; const mz = lz % CELL;
+                    
+                    const margin = 1.0; 
+                    const isInsideHoleX = (mx > B_PATH_W + margin) && (mx < CELL - margin);
+                    const isInsideHoleZ = (mz > B_PATH_W + margin) && (mz < CELL - margin);
+                    
+                    if(isInsideHoleX && isInsideHoleZ) {
+                        // 정확히 구멍 뚫린 영역 내부이면 착지 없이 계속 떨어짐
+                        grounded = false; 
+                    } else {
+                        // 빙고판 테두리 또는 격자 길(Path) 위이면 착지 가능
+                        if(player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;} else grounded=false; 
+                    }
+                } else {
+                    // 빙고방 밖의 일반 복도
+                    if(player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;} else grounded=false; 
+                }
+            }else{ 
+                if(player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;}else grounded=false; 
+            }
         }
     }
 

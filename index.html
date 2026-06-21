@@ -40,44 +40,45 @@
         #joystick-zone{position:absolute;bottom:35px;left:35px;width:120px;height:120px;background:rgba(255,255,255,.03);border:2px solid rgba(255,255,255,.15);border-radius:50%;z-index:10;touch-action:none;display:none;}
         #joystick-stick{position:absolute;top:37px;left:37px;width:46px;height:46px;background:rgba(255,255,255,.3);border-radius:50%;}
 
-        /* ─── START SCREEN (Overlay over the main canvas) ─── */
-        #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;}
-        #scanline-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.35) 2px,rgba(0,0,0,.35) 4px);pointer-events:none;z-index:2;animation:scanlines 6s linear infinite;}
-        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 10%,rgba(0,0,0,.95) 100%);pointer-events:none;z-index:3;}
-        #noise-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.1;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:staticAnim .05s steps(1) infinite;}
-        #cctv-glitch-blind{position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;opacity:0;z-index:6;pointer-events:none;}
+        /* ─── START SCREEN (Transparent Overlay) ─── */
+        #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;pointer-events:auto;}
+        #scanline-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.25) 2px,rgba(0,0,0,.25) 4px);pointer-events:none;z-index:2;animation:scanlines 6s linear infinite;}
+        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 10%,rgba(0,0,0,.8) 100%);pointer-events:none;z-index:3;}
+        #noise-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.08;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:staticAnim .05s steps(1) infinite;}
+        #cctv-glitch-blind{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;opacity:0;z-index:6;pointer-events:none;}
         @keyframes scanlines{0%{background-position:0 0;}100%{background-position:0 100px;}}
-        @keyframes staticAnim{0%,100%{opacity:.1;}50%{opacity:.15;}}
+        @keyframes staticAnim{0%,100%{opacity:.08;}50%{opacity:.12;}}
         
-        #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;background:rgba(0,0,0,0.4);padding:20px;border-radius:8px;backdrop-filter:blur(3px);border:1px solid rgba(209,189,113,0.2);}
-        #cctv-badge{font-family:monospace;font-size:16px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.8);animation:blink 1.2s step-end infinite;}
+        #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;padding:20px 30px;}
+        #cctv-badge{font-family:monospace;font-size:16px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.9);animation:blink 1.2s step-end infinite;}
+        @keyframes blink { 50% { opacity: 0; } }
         
         .title-main{
             font-size:28px;font-weight:600;letter-spacing:10px;margin:0;color:#c9b35d;font-family:monospace;
             text-shadow: 1px 1px 0px #7a6b38, 2px 2px 0px #5e5227, 3px 3px 5px rgba(0,0,0,0.9);
         }
         .title-sub{
-            font-size:60px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;
+            font-size:52px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;
             text-shadow: 
                 0 1px 0 #cccccc, 0 2px 0 #c5c5c5, 0 3px 0 #bbb, 0 4px 0 #b4b4b4, 
                 0 5px 0 #b0b0b0, 0 6px 0 #a3a3a3, 0 7px 0 #999, 0 8px 0 #888, 
-                0 9px 0 #777, 0 10px 15px rgba(0,0,0,0.9), 0 0 25px rgba(209,189,113,.5);
+                0 9px 0 #777, 0 10px 15px rgba(0,0,0,0.9), 0 0 25px rgba(209,189,113,.7);
         }
         .title-level{
-            font-size:16px;font-weight:600;letter-spacing:3px;margin:12px 0 30px;color:#bba86d;font-family:monospace;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            background:rgba(0,0,0,0.6); display:inline-block; padding:4px 10px; border-left:3px solid #d1bd71;
+            font-size:16px;font-weight:600;letter-spacing:3px;margin:12px 0 30px;color:#d1bd71;font-family:monospace;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            background:rgba(0,0,0,0.4); display:inline-block; padding:4px 10px; border-left:3px solid #d1bd71;
         }
         
         .menu-group{display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
         
-        .start-btn-container{position:relative;width:200px;height:58px;display:flex;justify-content:center;align-items:center;cursor:pointer;background:rgba(20,19,16,.85);border:2px solid #d1bd71;border-radius:4px;box-shadow:0 4px 15px rgba(0,0,0,0.6);transition:all 0.25s ease;}
-        .start-btn-container:hover{background:#d1bd71;box-shadow:0 0 25px rgba(209,189,113,0.5);}
+        .start-btn-container{position:relative;width:200px;height:58px;display:flex;justify-content:center;align-items:center;cursor:pointer;background:rgba(20,19,16,.9);border:2px solid #d1bd71;border-radius:4px;box-shadow:0 4px 15px rgba(0,0,0,0.8);transition:all 0.25s ease;}
+        .start-btn-container:hover{background:#d1bd71;box-shadow:0 0 25px rgba(209,189,113,0.7);}
         .start-btn-container:hover .start-label{color:#111;text-shadow:none;}
-        .start-label{font-size:20px;font-weight:900;letter-spacing:4px;color:#ebdfa7;font-family:monospace;text-shadow:0 2px 4px rgba(0,0,0,0.8);transition:color 0.2s;}
+        .start-label{font-size:20px;font-weight:900;letter-spacing:4px;color:#ebdfa7;font-family:monospace;text-shadow:0 2px 4px rgba(0,0,0,0.9);transition:color 0.2s;}
         
-        .setting-toggle-btn{background:rgba(12,11,9,0.8);color:#d1bd71;border:1px solid #6b6038;padding:10px 20px;font-size:14px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;}
-        .setting-toggle-btn:hover{color:#fff;border-color:#d1bd71;background:rgba(30,28,23,0.9);}
+        .setting-toggle-btn{background:rgba(12,11,9,0.9);color:#d1bd71;border:1px solid #6b6038;padding:10px 20px;font-size:14px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;box-shadow:0 4px 10px rgba(0,0,0,0.6);}
+        .setting-toggle-btn:hover{color:#fff;border-color:#d1bd71;background:rgba(30,28,23,0.95);}
         
         .inline-settings-panel {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -103,7 +104,6 @@
 </head>
 <body>
 
-<!-- 게임 상태: MENU, PLAYING, PAUSED, GAMEOVER, CLEAR -->
 <div id="vhs-overlay"></div>
 <div id="glitch-overlay"></div>
 <div id="crosshair"></div>
@@ -114,7 +114,6 @@
 <div id="heartbeat-ui">♡</div>
 <div id="ladder-hud">🪜 Ladder x1</div>
 
-<!-- 메인 메뉴 화면 레이어 (게임 캔버스 위를 덮음) -->
 <div id="start-screen">
     <div id="scanline-overlay"></div>
     <div id="vignette-overlay"></div>
@@ -122,7 +121,7 @@
     <div id="cctv-glitch-blind"></div>
     
     <div id="start-content">
-        <div id="cctv-badge">🔴 REC — CAM 04</div>
+        <div id="cctv-badge">🔴 REC — CAM 04 LIVE</div>
         <h2 class="title-main">LEVEL 0</h2>
         <h1 class="title-sub">THE BACKROOMS</h1>
         <div class="title-level">Obunga Remastered</div>
@@ -200,9 +199,6 @@
 </div>
 
 <script>
-// ════════════════════════════════════════════
-//  CONSTANTS & MAP SCALE 
-// ════════════════════════════════════════════
 const ROWS=40, COLS=40, UNIT=9, WH=7.0; 
 
 let mapData=[], reserved=[];
@@ -211,7 +207,6 @@ let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
 const UG_R=12, UG_C=12, UG_U=8.0, UG_WH=6.5;
 const UG_Y=-35; 
 
-// 게임 상태: 'MENU', 'PLAYING', 'PAUSED', 'GAMEOVER', 'CLEAR'
 let gameState = 'MENU';
 let platform=null;
 let isFlashOn=true, sensitivity=1.0, volBgm=0.4, volSfx=0.7;
@@ -234,10 +229,11 @@ let pitCX=0, pitCZ=0;
 let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
 let pitMeshes=[], pitVoid=null;
 
+// 빙고판 사이즈 꽉 채우게 수정 (양옆 우회 불가)
 const B_GRID_DIV = 3;    
-const B_PATH_W = 1.8;    
-const B_HOLE_W = 6.0;    
-let PIT_TOTAL = 15; 
+const B_PATH_W = 3.0; // 밟기 편하게 길 너비를 확충
+const B_HOLE_W = 11.0; // 구멍 크기 (3*11 + 4*3 = 45 단위)
+let PIT_TOTAL = 45.0; // 방 전체 크기 (5칸 * 9 = 45)
 
 let underground=false;
 let ugMap=[], ugWalls=null, ugFloor=null, ugCeil=null, ugObjs=[];
@@ -249,11 +245,10 @@ let climbing=false, climbT=0;
 const BG_COL=0x8f7d3e; 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(BG_COL);
-scene.fog=new THREE.FogExp2(BG_COL,0.048); 
 
-// 플레이어 카메라
+scene.fog=new THREE.FogExp2(BG_COL,0.025); 
+
 const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,180);
-// CCTV (메뉴) 카메라
 const cctvCamera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,200);
 
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});
@@ -262,11 +257,11 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.0));
 renderer.shadowMap.enabled=false;
 document.body.appendChild(renderer.domElement);
 
-const ambient=new THREE.AmbientLight(0xdecb8a,0.8);
+const ambient=new THREE.AmbientLight(0xdecb8a,1.0);
 scene.add(ambient);
 
 const fpsRig=new THREE.Group(); scene.add(fpsRig);
-const flash=new THREE.SpotLight(0xfffbe6,1.8,45,Math.PI/4.5,0.5,0.6);
+const flash=new THREE.SpotLight(0xfffbe6,3.0,70,Math.PI/4.0,0.7,0.4);
 const flashTgt=new THREE.Object3D(); flashTgt.position.set(0,0,-10);
 fpsRig.add(flash,flashTgt); flash.target=flashTgt;
 
@@ -286,9 +281,6 @@ const rArm=new THREE.Mesh(sharedArmGeo,armMat); rArm.rotateX(Math.PI/2.3); rArm.
 
 let player=new THREE.Group(); scene.add(player);
 
-// ════════════════════════════════════════════
-//  TEXTURE CREATION (HIGH QUALITY WALLPAPER)
-// ════════════════════════════════════════════
 function mkWallTex(){
     const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d');
     x.fillStyle='#ccbe82'; x.fillRect(0,0,256,256);
@@ -354,41 +346,63 @@ function spawnHintArrow() {
     }
 }
 
-// ════════════════════════════════════════════
-//  강제 레벨 디자인 
-// ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
 
-    for(let r=2; r<=13; r++) for(let c=20; c<=38; c++) reserved[r][c] = true;
+    for(let r=1; r<=14; r++) {
+        for(let c=20; c<=38; c++) {
+            reserved[r][c] = true;
+        }
+    }
 
-    for(let r=6; r<=10; r++) for(let c=24; c<=28; c++) mapData[r][c] = 0;
-    pitCX = (26 - COLS/2) * UNIT + UNIT/2; pitCZ = (8 - ROWS/2) * UNIT + UNIT/2;
+    for(let r=6; r<=10; r++) {
+        for(let c=24; c<=28; c++) {
+            mapData[r][c] = 0;
+        }
+    }
+    pitCX = (26 - COLS/2) * UNIT + UNIT/2;
+    pitCZ = (8 - ROWS/2) * UNIT + UNIT/2;
 
-    mapData[11][26] = 0; mapData[12][26] = 0; mapData[13][26] = 0; 
-    mapData[5][26] = 0; mapData[4][26] = 0; 
-    for(let c=26; c<=35; c++) mapData[4][c] = 0;
+    for(let r=11; r<=15; r++) mapData[r][26] = 0;
+    for(let r=2; r<=5; r++) mapData[r][26] = 0;
+    
+    for(let c=21; c<=37; c++) {
+        mapData[3][c] = 0;
+    }
 
-    escapeDoorPos.x = (35 - COLS/2) * UNIT + UNIT/2; escapeDoorPos.z = (3 - ROWS/2) * UNIT + UNIT/2; escapeDoorPos.ang = 0; 
+    escapeDoorPos.x = (36 - COLS/2) * UNIT + UNIT/2;
+    escapeDoorPos.z = (3 - ROWS/2) * UNIT + UNIT/2;
+    escapeDoorPos.ang = Math.PI / 2; 
 
     function carve(r,c){
         const dirs=[[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-.5);
         for(const[dr,dc]of dirs){
             const nr=r+dr,nc=c+dc;
             if(nr>0&&nr<ROWS-1&&nc>0&&nc<COLS-1 && mapData[nr][nc]===1 && !reserved[nr][nc]){
-                if(!reserved[r+dr/2][c+dc/2]){ mapData[r+dr/2][c+dc/2]=0; mapData[nr][nc]=0; carve(nr,nc); }
+                if(!reserved[r+dr/2][c+dc/2]){
+                    mapData[r+dr/2][c+dc/2]=0;
+                    mapData[nr][nc]=0;
+                    carve(nr,nc);
+                }
             }
         }
     }
-    carve(14, 26); carve(ROWS-3, 3); carve(3, 3);
+    carve(16, 26);
+    carve(ROWS-3, 3);
+    carve(3, 3);
 
     for(let r=2; r<ROWS-2; r+=2){
         for(let c=2; c<COLS-2; c+=2){
-            if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]) { if(Math.random()<0.4) mapData[r+1][c]=0; }
-            if(mapData[r][c]===0 && mapData[r][c+1]===1 && mapData[r][c+2]===0 && !reserved[r][c+1]) { if(Math.random()<0.4) mapData[r][c+1]=0; }
+            if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]) {
+                if(Math.random()<0.45) mapData[r+1][c]=0;
+            }
+            if(mapData[r][c]===0 && mapData[r][c+1]===1 && mapData[r][c+2]===0 && !reserved[r][c+1]) {
+                if(Math.random()<0.45) mapData[r][c+1]=0;
+            }
         }
     }
+
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
 }
@@ -396,9 +410,12 @@ function genMaze(){
 function buildGraphics(){
     if(iWalls){scene.remove(iWalls);iWalls.geometry.dispose();}
     lamps.forEach(l=>scene.remove(l)); lamps=[];
-    if(floorM){scene.remove(floorM);floorM=null;} if(ceilM){scene.remove(ceilM);ceilM=null;} if(floorGroup){scene.remove(floorGroup);floorGroup=null;}
+    if(floorM){scene.remove(floorM);floorM=null;}
+    if(ceilM){scene.remove(ceilM);ceilM=null;}
+    if(floorGroup){scene.remove(floorGroup);floorGroup=null;}
 
-    let wc=0; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(mapData[r][c]===1)wc++;
+    let wc=0;
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(mapData[r][c]===1)wc++;
     const wGeo=new THREE.BoxGeometry(UNIT,WH,UNIT);
     iWalls=new THREE.InstancedMesh(wGeo,wallMat,wc);
     
@@ -406,21 +423,29 @@ function buildGraphics(){
     for(let r=0;r<ROWS;r++){
         for(let c=0;c<COLS;c++){
             const wx=(c-COLS/2)*UNIT+UNIT/2, wz=(r-ROWS/2)*UNIT+UNIT/2;
-            if(mapData[r][c]===1){ dum.position.set(wx,WH/2,wz); dum.updateMatrix(); iWalls.setMatrixAt(idx++,dum.matrix); } 
-            else if(Math.random() < 0.04){ 
+            if(mapData[r][c]===1){
+                dum.position.set(wx,WH/2,wz); dum.updateMatrix();
+                iWalls.setMatrixAt(idx++,dum.matrix);
+            } else if(Math.random() < 0.04){ 
                 const lg=new THREE.Group();
                 const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
                 const pn=new THREE.Mesh(new THREE.BoxGeometry(4.3,.05,4.3),new THREE.MeshBasicMaterial({color:0xfffcd1}));
-                pn.position.y=-.01; lg.add(fr,pn); lg.position.set(wx,WH-.02,wz); scene.add(lg); lamps.push(lg);
-                const pl=new THREE.PointLight(0xfff5bf,.75,18,1.1); pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
+                pn.position.y=-.01; lg.add(fr,pn);
+                lg.position.set(wx,WH-.02,wz);
+                scene.add(lg); lamps.push(lg);
+                const pl=new THREE.PointLight(0xfff5bf,.75,18,1.1);
+                pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
             }
         }
     }
-    iWalls.instanceMatrix.needsUpdate=true; scene.add(iWalls);
+    iWalls.instanceMatrix.needsUpdate=true;
+    scene.add(iWalls);
 
     const mW=COLS*UNIT, mH=ROWS*UNIT;
-    floorM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),floorMat); floorM.rotation.x=-Math.PI/2; scene.add(floorM);
-    ceilM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),ceilMat); ceilM.rotation.x=Math.PI/2; ceilM.position.y=WH; scene.add(ceilM);
+    floorM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),floorMat);
+    floorM.rotation.x=-Math.PI/2; scene.add(floorM);
+    ceilM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),ceilMat);
+    ceilM.rotation.x=Math.PI/2; ceilM.position.y=WH; scene.add(ceilM);
 }
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
@@ -428,16 +453,14 @@ function safeSpawn(avoid,minD,excludeReserved=false){
     for(let i=0; i<600; i++){
         const r=Math.floor(Math.random()*(ROWS-2))+1,c=Math.floor(Math.random()*(COLS-2))+1;
         if(mapData[r][c]===0 && (!excludeReserved || !reserved[r][c])){
-            const p=worldXZ(r,c); if(avoid&&minD&&Math.sqrt((p.x-avoid.x)**2+(p.z-avoid.z)**2)<minD)continue;
+            const p=worldXZ(r,c);
+            if(avoid&&minD&&Math.sqrt((p.x-avoid.x)**2+(p.z-avoid.z)**2)<minD)continue;
             return{x:p.x,z:p.z,r,c};
         }
     }
     return{x:UNIT,z:UNIT,r:1,c:1};
 }
 
-// ════════════════════════════════════════════
-//  BINGO PIT SYSTEM (방을 가득 채우는 함정)
-// ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
     if(pitVoid){scene.remove(pitVoid);pitVoid=null;}
@@ -459,24 +482,21 @@ function buildBingoPit(){
     const eL = mW/2 - pitBounds.maxX; if(eL>0){ const fE = new THREE.Mesh(new THREE.PlaneGeometry(eL, pZLen), floorMat); fE.rotation.x = -Math.PI/2; fE.position.set(pitBounds.maxX+eL/2,0,pitCZ); floorGroup.add(fE); }
     scene.add(floorGroup);
 
-    const c=document.createElement('canvas'); c.width=c.height=64; const ctx=c.getContext('2d');
-    ctx.fillStyle='#ffd000'; ctx.fillRect(0,0,64,64); ctx.fillStyle='#cca600'; ctx.fillRect(4,4,56,56);
-    const lineTex=new THREE.CanvasTexture(c);
-
-    const pathMat = new THREE.MeshStandardMaterial({map:lineTex, roughness:0.7});
+    // 격자와 테두리를 안전하게 밟을 수 있게 바닥과 완벽히 동일한 재질(floorMat) 사용
+    const pathMat = floorMat; 
     const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.9});
     const voidMat = new THREE.MeshBasicMaterial({color:0x010101});
     const holeDepth = 18;
 
-    const hGeo = new THREE.BoxGeometry(PIT_TOTAL + 0.1, 0.1, B_PATH_W + 0.1);
+    const hGeo = new THREE.BoxGeometry(PIT_TOTAL, 0.1, B_PATH_W);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const z = pitBounds.minZ + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
-        const p = new THREE.Mesh(hGeo, pathMat); p.position.set(pitCX, -0.02, z); scene.add(p); pitMeshes.push(p);
+        const p = new THREE.Mesh(hGeo, pathMat); p.position.set(pitCX, 0.0, z); scene.add(p); pitMeshes.push(p);
     }
-    const vGeo = new THREE.BoxGeometry(B_PATH_W + 0.1, 0.1, PIT_TOTAL + 0.1);
+    const vGeo = new THREE.BoxGeometry(B_PATH_W, 0.1, PIT_TOTAL);
     for(let i=0; i<=B_GRID_DIV; i++) {
         const x = pitBounds.minX + B_PATH_W/2 + i*(B_HOLE_W+B_PATH_W);
-        const p = new THREE.Mesh(vGeo, pathMat); p.position.set(x, -0.02, pitCZ); scene.add(p); pitMeshes.push(p);
+        const p = new THREE.Mesh(vGeo, pathMat); p.position.set(x, 0.0, pitCZ); scene.add(p); pitMeshes.push(p);
     }
 
     const wGeoX = new THREE.BoxGeometry(B_HOLE_W, holeDepth, 0.05); const wGeoZ = new THREE.BoxGeometry(0.05, holeDepth, B_HOLE_W);
@@ -522,12 +542,9 @@ function spawnKey(){
     const kr=new THREE.Mesh(new THREE.TorusGeometry(.16,.04,6,12),new THREE.MeshStandardMaterial({color:0xee9900,metalness:.8}));
     const kb=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.4),new THREE.MeshStandardMaterial({color:0xee9900})); kb.position.y=-.2; kb.rotation.z=Math.PI/2; keyMesh.add(kr,kb);
     const kl=new THREE.PointLight(0xffcc33,2.2,12,1.2); kl.position.y=.2; keyMesh.add(kl);
-    const kp=safeSpawn({x:pitCX, z:pitCZ}, 60, true); keyMesh.position.set(kp.x,.8,kp.z); scene.add(keyMesh);
+    const kp=safeSpawn({x:pitCX, z:pitCZ}, 45, true); keyMesh.position.set(kp.x,.8,kp.z); scene.add(keyMesh);
 }
 
-// ════════════════════════════════════════════
-//  BUILD UNDERGROUND 
-// ════════════════════════════════════════════
 function buildUnderground(){
     ugObjs.forEach(o=>scene.remove(o)); ugObjs=[];
     if(ugWalls){scene.remove(ugWalls);ugWalls=null;} if(ugFloor){scene.remove(ugFloor);ugFloor=null;} if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
@@ -578,7 +595,7 @@ function buildUnderground(){
 function gridCollide(ox, oz, nx, nz, rad) {
     if (isNaN(nx) || isNaN(nz)) return { x: ox, z: oz };
     if (player.position.y < -.05) return { x: nx, z: nz };
-    if (!doorOpened && doorGroup) { const ddx = doorGroup.position.x - nx; const ddz = doorGroup.position.z - nz; if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.2) return { x: ox, z: oz }; }
+    if (!doorOpened && doorGroup) { const ddx = doorGroup.position.x - nx; const ddz = doorGroup.position.z - nz; if (Math.sqrt(ddx * ddx + ddz * ddz) < 2.0) return { x: ox, z: oz }; }
 
     let resultX = nx, resultZ = nz;
     const checkAxisCollision = (targetX, targetZ) => {
@@ -627,7 +644,7 @@ function enterUnderground(){
     if(keyMesh)keyMesh.visible=false; if(doorGroup)doorGroup.visible=false;
     pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;}); if(pitVoid)pitVoid.visible=false;
     scene.background.setHex(0x140b04); scene.fog.color.setHex(0x140b04); scene.fog.density=0.07;
-    ambient.intensity=0.5; flash.intensity=isFlashOn?3.2:0;
+    ambient.intensity=0.5; flash.intensity=isFlashOn?4.0:0;
     showToast("⬇ 구덩이에 추락했습니다!<br>🪜 사다리를 수색하여 탈출하십시오.");
 }
 
@@ -641,53 +658,45 @@ function exitUnderground(){
     pitMeshes.forEach(m=>{m.visible=true;}); if(pitVoid)pitVoid.visible=true;
     
     player.position.set(pitCX + PIT_TOTAL*0.5 + 2.5, 0.1, pitCZ + PIT_TOTAL*0.5 + 2.5); velY=0; grounded=true;
-    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.048;
-    ambient.intensity=0.8; flash.intensity=isFlashOn?1.8:0;
+    scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density=0.025;
+    ambient.intensity=1.0; flash.intensity=isFlashOn?3.0:0;
     showToast("⬆ 지상 복귀 완료!<br>🏃 외곽 길을 타고 신속히 이동하세요!");
 }
 
-// ════════════════════════════════════════════
-//  MONSTER DATA (2D 얼굴 이미지 같은 절차적 오붕가)
-// ════════════════════════════════════════════
 let entities=[];
 
 function mkObungaTex() {
     const c = document.createElement('canvas'); c.width = 512; c.height = 512; const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,512,512); // 배경 투명
+    ctx.clearRect(0,0,512,512); 
     
-    // 얼굴 형태 (타원)
-    ctx.fillStyle = '#e3c6a8'; ctx.beginPath(); ctx.ellipse(256, 256, 180, 240, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.lineWidth = 15; ctx.strokeStyle = '#3d2510'; ctx.stroke();
+    ctx.fillStyle = '#e3c6a8'; ctx.beginPath(); ctx.ellipse(256, 256, 190, 245, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 14; ctx.strokeStyle = '#321d0a'; ctx.stroke();
 
-    // 두 눈 (크고 검게)
     ctx.fillStyle = '#0a0a0a';
-    ctx.beginPath(); ctx.ellipse(180, 200, 45, 55, -0.2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(330, 200, 50, 45, 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(175, 190, 55, 65, -0.22, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(335, 190, 60, 55, 0.12, 0, Math.PI * 2); ctx.fill();
     
-    // 흰자/눈동자
     ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(180, 200, 15, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(330, 200, 15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(175, 190, 18, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(335, 190, 18, 0, Math.PI*2); ctx.fill();
     
-    ctx.fillStyle = '#ff0000'; // 붉은 눈동자
-    ctx.beginPath(); ctx.arc(180, 200, 6, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(330, 200, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ee0000'; 
+    ctx.beginPath(); ctx.arc(175, 190, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(335, 190, 8, 0, Math.PI*2); ctx.fill();
 
-    // 소름끼치는 큰 입
-    ctx.fillStyle = '#050505';
-    ctx.beginPath(); ctx.moveTo(150, 320); ctx.quadraticCurveTo(256, 250, 360, 320); ctx.quadraticCurveTo(380, 420, 256, 450); ctx.quadraticCurveTo(130, 420, 150, 320); ctx.fill();
+    ctx.fillStyle = '#020202';
+    ctx.beginPath(); ctx.moveTo(135, 310); ctx.quadraticCurveTo(256, 235, 375, 310); ctx.quadraticCurveTo(400, 425, 256, 455); ctx.quadraticCurveTo(110, 425, 135, 310); ctx.fill();
     
-    // 이빨
-    ctx.fillStyle = '#dbd1b4';
-    for(let i=0; i<8; i++) {
-        ctx.fillRect(180 + i*22, 330, 12, 30); ctx.fillRect(190 + i*18, 400, 10, 25);
+    ctx.fillStyle = '#eae2bf';
+    for(let i=0; i<10; i++) {
+        ctx.fillRect(165 + i*20, 315, 11, 28); 
+        ctx.fillRect(175 + i*17, 395, 9, 22);
     }
     
-    // 노이즈 질감
     const imgData = ctx.getImageData(0,0,512,512);
     for(let i=0; i<imgData.data.length; i+=4) {
         if(imgData.data[i+3] > 0) {
-            const noise = (Math.random() - 0.5) * 40;
+            const noise = (Math.random() - 0.5) * 35;
             imgData.data[i] += noise; imgData.data[i+1] += noise; imgData.data[i+2] += noise;
         }
     }
@@ -698,7 +707,7 @@ function mkObungaTex() {
 function mkEntity(){
     const e = new THREE.Group();
     const tex = mkObungaTex(); const mat = new THREE.SpriteMaterial({ map: tex, color: 0xffffff }); const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(5.5, 5.5, 1); sprite.position.y = 3.0; e.add(sprite); scene.add(e); 
+    sprite.scale.set(6.2, 6.2, 1); sprite.position.y = 3.1; e.add(sprite); scene.add(e); 
     return {mesh: e, sprite: sprite, state: 'patrol', patrolTarget: null, baseSpeed: 0.11, speed: 0.11, stuckT: 0, lastPos: new THREE.Vector3(), scream: false};
 }
 
@@ -713,29 +722,28 @@ function entityAI(e,pp){
     if (gameState === 'MENU') {
         e.state = 'patrol'; e.scream = false;
     } else {
-        if(dist<40&&gameState==='PLAYING'&&player.position.y>=-0.2){ 
-            if(!e.scream){e.scream=true;scream(true);}e.state='chase';
+        if(dist<45 && gameState==='PLAYING' && player.position.y>=-0.2){ 
+            if(!e.scream){e.scream=true; scream(true);} e.state='chase';
         }else if(e.state==='chase'&&(dist>50||player.position.y<-.2)){ 
             e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,false);
         }
     }
 
     const dest=e.state==='chase'?pp:e.patrolTarget;
-    if(e.state==='patrol'&&(!dest || (Math.abs(ep.x-dest.x)<2.0&&Math.abs(ep.z-dest.z)<2.0)))e.patrolTarget=safeSpawn(pp,0,false);
+    if(e.state==='patrol'&&(!dest || (Math.abs(ep.x-dest.x)<2.0&&Math.abs(ep.z-dest.z)<2.0))) {
+        e.patrolTarget=safeSpawn(pp,0,false);
+    }
     
     if(dest) {
-        const dx=dest.x-ep.x,dz=dest.z-ep.z,len=Math.sqrt(dx*dx+dz*dz);
+        const dx=dest.x-ep.x, dz=dest.z-ep.z, len=Math.sqrt(dx*dx+dz*dz);
         if(len>.1){
             const sp=e.state==='chase'?e.speed*1.45:e.speed; const te={x:ep.x+dx/len*sp,z:ep.z+dz/len*sp}; const se=gridCollide(ep.x,ep.z,te.x,te.z,.6);
-            ep.x=se.x;ep.z=se.z; e.mesh.rotation.y=Math.atan2(dx,dz);
+            ep.x=se.x; ep.z=se.z; e.mesh.rotation.y=Math.atan2(dx,dz);
         }
     }
     if(e.state==='chase')screamVol(dist);
 }
 
-// ════════════════════════════════════════════
-//  CONTROLS & SETTINGS
-// ════════════════════════════════════════════
 let camX=0,camY=0,sCamX=0,sCamY=0;
 const keys={w:false,a:false,s:false,d:false,shift:false};
 let jInput={x:0,y:0},jRatio=0,jTouchId=null,rTouchId=null,prevX=0,prevY=0,jStart={x:0,y:0};
@@ -774,7 +782,6 @@ function setPlatform(t){
     document.getElementById('pc-btn').classList.toggle('selected',t==='pc');
     document.getElementById('mobile-btn').classList.toggle('selected',t==='mobile');
     
-    // 모바일 선택 시 전체화면 & 가로모드 자동 유도
     if(t === 'mobile' && gameState === 'MENU') {
         const docEl = document.documentElement;
         if (!document.fullscreenElement) {
@@ -840,7 +847,12 @@ function handleJump(e){
     if(underground&&ladderPlaced&&ladderMesh){ const d=Math.sqrt((player.position.x-ladderMesh.position.x)**2+(player.position.z-ladderMesh.position.z)**2); if(d<4.0){climbing=true;return;} }
     if(grounded){velY=JUMP;grounded=false;}
 }
-function toggleFlash(){ isFlashOn=!isFlashOn; document.getElementById('btn-mobile-flash')?.classList.toggle('active',isFlashOn); flash.intensity=isFlashOn?(underground?3.2:1.8):0; lensMesh.material.color.setHex(isFlashOn?0xffffee:0x222222); }
+function toggleFlash(){ 
+    isFlashOn=!isFlashOn; 
+    document.getElementById('btn-mobile-flash')?.classList.toggle('active',isFlashOn); 
+    flash.intensity=isFlashOn?(underground?4.0:3.0):0; 
+    lensMesh.material.color.setHex(isFlashOn?0xffffee:0x222222); 
+}
 function placeLadder(){
     if(!hasLadder||ladderPlaced||!underground||!holeGroup)return;
     ladderPlaced=true;hasLadder=false; document.getElementById('ladder-hud').style.display='none';
@@ -872,13 +884,10 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false;});
 
 function openDoor(){
-    if(!hasKey||doorOpened)return; doorOpened=true; showToast("🔓 차단 해제 완료!<br>중앙 통로로 신속히 도망치세요!");
+    if(!hasKey||doorOpened)return; doorOpened=true; showToast("🔓 차단 해제 완료!<br>동쪽 통로 안쪽의 초록 게이트로 신속히 도망치세요!");
     document.getElementById('interact-prompt').style.display='none'; document.getElementById('btn-mobile-interact').style.display='none';
 }
 
-// ════════════════════════════════════════════
-//  AUDIO LAYER
-// ════════════════════════════════════════════
 let actx=null,bgGain=null,sfxGain=null,scGain=null,khGain=null,scOsc1=null,scOsc2=null,ambO1=null,ambO2=null,khOsc=null;
 function initAudio(){
     try{
@@ -924,7 +933,7 @@ function goMainMenu(){
     
     document.getElementById('start-screen').style.display='flex';
     document.getElementById('glitch-overlay').style.cssText='background:rgba(0,0,0,0);opacity:0;';
-    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.048;ambient.intensity=.8; flash.intensity=isFlashOn?1.8:0;
+    scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.025;ambient.intensity=1.0; flash.intensity=isFlashOn?3.0:0;
     
     ugObjs.forEach(o=>scene.remove(o));ugObjs=[];
     if(ugWalls){scene.remove(ugWalls);ugWalls=null;}if(ugFloor){scene.remove(ugFloor);ugFloor=null;}if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
@@ -936,7 +945,6 @@ function goMainMenu(){
     try{if(ambO1){ambO1.stop();ambO1=null;}if(ambO2){ambO2.stop();ambO2=null;}if(khOsc){khOsc.stop();khOsc=null;}actx=null;}catch(e){}
     if(document.pointerLockElement===document.body)document.exitPointerLock(); lightState = 'normal'; hintSpawned = false;
     
-    // 다시 게임 리셋 (CCTV에서 돌아다니는 모습 보이게)
     genMaze(); buildGraphics();
     buildBingoPit(); spawnDoor(); spawnKey();
     entities.forEach(e=>{ const ep=safeSpawn({x:0,z:0}, 0, false); e.mesh.position.set(ep.x,0,ep.z); e.patrolTarget=ep; e.state='patrol'; });
@@ -961,32 +969,38 @@ function launchGame(){
     gameState = 'PLAYING'; recTime=0; initAudio();
 }
 
-// 초기 로드 시 맵 세팅
 genMaze(); buildGraphics(); entities.push(mkEntity()); 
 
-const cctvSpots = [ {x: 10, y: 5.5, z: 10}, {x: -20, y: 6.0, z: -20}, {x: 25, y: 4.0, z: 25}, {x: -15, y: 5.5, z: 15} ];
+const cctvSpots = [
+    {x: -12, y: 5.5, z: -12, lookX: 10, lookZ: -10}, 
+    {x: 25, y: 6.0, z: -25, lookX: 5, lookZ: -5}, 
+    {x: 35, y: 4.5, z: 20, lookX: 15, lookZ: 10}, 
+    {x: -15, y: 5.5, z: 25, lookX: 0, lookZ: 0}
+];
 let cctvTimer = 0, cctvIndex = 0;
 
-// ════════════════════════════════════════════
-//  MAIN LOOP
-// ════════════════════════════════════════════
 function animate(){
     requestAnimationFrame(animate);
     const rt=Date.now()*.005;
 
     if(gameState === 'MENU') {
         cctvTimer += 1/60;
-        if(cctvTimer > 6) {
+        if(cctvTimer > 6.5) {
             cctvIndex = (cctvIndex + 1) % cctvSpots.length; cctvTimer = 0;
             const blindEl = document.getElementById('cctv-glitch-blind'); blindEl.style.opacity = '1';
             setTimeout(() => { blindEl.style.opacity = '0.3'; }, 40); setTimeout(() => { blindEl.style.opacity = '0.8'; }, 90); setTimeout(() => { blindEl.style.opacity = '0'; }, 160);
         }
-        entities.forEach(e => { entityAI(e, {x:0, z:0}); }); // 패트롤만 함
+        
+        entities.forEach(e => { entityAI(e, {x:0, z:0}); }); 
         
         const spot = cctvSpots[cctvIndex];
         cctvCamera.position.set(spot.x, spot.y, spot.z);
-        if(entities[0]) cctvCamera.lookAt(entities[0].mesh.position.x, entities[0].mesh.position.y, entities[0].mesh.position.z);
-        else cctvCamera.lookAt(0,0,0);
+        
+        if(entities[0]) {
+            cctvCamera.lookAt(entities[0].mesh.position.x, entities[0].mesh.position.y + 1.5, entities[0].mesh.position.z);
+        } else {
+            cctvCamera.lookAt(spot.lookX, 1.8, spot.lookZ);
+        }
         
         renderer.render(scene, cctvCamera);
         return;
@@ -1000,9 +1014,10 @@ function animate(){
 
     if(recTime >= 100 && recTime < 104 && lightState === 'normal') lightState = 'flickering';
     if(lightState === 'flickering') {
-        if (Math.random() < 0.2) { ambient.intensity = Math.random() * 0.8; scene.fog.density = 0.08; }
+        if (Math.random() < 0.2) { ambient.intensity = Math.random() * 0.8; scene.fog.density = 0.04; }
         if(recTime >= 104) {
-            lightState = 'off'; ambient.intensity = 0.05; scene.fog.density = 0.08; lamps.forEach(l => { if(l.isPointLight) l.intensity = 0; });
+            lightState = 'off'; ambient.intensity = 0.08; scene.fog.density = 0.04; 
+            lamps.forEach(l => { if(l.isPointLight) l.intensity = 0; });
             document.getElementById('glitch-overlay').style.cssText='background:rgba(5,5,5,.8);opacity:1;';
             entities.forEach(e => e.speed = e.baseSpeed * 1.4); speedBoosted = true;
         }
@@ -1011,16 +1026,26 @@ function animate(){
 
     if(keyMesh&&!hasKey)keyMesh.rotation.y+=.02; if(!underground)keyHint(player.position);
 
-    // 빙고판 빡센 추락 판정 (가득 채움)
+    // 넓어진 길(Path)에 걸맞는 안정적이고 여유로운 밟기 판정
     if(!underground&&pitBounds.active&&player.position.y>=-0.05){
         const inPit=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
         if(inPit){
             const lx = player.position.x - pitBounds.minX; const lz = player.position.z - pitBounds.minZ;
-            const CELL = B_HOLE_W + B_PATH_W; const mx = lx % CELL; const mz = lz % CELL;
-            const pRad = 0.25; // 빡빡한 판정
-            let onPathX = (mx < B_PATH_W + pRad) || (mx > CELL - pRad); let onPathZ = (mz < B_PATH_W + pRad) || (mz > CELL - pRad);
-            let safe = onPathX || onPathZ;
-            if(!safe && grounded){ grounded=false; velY=-.05; }
+            const CELL = B_HOLE_W + B_PATH_W; 
+            const mx = lx % CELL; 
+            const mz = lz % CELL;
+            
+            // 테두리나 길에 걸쳤을 때는 안전하게 보호 (margin: 1.0)
+            const margin = 1.0; 
+            const isInsideHoleX = (mx > B_PATH_W + margin) && (mx < CELL - margin);
+            const isInsideHoleZ = (mz > B_PATH_W + margin) && (mz < CELL - margin);
+            
+            if(isInsideHoleX && isInsideHoleZ) {
+                if(grounded) {
+                    grounded = false;
+                    velY = -.045;
+                }
+            }
         }
     }
 

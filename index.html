@@ -202,7 +202,7 @@ const ROWS=40, COLS=40, UNIT=9, WH=7.0;
 
 let mapData=[], reserved=[];
 let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
-let surfaceDecals = [], furnitures = [];
+let surfaceDecals = [], furnitures = [], staticColliders = [];
 
 const UG_R=12, UG_C=12, UG_U=8.0, UG_WH=6.5;
 const UG_Y=-35; 
@@ -315,6 +315,8 @@ const wallTex=mkWallTex(), floorTex=mkFloorTex(), ceilTex=mkCeilTex();
 const wallMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.85});
 const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
+const partitionMat=new THREE.MeshStandardMaterial({color: 0xdfcd98, roughness: 0.9}); // 약간 밝은 파티션 재질
+const moldingMat=new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.8}); // 파티션 상단 나무 몰딩 재질
 
 function mkArrowTex(){
     const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d');
@@ -358,18 +360,41 @@ function createChair() {
     return group;
 }
 
+function createDesk() {
+    const group = new THREE.Group();
+    const dMat = new THREE.MeshStandardMaterial({color: 0x4a3424, roughness: 0.9});
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.15, 1.4), dMat); top.position.y = 1.4;
+    const legGeo = new THREE.BoxGeometry(0.15, 1.4, 0.15);
+    const l1 = new THREE.Mesh(legGeo, dMat); l1.position.set(-1.2, 0.7, -0.6);
+    const l2 = new THREE.Mesh(legGeo, dMat); l2.position.set(1.2, 0.7, -0.6);
+    const l3 = new THREE.Mesh(legGeo, dMat); l3.position.set(-1.2, 0.7, 0.6);
+    const l4 = new THREE.Mesh(legGeo, dMat); l4.position.set(1.2, 0.7, 0.6);
+    group.add(top, l1, l2, l3, l4);
+    group.colliderRadius = 1.4;
+    return group;
+}
+
 function clearSurfaceDecals() {
     surfaceDecals.forEach(d => { if(d.parent) scene.remove(d); if(d.geometry) d.geometry.dispose(); }); surfaceDecals = [];
     furnitures.forEach(f => { if(f.parent) scene.remove(f); }); furnitures = [];
+    staticColliders = []; // 정적 가벽 충돌체 초기화
 }
 
 function spawnFurnitures() {
-    for(let i=0; i<60; i++) { 
+    for(let i=0; i<80; i++) { 
         let sp = safeSpawn(null, 0, true);
         if(sp.x !== UNIT && sp.z !== UNIT) {
-            let chair = createChair();
-            chair.position.set(sp.x, 0, sp.z); chair.rotation.y = Math.random() * Math.PI * 2;
-            scene.add(chair); furnitures.push(chair);
+            let isDesk = Math.random() > 0.6;
+            let f = isDesk ? createDesk() : createChair();
+            f.position.set(sp.x, 0, sp.z); 
+            f.rotation.y = Math.random() * Math.PI * 2;
+            
+            // 물리 연산을 위한 초기 속성
+            f.vx = 0; f.vz = 0;
+            f.fallen = false;
+            f.targetRx = 0; f.targetRz = 0;
+            
+            scene.add(f); furnitures.push(f);
         }
     }
 }
@@ -466,10 +491,13 @@ function buildGraphics(){
     for(let r=0;r<ROWS;r++){
         for(let c=0;c<COLS;c++){
             const wx=(c-COLS/2)*UNIT+UNIT/2, wz=(r-ROWS/2)*UNIT+UNIT/2;
+            
+            // 일반 타일 벽 렌더링
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
             } else {
+                // 천장 전등
                 if(Math.random() < 0.04){ 
                     const lg=new THREE.Group();
                     const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
@@ -481,6 +509,7 @@ function buildGraphics(){
                     pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
                 }
                 
+                // 그래피티
                 if(Math.random() < 0.12 && !reserved[r][c]) {
                     const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
                     for(let [dr, dc] of dirs) {
@@ -490,6 +519,40 @@ function buildGraphics(){
                             g.rotation.y = Math.atan2(-dc, -dr);
                             scene.add(g); surfaceDecals.push(g);
                             break;
+                        }
+                    }
+                }
+                
+                // 파티션 난간 및 1센치 가벽 스폰 로직
+                if(r>1 && r<ROWS-2 && c>1 && c<COLS-2 && !reserved[r][c]) {
+                    if(Math.random() < 0.08) {
+                        let isHoriz = Math.random() > 0.5;
+                        
+                        if (Math.random() > 0.4) {
+                            // 중간 높이 난간(Partition)
+                            let pw = isHoriz ? UNIT*0.6 : 0.3;
+                            let pz = isHoriz ? 0.3 : UNIT*0.6;
+                            let pH = 2.8; 
+                            
+                            let pMesh = new THREE.Mesh(new THREE.BoxGeometry(pw, pH, pz), partitionMat);
+                            pMesh.position.set(wx, pH/2, wz);
+                            scene.add(pMesh); surfaceDecals.push(pMesh);
+                            
+                            let molding = new THREE.Mesh(new THREE.BoxGeometry(pw+0.05, 0.1, pz+0.05), moldingMat);
+                            molding.position.set(wx, pH, wz);
+                            scene.add(molding); surfaceDecals.push(molding);
+                            
+                            staticColliders.push({ minX: wx - pw/2, maxX: wx + pw/2, minZ: wz - pz/2, maxZ: wz + pz/2 });
+                        } else {
+                            // 1센치 두께의 얇은 가벽(Thin wall)
+                            let tw = isHoriz ? UNIT*0.6 : 0.1;
+                            let tz = isHoriz ? 0.1 : UNIT*0.6;
+                            
+                            let tMesh = new THREE.Mesh(new THREE.BoxGeometry(tw, WH, tz), wallMat);
+                            tMesh.position.set(wx, WH/2, wz);
+                            scene.add(tMesh); surfaceDecals.push(tMesh);
+                            
+                            staticColliders.push({ minX: wx - tw/2, maxX: wx + tw/2, minZ: wz - tz/2, maxZ: wz + tz/2 });
                         }
                     }
                 }
@@ -695,6 +758,7 @@ function gridCollide(ox, oz, nx, nz, rad) {
 
     let resultX = nx, resultZ = nz;
     const checkAxisCollision = (targetX, targetZ) => {
+        // 기존 맵 블록 충돌
         const pc = Math.floor((ox - UNIT / 2 + (COLS * UNIT) / 2) / UNIT); const pr = Math.floor((oz - UNIT / 2 + (ROWS * UNIT) / 2) / UNIT);
         for (let r = pr - 1; r <= pr + 1; r++) {
             for (let c = pc - 1; c <= pc + 1; c++) {
@@ -703,6 +767,13 @@ function gridCollide(ox, oz, nx, nz, rad) {
                     const wx = (c - COLS / 2) * UNIT + UNIT / 2, wz = (r - ROWS / 2) * UNIT + UNIT / 2; const half = UNIT / 2 + rad;
                     if (targetX > wx - half && targetX < wx + half && targetZ > wz - half && targetZ < wz + half) return true; 
                 }
+            }
+        }
+        // 난간 및 가벽 충돌
+        for (let i=0; i<staticColliders.length; i++) {
+            let box = staticColliders[i];
+            if (targetX + rad > box.minX && targetX - rad < box.maxX && targetZ + rad > box.minZ && targetZ - rad < box.maxZ) {
+                return true;
             }
         }
         return false;
@@ -1217,20 +1288,47 @@ function animate(){
         }
     }
     
-    // 가구 밀침 기능 연산
+    // ════════════════════════════════════════════
+    //  가구(의자, 책상) 물리 시스템 연산 (발로 차고 넘어짐)
+    // ════════════════════════════════════════════
     furnitures.forEach(f => {
-        let dx = f.position.x - player.position.x; let dz = f.position.z - player.position.z; let dist = Math.sqrt(dx*dx + dz*dz);
-        let minDist = 0.55 + f.colliderRadius;
+        let dx = f.position.x - player.position.x; 
+        let dz = f.position.z - player.position.z; 
+        let dist = Math.sqrt(dx*dx + dz*dz);
+        let minDist = 0.6 + f.colliderRadius; // 플레이어 충돌 반경 + 가구 반경
+        
+        // 플레이어와 부딪힐 경우 물리적으로 밀어냄
         if(dist < minDist && dist > 0.001) {
-            let overlap = minDist - dist; let pushX = (dx/dist) * overlap; let pushZ = (dz/dist) * overlap;
-            let safeF = gridCollide(f.position.x, f.position.z, f.position.x + pushX, f.position.z + pushZ, f.colliderRadius);
-            f.position.x = safeF.x; f.position.z = safeF.z;
+            let push = (minDist - dist) * 0.25; 
+            f.vx += (dx/dist) * push;
+            f.vz += (dz/dist) * push;
+        }
+        
+        // 속도가 있으면 이동 처리 및 쓰러짐 연산
+        if(Math.abs(f.vx) > 0.005 || Math.abs(f.vz) > 0.005) {
+            let safeF = gridCollide(f.position.x, f.position.z, f.position.x + f.vx, f.position.z + f.vz, f.colliderRadius);
+            f.position.x = safeF.x; 
+            f.position.z = safeF.z;
             
-            let dx2 = f.position.x - player.position.x; let dz2 = f.position.z - player.position.z; let dist2 = Math.sqrt(dx2*dx2 + dz2*dz2);
-            if(dist2 < minDist && dist2 > 0.001) {
-                let pPushX = -(dx2/dist2) * (minDist - dist2); let pPushZ = -(dz2/dist2) * (minDist - dist2);
-                player.position.x += pPushX; player.position.z += pPushZ;
+            // 일정 충격을 받으면 쾅 하고 쓰러짐 판정
+            if(!f.fallen && (Math.abs(f.vx) > 0.1 || Math.abs(f.vz) > 0.1)) {
+                f.fallen = true;
+                if(Math.abs(f.vx) > Math.abs(f.vz)) {
+                    f.targetRz = f.vx > 0 ? -Math.PI/2 : Math.PI/2;
+                } else {
+                    f.targetRx = f.vz > 0 ? Math.PI/2 : -Math.PI/2;
+                }
             }
+            
+            // 바닥 마찰력으로 서서히 감속
+            f.vx *= 0.85; 
+            f.vz *= 0.85;
+        }
+        
+        // 쓰러지는 애니메이션 보간 처리
+        if(f.fallen) {
+            if(f.targetRx !== 0) f.rotation.x += (f.targetRx - f.rotation.x) * 0.15;
+            if(f.targetRz !== 0) f.rotation.z += (f.targetRz - f.rotation.z) * 0.15;
         }
     });
 
@@ -1263,7 +1361,6 @@ function animate(){
     if(!underground&&pitBounds.active){
         const inP=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
         if(inP){
-            // 격한 흔들림 부여
             tiltX = (Math.random()-0.5)*0.15 + Math.sin(Date.now()*.05)*0.06;
             tiltZ = (Math.random()-0.5)*0.15 + Math.cos(Date.now()*.043)*0.06;
             bobY += (Math.random()-0.5)*0.25;
@@ -1301,5 +1398,6 @@ window.addEventListener('resize',()=>{
 </script>
 </body>
 </html>
+
 
 ```

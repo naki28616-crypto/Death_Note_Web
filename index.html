@@ -201,6 +201,8 @@
 const ROWS=40, COLS=40, UNIT=9, WH=7.0; 
 
 let mapData=[], reserved=[];
+// 맵 벽면 확장 장애물(파티션, 얇은 가벽)을 저장하여 플레이어 스폰 시 피하게 함
+let obstacles=[]; 
 let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
 let surfaceDecals = [], furnitures = [], staticColliders = [];
 
@@ -377,7 +379,7 @@ function createDesk() {
 function clearSurfaceDecals() {
     surfaceDecals.forEach(d => { if(d.parent) scene.remove(d); if(d.geometry) d.geometry.dispose(); }); surfaceDecals = [];
     furnitures.forEach(f => { if(f.parent) scene.remove(f); }); furnitures = [];
-    staticColliders = []; // 정적 가벽 충돌체 초기화
+    staticColliders = []; 
 }
 
 function spawnFurnitures() {
@@ -389,7 +391,7 @@ function spawnFurnitures() {
             f.position.set(sp.x, 0, sp.z); 
             f.rotation.y = Math.random() * Math.PI * 2;
             
-            // 물리 연산을 위한 초기 속성
+            // 가구 물리 작용을 위한 커스텀 변수
             f.vx = 0; f.vz = 0;
             f.fallen = false;
             f.targetRx = 0; f.targetRz = 0;
@@ -432,10 +434,15 @@ function spawnHintArrow() {
     showToast("벽과 바닥에 누군가 남긴 표식이 나타났습니다...");
 }
 
+// ════════════════════════════════════════════
+//  강제 레벨 디자인 및 장애물 (파티션/가벽) 연산
+// ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
+    obstacles = Array(ROWS).fill().map(()=>Array(COLS).fill(null));
 
+    // 탈출 구역 주변 예약 (방해물 및 미로 꼬임 방지)
     for(let r=1; r<=14; r++) { for(let c=20; c<=38; c++) { reserved[r][c] = true; } }
     for(let r=6; r<=10; r++) { for(let c=24; c<=28; c++) { mapData[r][c] = 0; } }
     pitCX = (26 - COLS/2) * UNIT + UNIT/2; pitCZ = (8 - ROWS/2) * UNIT + UNIT/2;
@@ -472,6 +479,27 @@ function genMaze(){
 
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
+
+    // 빈 공간 중 인접한 벽이 있는 곳을 찾아 벽에서 튀어나오는 파티션/가벽 데이터 생성
+    for(let r=2; r<ROWS-2; r++){
+        for(let c=2; c<COLS-2; c++){
+            if(mapData[r][c] === 0 && !reserved[r][c] && Math.random() < 0.15) { 
+                let wallNeighbors = [];
+                if(mapData[r-1][c]===1) wallNeighbors.push({side:'top'});
+                if(mapData[r+1][c]===1) wallNeighbors.push({side:'bottom'});
+                if(mapData[r][c-1]===1) wallNeighbors.push({side:'left'});
+                if(mapData[r][c+1]===1) wallNeighbors.push({side:'right'});
+
+                if(wallNeighbors.length > 0) {
+                    let neighbor = wallNeighbors[Math.floor(Math.random()*wallNeighbors.length)];
+                    obstacles[r][c] = {
+                        type: Math.random() > 0.4 ? 'partition' : 'thinWall',
+                        side: neighbor.side
+                    };
+                }
+            }
+        }
+    }
 }
 
 function buildGraphics(){
@@ -492,7 +520,7 @@ function buildGraphics(){
         for(let c=0;c<COLS;c++){
             const wx=(c-COLS/2)*UNIT+UNIT/2, wz=(r-ROWS/2)*UNIT+UNIT/2;
             
-            // 일반 타일 벽 렌더링
+            // 일반 타일 렌더링
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
@@ -510,7 +538,7 @@ function buildGraphics(){
                 }
                 
                 // 그래피티
-                if(Math.random() < 0.12 && !reserved[r][c]) {
+                if(Math.random() < 0.12 && !reserved[r][c] && !obstacles[r][c]) {
                     const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
                     for(let [dr, dc] of dirs) {
                         if(r+dr>=0 && r+dr<ROWS && c+dc>=0 && c+dc<COLS && mapData[r+dr][c+dc]===1) {
@@ -523,38 +551,40 @@ function buildGraphics(){
                     }
                 }
                 
-                // 파티션 난간 및 1센치 가벽 스폰 로직
-                if(r>1 && r<ROWS-2 && c>1 && c<COLS-2 && !reserved[r][c]) {
-                    if(Math.random() < 0.08) {
-                        let isHoriz = Math.random() > 0.5;
-                        
-                        if (Math.random() > 0.4) {
-                            // 중간 높이 난간(Partition)
-                            let pw = isHoriz ? UNIT*0.6 : 0.3;
-                            let pz = isHoriz ? 0.3 : UNIT*0.6;
-                            let pH = 2.8; 
-                            
-                            let pMesh = new THREE.Mesh(new THREE.BoxGeometry(pw, pH, pz), partitionMat);
-                            pMesh.position.set(wx, pH/2, wz);
-                            scene.add(pMesh); surfaceDecals.push(pMesh);
-                            
-                            let molding = new THREE.Mesh(new THREE.BoxGeometry(pw+0.05, 0.1, pz+0.05), moldingMat);
-                            molding.position.set(wx, pH, wz);
-                            scene.add(molding); surfaceDecals.push(molding);
-                            
-                            staticColliders.push({ minX: wx - pw/2, maxX: wx + pw/2, minZ: wz - pz/2, maxZ: wz + pz/2 });
-                        } else {
-                            // 1센치 두께의 얇은 가벽(Thin wall)
-                            let tw = isHoriz ? UNIT*0.6 : 0.1;
-                            let tz = isHoriz ? 0.1 : UNIT*0.6;
-                            
-                            let tMesh = new THREE.Mesh(new THREE.BoxGeometry(tw, WH, tz), wallMat);
-                            tMesh.position.set(wx, WH/2, wz);
-                            scene.add(tMesh); surfaceDecals.push(tMesh);
-                            
-                            staticColliders.push({ minX: wx - tw/2, maxX: wx + tw/2, minZ: wz - tz/2, maxZ: wz + tz/2 });
-                        }
+                // 벽과 이어져서 튀어나오는 파티션 및 얇은 가벽 실제 물리 렌더링
+                if(obstacles[r][c]) {
+                    let obs = obstacles[r][c];
+                    let isHoriz = (obs.side === 'left' || obs.side === 'right');
+                    
+                    let extLen = UNIT * 0.65; // 복도의 65% 길이만큼 돌출됨
+                    let extThick = obs.type === 'thinWall' ? 0.25 : 0.6; // 가벽은 매우 얇고, 파티션은 살짝 두께감 있음
+                    
+                    let ow = isHoriz ? extLen : extThick;
+                    let oz = isHoriz ? extThick : extLen;
+                    let oH = obs.type === 'partition' ? WH * 0.4 : WH;
+                    
+                    // 벽과 접합되도록 정확한 오프셋 중심점 계산
+                    let ox = wx; let oZ = wz;
+                    if (obs.side === 'left') ox = wx - UNIT/2 + extLen/2;
+                    if (obs.side === 'right') ox = wx + UNIT/2 - extLen/2;
+                    if (obs.side === 'top') oZ = wz - UNIT/2 + extLen/2;
+                    if (obs.side === 'bottom') oZ = wz + UNIT/2 - extLen/2;
+
+                    let mesh = new THREE.Mesh(new THREE.BoxGeometry(ow, oH, oz), obs.type === 'partition' ? partitionMat : wallMat);
+                    mesh.position.set(ox, oH/2, oZ);
+                    scene.add(mesh); surfaceDecals.push(mesh);
+                    
+                    // 파티션이면 위에 갈색 나무 몰딩 부착
+                    if (obs.type === 'partition') {
+                        let moldW = isHoriz ? ow : ow + 0.1;
+                        let moldZ = isHoriz ? oz + 0.1 : oz;
+                        let molding = new THREE.Mesh(new THREE.BoxGeometry(moldW, 0.15, moldZ), moldingMat);
+                        molding.position.set(ox, oH + 0.075, oZ);
+                        scene.add(molding); surfaceDecals.push(molding);
                     }
+                    
+                    // 플레이어 충돌 처리를 위해 Static Collider 영역 등록
+                    staticColliders.push({ minX: ox - ow/2, maxX: ox + ow/2, minZ: oZ - oz/2, maxZ: oZ + oz/2 });
                 }
             }
         }
@@ -572,10 +602,11 @@ function buildGraphics(){
 }
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
+// 안전 스폰 시 장애물 배열 정보도 검사하여 플레이어가 절대 벽돌 안에 껴서 시작하지 않도록 방지
 function safeSpawn(avoid,minD,excludeReserved=false){
     for(let i=0; i<600; i++){
         const r=Math.floor(Math.random()*(ROWS-2))+1,c=Math.floor(Math.random()*(COLS-2))+1;
-        if(mapData[r][c]===0 && (!excludeReserved || !reserved[r][c])){
+        if(mapData[r][c]===0 && !obstacles[r][c] && (!excludeReserved || !reserved[r][c])){
             const p=worldXZ(r,c);
             if(avoid&&minD&&Math.sqrt((p.x-avoid.x)**2+(p.z-avoid.z)**2)<minD)continue;
             return{x:p.x,z:p.z,r,c};
@@ -621,6 +652,9 @@ function buildSurfaceHole() {
     }
 }
 
+// ════════════════════════════════════════════
+//  빙고판 안정적 낙하 물리 시스템 (테두리 및 교차로를 바닥 재질로 보완)
+// ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
     if(pitVoid){scene.remove(pitVoid);pitVoid=null;}
@@ -642,6 +676,7 @@ function buildBingoPit(){
     const eL = mW/2 - pitBounds.maxX; if(eL>0){ const fE = new THREE.Mesh(new THREE.PlaneGeometry(eL, pZLen), floorMat); fE.rotation.x = -Math.PI/2; fE.position.set(pitBounds.maxX+eL/2,0,pitCZ); floorGroup.add(fE); }
     scene.add(floorGroup);
 
+    // 격자를 완전히 바닥 재질과 동일하게 설정하여 시각적으로 확실한 바닥임을 보여줌
     const pathMat = floorMat; 
     const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.9});
     const voidMat = new THREE.MeshBasicMaterial({color:0x010101});
@@ -752,6 +787,7 @@ function buildUnderground(){
     const hl1=new THREE.PointLight(0x00dd55,3.2,10); hl1.position.set(0,0,.3); holeGroup.add(hl1); scene.add(holeGroup); ugObjs.push(holeGroup);
 }
 
+// 장애물 정적 컬라이더까지 정확히 계산하여 벽 끼임 방지
 function gridCollide(ox, oz, nx, nz, rad) {
     if (isNaN(nx) || isNaN(nz)) return { x: ox, z: oz };
     if (player.position.y < -.05) return { x: nx, z: nz };
@@ -1289,40 +1325,38 @@ function animate(){
     }
     
     // ════════════════════════════════════════════
-    //  가구(의자, 책상) 물리 시스템 연산 (발로 차고 넘어짐)
+    //  가구(의자, 책상) 발로 차서 쓰러뜨리기 (물리 연산)
     // ════════════════════════════════════════════
     furnitures.forEach(f => {
         let dx = f.position.x - player.position.x; 
         let dz = f.position.z - player.position.z; 
         let dist = Math.sqrt(dx*dx + dz*dz);
-        let minDist = 0.6 + f.colliderRadius; // 플레이어 충돌 반경 + 가구 반경
+        let minDist = 0.8 + f.colliderRadius; // 부딪히는 물리 감지 반경
         
-        // 플레이어와 부딪힐 경우 물리적으로 밀어냄
+        // 플레이어와 부딪힐 경우 물리적 타격 (Kick) 판정
         if(dist < minDist && dist > 0.001) {
-            let push = (minDist - dist) * 0.25; 
-            f.vx += (dx/dist) * push;
-            f.vz += (dz/dist) * push;
+            let kickPower = sprinting ? 0.9 : 0.45; // 달릴 때 더 멀리 날아감
+            if(!f.fallen) {
+                f.vx += (dx/dist) * kickPower;
+                f.vz += (dz/dist) * kickPower;
+                f.fallen = true;
+                // 미는 방향에 따라 앞으로 쓰러지는 각도 결정
+                if(Math.abs(dx) > Math.abs(dz)) {
+                    f.targetRz = dx > 0 ? -Math.PI/2 : Math.PI/2;
+                } else {
+                    f.targetRx = dz > 0 ? Math.PI/2 : -Math.PI/2;
+                }
+            } else {
+                // 이미 쓰러진 가구도 차면서 이동 가능
+                f.vx += (dx/dist) * 0.15;
+                f.vz += (dz/dist) * 0.15;
+            }
         }
         
-        // 속도가 있으면 이동 처리 및 쓰러짐 연산
         if(Math.abs(f.vx) > 0.005 || Math.abs(f.vz) > 0.005) {
             let safeF = gridCollide(f.position.x, f.position.z, f.position.x + f.vx, f.position.z + f.vz, f.colliderRadius);
-            f.position.x = safeF.x; 
-            f.position.z = safeF.z;
-            
-            // 일정 충격을 받으면 쾅 하고 쓰러짐 판정
-            if(!f.fallen && (Math.abs(f.vx) > 0.1 || Math.abs(f.vz) > 0.1)) {
-                f.fallen = true;
-                if(Math.abs(f.vx) > Math.abs(f.vz)) {
-                    f.targetRz = f.vx > 0 ? -Math.PI/2 : Math.PI/2;
-                } else {
-                    f.targetRx = f.vz > 0 ? Math.PI/2 : -Math.PI/2;
-                }
-            }
-            
-            // 바닥 마찰력으로 서서히 감속
-            f.vx *= 0.85; 
-            f.vz *= 0.85;
+            f.position.x = safeF.x; f.position.z = safeF.z;
+            f.vx *= 0.85; f.vz *= 0.85; // 바닥 마찰력으로 감속
         }
         
         // 쓰러지는 애니메이션 보간 처리

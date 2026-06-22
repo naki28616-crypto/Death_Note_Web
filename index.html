@@ -1,3 +1,4 @@
+
 ```html
 <!DOCTYPE html>
 <html lang="ko">
@@ -6,11 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>The Backrooms - True Escape Remastered (Obunga Edition)</title>
     <style>
-        html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#050503;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
+        html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#030302;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
         canvas{display:block;width:100%!important;height:100%!important;position:absolute;top:0;left:0;z-index:1;}
-        #vhs-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(0,0,0,0) 30%,rgba(0,0,0,0.9) 100%);pointer-events:none;z-index:2;}
+        #vhs-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(0,0,0,0) 30%,rgba(0,0,0,0.85) 100%);pointer-events:none;z-index:2;}
         #glitch-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);opacity:0;pointer-events:none;z-index:3;transition:background-color .1s,opacity .1s;}
-        #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;background:rgba(255,255,255,.5);border-radius:50%;pointer-events:none;z-index:5;display:none;}
+        #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:rgba(255,255,255,.6);border-radius:50%;pointer-events:none;z-index:5;display:none;}
         #cctv-ui{position:absolute;top:25px;left:25px;color:#ff3333;font-weight:bold;font-size:16px;z-index:210;letter-spacing:1.5px;pointer-events:none;font-family:monospace;display:none;text-shadow:0 0 8px rgba(255,51,51,0.7);}
         #quest-ui{position:absolute;top:60px;left:25px;color:#ffea9f;font-weight:bold;font-size:14px;z-index:210;letter-spacing:1px;pointer-events:none;background:rgba(12,11,9,.9);padding:10px 16px;border-left:3px solid #d1bd71;border-radius:0 4px 4px 0;display:none;text-shadow:0 1px 4px rgba(0,0,0,1);box-shadow:0 4px 12px rgba(0,0,0,.6);}
         #interact-prompt{position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);color:#fff;background:rgba(0,0,0,.85);border:1px solid #d1bd71;padding:10px 20px;border-radius:4px;font-weight:bold;font-size:14px;z-index:100;display:none;pointer-events:none;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.5);}
@@ -40,60 +41,94 @@
         #joystick-zone{position:absolute;bottom:35px;left:35px;width:120px;height:120px;background:rgba(255,255,255,.03);border:2px solid rgba(255,255,255,.15);border-radius:50%;z-index:10;touch-action:none;display:none;}
         #joystick-stick{position:absolute;top:37px;left:37px;width:46px;height:46px;background:rgba(255,255,255,.3);border-radius:50%;}
 
-        #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;pointer-events:auto;backdrop-filter:blur(3px);}
+        /* -----------------------------------------
+           NEW 고해상도 선명한 시작 화면 스타일
+        ----------------------------------------- */
+        #start-screen{
+            position:absolute;top:0;left:0;width:100%;height:100%;z-index:200;
+            display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+            color:#fff;overflow:hidden;padding-left:10%;box-sizing:border-box;pointer-events:auto;
+        }
         #scanline-overlay{display:none;}
-        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 10%,rgba(0,0,0,.8) 100%);pointer-events:none;z-index:3;}
-        #noise-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.15;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:staticAnim .1s steps(2) infinite;}
-        #cctv-glitch-blind{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;opacity:0;z-index:6;pointer-events:none;}
-        @keyframes scanlines{0%{background-position:0 0;}100%{background-position:0 100px;}}
-        @keyframes staticAnim{0%,100%{opacity:.15;}50%{opacity:.20;}}
+        #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0.1) 15%,rgba(0,0,0,.85) 100%);pointer-events:none;z-index:3;}
         
-        #start-content{position:relative;z-index:5;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:550px;transition:opacity 0.3s ease;padding:20px 30px;}
-        #cctv-badge{font-family:monospace;font-size:16px;color:#ff3333;letter-spacing:3px;margin-bottom:12px;font-weight:bold;text-shadow:0 0 10px rgba(255,51,51,0.9);animation:blink 1.2s step-end infinite;}
-        @keyframes blink { 50% { opacity: 0; } }
+        #noise-overlay{
+            position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:.06;
+            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            animation:staticAnim .08s steps(2) infinite;
+        }
+        #cctv-glitch-blind{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;opacity:0;z-index:6;pointer-events:none;}
+        @keyframes staticAnim{0%,100%{opacity:.05;}50%{opacity:.08;}}
+        
+        #start-content{
+            position:relative;z-index:10;display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:600px;
+            transition:opacity 0.3s ease;
+            padding:35px 45px;
+            background:rgba(12, 11, 9, 0.45);
+            border-left: 4px solid #d1bd71;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        #cctv-badge{font-family:monospace;font-size:14px;color:#ff3333;letter-spacing:4px;margin-bottom:14px;font-weight:900;text-shadow:0 0 12px rgba(255,51,51,0.95);animation:blink 1.2s step-end infinite;}
         
         .title-main{
-            font-size:28px;font-weight:600;letter-spacing:10px;margin:0;color:#c9b35d;font-family:monospace;
-            text-shadow: 1px 1px 0px #7a6b38, 2px 2px 0px #5e5227, 3px 3px 5px rgba(0,0,0,0.9);
+            font-size:24px;font-weight:700;letter-spacing:12px;margin:0;color:#c9b35d;font-family:monospace;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         .title-sub{
-            font-size:52px;font-weight:900;letter-spacing:6px;margin:4px 0 0;color:#ffffff;
+            font-size:56px;font-weight:900;letter-spacing:4px;margin:6px 0 0;color:#ffffff;line-height:1.1;
             text-shadow: 
-                0 1px 0 #cccccc, 0 2px 0 #c5c5c5, 0 3px 0 #bbb, 0 4px 0 #b4b4b4, 
-                0 5px 0 #b0b0b0, 0 6px 0 #a3a3a3, 0 7px 0 #999, 0 8px 0 #888, 
-                0 9px 0 #777, 0 10px 15px rgba(0,0,0,0.9), 0 0 25px rgba(209,189,113,.7);
+                0 2px 0 #1c1a14, 0 4px 0 #111, 0 6px 15px rgba(0,0,0,0.95), 
+                0 0 30px rgba(209,189,113,0.45);
         }
         .title-level{
-            font-size:16px;font-weight:600;letter-spacing:3px;margin:12px 0 30px;color:#d1bd71;font-family:monospace;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
-            background:rgba(0,0,0,0.4); display:inline-block; padding:4px 10px; border-left:3px solid #d1bd71;
+            font-size:15px;font-weight:700;letter-spacing:4px;margin:16px 0 35px;color:#ebd997;font-family:monospace;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+            background:rgba(211, 191, 113, 0.15); display:inline-block; padding:5px 14px; border-radius: 3px;
         }
         
-        .menu-group{display:flex;flex-direction:column;gap:14px;align-items:flex-start;}
+        .menu-group{display:flex;flex-direction:column;gap:16px;width:100%;align-items:flex-start;}
         
-        .start-btn-container{position:relative;width:200px;height:58px;display:flex;justify-content:center;align-items:center;cursor:pointer;background:rgba(20,19,16,.9);border:2px solid #d1bd71;border-radius:4px;box-shadow:0 4px 15px rgba(0,0,0,0.8);transition:all 0.25s ease;}
-        .start-btn-container:hover{background:#d1bd71;box-shadow:0 0 25px rgba(209,189,113,0.7);}
-        .start-btn-container:hover .start-label{color:#111;text-shadow:none;}
-        .start-label{font-size:20px;font-weight:900;letter-spacing:4px;color:#ebdfa7;font-family:monospace;text-shadow:0 2px 4px rgba(0,0,0,0.9);transition:color 0.2s;}
+        .start-btn-container{
+            position:relative;width:240px;height:54px;display:flex;justify-content:center;align-items:center;
+            cursor:pointer;background:#d1bd71;border:2px solid #fff;border-radius:4px;
+            box-shadow:0 8px 25px rgba(209,189,113,0.35);transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .start-btn-container:hover{
+            transform:translateY(-2px);
+            background:#ffea9f;box-shadow:0 12px 35px rgba(255,234,159,0.55);
+        }
+        .start-btn-container:active{
+            transform:translateY(1px);
+        }
+        .start-label{font-size:18px;font-weight:900;letter-spacing:4px;color:#111;font-family:monospace;}
         
-        .setting-toggle-btn{background:rgba(12,11,9,0.9);color:#d1bd71;border:1px solid #6b6038;padding:10px 20px;font-size:14px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1.5px;transition:all 0.2s;font-family:monospace;box-shadow:0 4px 10px rgba(0,0,0,0.6);}
-        .setting-toggle-btn:hover{color:#fff;border-color:#d1bd71;background:rgba(30,28,23,0.95);}
+        .setting-toggle-btn{
+            background:rgba(12,11,9,0.85);color:#d1bd71;border:1px solid #7c6f3e;padding:12px 24px;
+            font-size:13px;font-weight:900;border-radius:4px;cursor:pointer;letter-spacing:2px;
+            transition:all 0.2s;font-family:monospace;
+            box-shadow:0 4px 10px rgba(0,0,0,0.3);
+        }
+        .setting-toggle-btn:hover{color:#fff;border-color:#d1bd71;background:rgba(30,28,23,0.95);transform:translateY(-1px);}
         
         .inline-settings-panel {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 4, 0.98); z-index: 210; opacity: 0; pointer-events: none;
+            background: rgba(4, 4, 3, 0.98); z-index: 210; opacity: 0; pointer-events: none;
             display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
             box-sizing: border-box; overflow-y: auto; transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 40px 20px;
+            padding: 50px 20px;
         }
         .inline-settings-panel.open { opacity: 1; pointer-events: auto; }
         
-        .settings-content-wrapper { display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 600px; padding-bottom: 50px; }
+        .settings-content-wrapper { display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 500px; padding-bottom: 50px; }
         .platform-mini-box{display:flex;gap:12px;width:100%;}
-        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:14px 0;font-size:14px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
+        .platform-choice-btn{background:#1c1b17;color:#9e9573;border:1px solid #4a4537;flex:1;padding:14px 0;font-size:13px;font-weight:bold;border-radius:3px;cursor:pointer;transition:all 0.2s;font-family:monospace;}
         .platform-choice-btn.selected{background:#d1bd71;color:#1c1b17;border-color:#fff;box-shadow:0 4px 12px rgba(209,189,113,.3);font-weight:900;}
 
-        #gameover-screen,#pause-screen,#clear-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(3,3,2,.95);z-index:150;display:none;flex-direction:column;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
+        #gameover-screen,#pause-screen,#clear-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(3,3,2,.95);z-index:150;display:none;flex-direction:column;justify-content:center;align-items:center;backdrop-filter:blur(6px);}
         #gameover-screen{color:#cc2424;}
         #clear-screen{color:#ffcc00;background:rgba(12,11,9,.95);}
         .go-btn{background:#260f0f;color:#ff8888;border:1px solid #662222;padding:14px 28px;font-size:14px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1px;transition:all 0.2s;}
@@ -114,7 +149,6 @@
 <div id="ladder-hud">🪜 Ladder x1</div>
 
 <div id="start-screen">
-    <div id="scanline-overlay"></div>
     <div id="vignette-overlay"></div>
     <div id="noise-overlay"></div>
     <div id="cctv-glitch-blind"></div>
@@ -122,7 +156,7 @@
     <div id="start-content">
         <div id="cctv-badge">🔴 REC — CAM 04 LIVE</div>
         <h2 class="title-main">LEVEL 0</h2>
-        <h1 class="title-sub">THE BACKROOMS</h1>
+        <h1 class="title-sub">THE<br>BACKROOMS</h1>
         <div class="title-level">Obunga Remastered</div>
         
         <div class="menu-group">
@@ -135,7 +169,7 @@
 
     <div id="start-settings-panel" class="inline-settings-panel">
         <div class="settings-content-wrapper">
-            <h1 style="font-size:28px; font-weight:900; letter-spacing:3px; margin:0 0 10px 0; color:#ffffff; font-family:monospace;">SETTINGS</h1>
+            <h1 style="font-size:32px; font-weight:900; letter-spacing:2px; margin:0 0 10px 0; color:#ffffff; font-family:monospace; text-align:center;">SETTINGS</h1>
             
             <div style="font-size:12px; color:#9e9573; font-weight:bold; font-family:monospace; margin-bottom:-6px;">SELECT PLATFORM</div>
             <div class="platform-mini-box">
@@ -157,7 +191,7 @@
             </div>
             <button class="platform-choice-btn" style="width:100%; margin-top:4px; padding:12px 0; border-color:#595443;" onclick="toggleFS()">📺 FULLSCREEN</button>
             <hr style="border:0; border-top:1px solid #3d3a2e; margin:6px 0; width:100%;">
-            <button class="platform-choice-btn" style="width:100%; background:#21201c; color:#ffea9f; border-color:#d1bd71; font-weight:900; font-size:14px; letter-spacing:2px;" onclick="toggleStartSettings(false)">↩ RETURN</button>
+            <button class="platform-choice-btn" style="width:100%; background:#1c1a14; color:#ffea9f; border-color:#d1bd71; font-weight:900; font-size:14px; letter-spacing:2px;" onclick="toggleStartSettings(false)">↩ RETURN</button>
         </div>
     </div>
 </div>
@@ -201,7 +235,6 @@
 const ROWS=40, COLS=40, UNIT=9, WH=7.0; 
 
 let mapData=[], reserved=[];
-// 맵 벽면 확장 장애물(파티션, 얇은 가벽)을 저장하여 플레이어 스폰 시 피하게 함
 let obstacles=[]; 
 let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
 let surfaceDecals = [], furnitures = [], staticColliders = [];
@@ -317,8 +350,8 @@ const wallTex=mkWallTex(), floorTex=mkFloorTex(), ceilTex=mkCeilTex();
 const wallMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.85});
 const floorMat=new THREE.MeshStandardMaterial({map:floorTex,roughness:.95});
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9});
-const partitionMat=new THREE.MeshStandardMaterial({color: 0xdfcd98, roughness: 0.9}); // 약간 밝은 파티션 재질
-const moldingMat=new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.8}); // 파티션 상단 나무 몰딩 재질
+const partitionMat=new THREE.MeshStandardMaterial({color: 0xdfcd98, roughness: 0.9}); 
+const moldingMat=new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.8}); 
 
 function mkArrowTex(){
     const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d');
@@ -390,8 +423,6 @@ function spawnFurnitures() {
             let f = isDesk ? createDesk() : createChair();
             f.position.set(sp.x, 0, sp.z); 
             f.rotation.y = Math.random() * Math.PI * 2;
-            
-            // 가구 물리 작용을 위한 커스텀 변수
             f.vx = 0; f.vz = 0;
             f.fallen = false;
             f.targetRx = 0; f.targetRz = 0;
@@ -434,15 +465,11 @@ function spawnHintArrow() {
     showToast("벽과 바닥에 누군가 남긴 표식이 나타났습니다...");
 }
 
-// ════════════════════════════════════════════
-//  강제 레벨 디자인 및 장애물 (파티션/가벽) 연산
-// ════════════════════════════════════════════
 function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
     obstacles = Array(ROWS).fill().map(()=>Array(COLS).fill(null));
 
-    // 탈출 구역 주변 예약 (방해물 및 미로 꼬임 방지)
     for(let r=1; r<=14; r++) { for(let c=20; c<=38; c++) { reserved[r][c] = true; } }
     for(let r=6; r<=10; r++) { for(let c=24; c<=28; c++) { mapData[r][c] = 0; } }
     pitCX = (26 - COLS/2) * UNIT + UNIT/2; pitCZ = (8 - ROWS/2) * UNIT + UNIT/2;
@@ -480,7 +507,6 @@ function genMaze(){
     for(let r=0;r<ROWS;r++){mapData[r][0]=1;mapData[r][COLS-1]=1;}
     for(let c=0;c<COLS;c++){mapData[0][c]=1;mapData[ROWS-1][c]=1;}
 
-    // 빈 공간 중 인접한 벽이 있는 곳을 찾아 벽에서 튀어나오는 파티션/가벽 데이터 생성
     for(let r=2; r<ROWS-2; r++){
         for(let c=2; c<COLS-2; c++){
             if(mapData[r][c] === 0 && !reserved[r][c] && Math.random() < 0.15) { 
@@ -520,12 +546,10 @@ function buildGraphics(){
         for(let c=0;c<COLS;c++){
             const wx=(c-COLS/2)*UNIT+UNIT/2, wz=(r-ROWS/2)*UNIT+UNIT/2;
             
-            // 일반 타일 렌더링
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
             } else {
-                // 천장 전등
                 if(Math.random() < 0.04){ 
                     const lg=new THREE.Group();
                     const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
@@ -537,7 +561,6 @@ function buildGraphics(){
                     pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
                 }
                 
-                // 그래피티
                 if(Math.random() < 0.12 && !reserved[r][c] && !obstacles[r][c]) {
                     const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
                     for(let [dr, dc] of dirs) {
@@ -551,19 +574,17 @@ function buildGraphics(){
                     }
                 }
                 
-                // 벽과 이어져서 튀어나오는 파티션 및 얇은 가벽 실제 물리 렌더링
                 if(obstacles[r][c]) {
                     let obs = obstacles[r][c];
                     let isHoriz = (obs.side === 'left' || obs.side === 'right');
                     
-                    let extLen = UNIT * 0.65; // 복도의 65% 길이만큼 돌출됨
-                    let extThick = obs.type === 'thinWall' ? 0.25 : 0.6; // 가벽은 매우 얇고, 파티션은 살짝 두께감 있음
+                    let extLen = UNIT * 0.65; 
+                    let extThick = obs.type === 'thinWall' ? 0.25 : 0.6; 
                     
                     let ow = isHoriz ? extLen : extThick;
                     let oz = isHoriz ? extThick : extLen;
                     let oH = obs.type === 'partition' ? WH * 0.4 : WH;
                     
-                    // 벽과 접합되도록 정확한 오프셋 중심점 계산
                     let ox = wx; let oZ = wz;
                     if (obs.side === 'left') ox = wx - UNIT/2 + extLen/2;
                     if (obs.side === 'right') ox = wx + UNIT/2 - extLen/2;
@@ -574,7 +595,6 @@ function buildGraphics(){
                     mesh.position.set(ox, oH/2, oZ);
                     scene.add(mesh); surfaceDecals.push(mesh);
                     
-                    // 파티션이면 위에 갈색 나무 몰딩 부착
                     if (obs.type === 'partition') {
                         let moldW = isHoriz ? ow : ow + 0.1;
                         let moldZ = isHoriz ? oz + 0.1 : oz;
@@ -583,7 +603,6 @@ function buildGraphics(){
                         scene.add(molding); surfaceDecals.push(molding);
                     }
                     
-                    // 플레이어 충돌 처리를 위해 Static Collider 영역 등록
                     staticColliders.push({ minX: ox - ow/2, maxX: ox + ow/2, minZ: oZ - oz/2, maxZ: oZ + oz/2 });
                 }
             }
@@ -602,7 +621,6 @@ function buildGraphics(){
 }
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
-// 안전 스폰 시 장애물 배열 정보도 검사하여 플레이어가 절대 벽돌 안에 껴서 시작하지 않도록 방지
 function safeSpawn(avoid,minD,excludeReserved=false){
     for(let i=0; i<600; i++){
         const r=Math.floor(Math.random()*(ROWS-2))+1,c=Math.floor(Math.random()*(COLS-2))+1;
@@ -652,9 +670,6 @@ function buildSurfaceHole() {
     }
 }
 
-// ════════════════════════════════════════════
-//  빙고판 안정적 낙하 물리 시스템 (테두리 및 교차로를 바닥 재질로 보완)
-// ════════════════════════════════════════════
 function buildBingoPit(){
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);}); pitMeshes=[];
     if(pitVoid){scene.remove(pitVoid);pitVoid=null;}
@@ -676,7 +691,6 @@ function buildBingoPit(){
     const eL = mW/2 - pitBounds.maxX; if(eL>0){ const fE = new THREE.Mesh(new THREE.PlaneGeometry(eL, pZLen), floorMat); fE.rotation.x = -Math.PI/2; fE.position.set(pitBounds.maxX+eL/2,0,pitCZ); floorGroup.add(fE); }
     scene.add(floorGroup);
 
-    // 격자를 완전히 바닥 재질과 동일하게 설정하여 시각적으로 확실한 바닥임을 보여줌
     const pathMat = floorMat; 
     const downWallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.9});
     const voidMat = new THREE.MeshBasicMaterial({color:0x010101});
@@ -787,14 +801,12 @@ function buildUnderground(){
     const hl1=new THREE.PointLight(0x00dd55,3.2,10); hl1.position.set(0,0,.3); holeGroup.add(hl1); scene.add(holeGroup); ugObjs.push(holeGroup);
 }
 
-// 장애물 정적 컬라이더까지 정확히 계산하여 벽 끼임 방지
 function gridCollide(ox, oz, nx, nz, rad) {
     if (isNaN(nx) || isNaN(nz)) return { x: ox, z: oz };
     if (player.position.y < -.05) return { x: nx, z: nz };
 
     let resultX = nx, resultZ = nz;
     const checkAxisCollision = (targetX, targetZ) => {
-        // 기존 맵 블록 충돌
         const pc = Math.floor((ox - UNIT / 2 + (COLS * UNIT) / 2) / UNIT); const pr = Math.floor((oz - UNIT / 2 + (ROWS * UNIT) / 2) / UNIT);
         for (let r = pr - 1; r <= pr + 1; r++) {
             for (let c = pc - 1; c <= pc + 1; c++) {
@@ -805,7 +817,6 @@ function gridCollide(ox, oz, nx, nz, rad) {
                 }
             }
         }
-        // 난간 및 가벽 충돌
         for (let i=0; i<staticColliders.length; i++) {
             let box = staticColliders[i];
             if (targetX + rad > box.minX && targetX - rad < box.maxX && targetZ + rad > box.minZ && targetZ - rad < box.maxZ) {
@@ -1324,30 +1335,24 @@ function animate(){
         }
     }
     
-    // ════════════════════════════════════════════
-    //  가구(의자, 책상) 발로 차서 쓰러뜨리기 (물리 연산)
-    // ════════════════════════════════════════════
     furnitures.forEach(f => {
         let dx = f.position.x - player.position.x; 
         let dz = f.position.z - player.position.z; 
         let dist = Math.sqrt(dx*dx + dz*dz);
-        let minDist = 0.8 + f.colliderRadius; // 부딪히는 물리 감지 반경
+        let minDist = 0.8 + f.colliderRadius; 
         
-        // 플레이어와 부딪힐 경우 물리적 타격 (Kick) 판정
         if(dist < minDist && dist > 0.001) {
-            let kickPower = sprinting ? 0.9 : 0.45; // 달릴 때 더 멀리 날아감
+            let kickPower = sprinting ? 0.9 : 0.45; 
             if(!f.fallen) {
                 f.vx += (dx/dist) * kickPower;
                 f.vz += (dz/dist) * kickPower;
                 f.fallen = true;
-                // 미는 방향에 따라 앞으로 쓰러지는 각도 결정
                 if(Math.abs(dx) > Math.abs(dz)) {
                     f.targetRz = dx > 0 ? -Math.PI/2 : Math.PI/2;
                 } else {
                     f.targetRx = dz > 0 ? Math.PI/2 : -Math.PI/2;
                 }
             } else {
-                // 이미 쓰러진 가구도 차면서 이동 가능
                 f.vx += (dx/dist) * 0.15;
                 f.vz += (dz/dist) * 0.15;
             }
@@ -1356,10 +1361,9 @@ function animate(){
         if(Math.abs(f.vx) > 0.005 || Math.abs(f.vz) > 0.005) {
             let safeF = gridCollide(f.position.x, f.position.z, f.position.x + f.vx, f.position.z + f.vz, f.colliderRadius);
             f.position.x = safeF.x; f.position.z = safeF.z;
-            f.vx *= 0.85; f.vz *= 0.85; // 바닥 마찰력으로 감속
+            f.vx *= 0.85; f.vz *= 0.85; 
         }
         
-        // 쓰러지는 애니메이션 보간 처리
         if(f.fallen) {
             if(f.targetRx !== 0) f.rotation.x += (f.targetRx - f.rotation.x) * 0.15;
             if(f.targetRz !== 0) f.rotation.z += (f.targetRz - f.rotation.z) * 0.15;
@@ -1432,6 +1436,5 @@ window.addEventListener('resize',()=>{
 </script>
 </body>
 </html>
-
 
 ```

@@ -30,7 +30,7 @@
         #btn-mobile-interact{background:#ffea9f!important;color:#111!important;border-color:#fff!important;display:none;font-size:28px;animation:pulse 1.2s infinite;z-index:230;}
         @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 rgba(255,234,159,.5);}50%{transform:scale(1.15);box-shadow:0 0 20px rgba(255,234,159,.8);}100%{transform:scale(1);box-shadow:0 0 0 rgba(255,234,159,.5);}}
         
-        #stamina-container{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);width:160px;background:rgba(8,8,6,.95);border:1px solid #474436;padding:5px;border-radius:4px;z-index:10;display:none;}
+        #stamina-container{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);width:200px;background:rgba(8,8,6,.95);border:1px solid #474436;padding:5px;border-radius:4px;z-index:10;display:none;}
         .stamina-bg{background:rgba(0,0,0,.7);height:5px;overflow:hidden;border-radius:2px;}
         #stamina-bar{width:100%;height:100%;background:#d1bd71;}
         
@@ -40,7 +40,6 @@
         #joystick-zone{position:absolute;bottom:35px;left:35px;width:120px;height:120px;background:rgba(255,255,255,.03);border:2px solid rgba(255,255,255,.15);border-radius:50%;z-index:10;touch-action:none;display:none;}
         #joystick-stick{position:absolute;top:37px;left:37px;width:46px;height:46px;background:rgba(255,255,255,.3);border-radius:50%;}
 
-        /* ─── START SCREEN (Transparent Overlay) ─── */
         #start-screen{position:absolute;top:0;left:0;width:100%;height:100%;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#ebdfa7;overflow:hidden;padding-left:8%;box-sizing:border-box;pointer-events:auto;backdrop-filter:blur(3px);}
         #scanline-overlay{display:none;}
         #vignette-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 10%,rgba(0,0,0,.8) 100%);pointer-events:none;z-index:3;}
@@ -203,6 +202,7 @@ const ROWS=40, COLS=40, UNIT=9, WH=7.0;
 
 let mapData=[], reserved=[];
 let iWalls=null, lamps=[], floorM=null, ceilM=null, floorGroup=null;
+let surfaceDecals = [], furnitures = [];
 
 const UG_R=12, UG_C=12, UG_U=8.0, UG_WH=6.5;
 const UG_Y=-35; 
@@ -218,7 +218,7 @@ let velY=0, grounded=true;
 const GRAVITY=-0.016, JUMP=0.18;
 let lastHB=0;
 const SPD_BASE=0.14, SPD_SPRINT=0.24, SPD_TIRED=0.08;
-let stamina=100, exhausted=false, moving=false, sprinting=false;
+let stamina=200, exhausted=false, moving=false, sprinting=false;
 
 let hasKey=false, doorOpened=false;
 let keyMesh=null, doorGroup=null, doorPivot=null;
@@ -229,11 +229,10 @@ let pitCX=0, pitCZ=0;
 let pitBounds={minX:0,maxX:0,minZ:0,maxZ:0,active:false};
 let pitMeshes=[], pitVoid=null;
 
-// 빙고판 사이즈
 const B_GRID_DIV = 3;    
-const B_PATH_W = 3.0; // 길 너비
-const B_HOLE_W = 11.0; // 구멍 크기
-let PIT_TOTAL = 45.0; // 방 전체 크기
+const B_PATH_W = 3.0; 
+const B_HOLE_W = 11.0; 
+let PIT_TOTAL = 45.0; 
 
 let underground=false;
 let ugMap=[], ugWalls=null, ugFloor=null, ugCeil=null, ugObjs=[];
@@ -242,7 +241,6 @@ let hasLadder=false, ladderItem=null, ladderMesh=null, ladderPlaced=false;
 let holeGroup=null, holePosX=0, holePosZ=0, holeWallNX=0, holeWallNZ=0;
 let climbing=false, climbT=0;
 
-// 지상 탈출구 관리
 let surfaceHoleSpawn = {x:0, z:0, lookX:0, lookZ:1};
 let surfaceHoleGroup = null;
 
@@ -328,6 +326,54 @@ function mkArrowTex(){
 }
 const arrowTex = mkArrowTex();
 
+const graffitiTexts = ["RUN", "NO ESCAPE", "DON'T", "DIE", "HELP ME", "WHY", "TURN AROUND", "STAY AWAY"];
+function createGraffiti() {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256; const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,512,256);
+    const text = graffitiTexts[Math.floor(Math.random() * graffitiTexts.length)];
+    ctx.fillStyle = (Math.random() > 0.4) ? 'rgba(130, 10, 10, 0.85)' : 'rgba(15, 15, 15, 0.85)';
+    ctx.font = 'bold ' + (50 + Math.random()*50) + 'px "Courier New", Courier, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, 256, 128);
+    for(let i=0; i<30; i++) {
+        let x = 100 + Math.random()*312; let y = 128 + Math.random()*40;
+        ctx.fillRect(x, y, 2+Math.random()*4, Math.random()*80);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    return new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({map: tex, transparent: true, depthWrite: false, opacity: 0.9}));
+}
+
+function createChair() {
+    const group = new THREE.Group();
+    const cMat = new THREE.MeshStandardMaterial({color: 0x3d2314, roughness: 0.8});
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 1.2), cMat); seat.position.y = 1.0;
+    const legGeo = new THREE.BoxGeometry(0.1, 1.0, 0.1);
+    const l1 = new THREE.Mesh(legGeo, cMat); l1.position.set(-0.5, 0.5, -0.5);
+    const l2 = new THREE.Mesh(legGeo, cMat); l2.position.set(0.5, 0.5, -0.5);
+    const l3 = new THREE.Mesh(legGeo, cMat); l3.position.set(-0.5, 0.5, 0.5);
+    const l4 = new THREE.Mesh(legGeo, cMat); l4.position.set(0.5, 0.5, 0.5);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.1), cMat); back.position.set(0, 1.6, -0.55);
+    group.add(seat, l1, l2, l3, l4, back);
+    group.colliderRadius = 0.8;
+    return group;
+}
+
+function clearSurfaceDecals() {
+    surfaceDecals.forEach(d => { if(d.parent) scene.remove(d); if(d.geometry) d.geometry.dispose(); }); surfaceDecals = [];
+    furnitures.forEach(f => { if(f.parent) scene.remove(f); }); furnitures = [];
+}
+
+function spawnFurnitures() {
+    for(let i=0; i<60; i++) { 
+        let sp = safeSpawn(null, 0, true);
+        if(sp.x !== UNIT && sp.z !== UNIT) {
+            let chair = createChair();
+            chair.position.set(sp.x, 0, sp.z); chair.rotation.y = Math.random() * Math.PI * 2;
+            scene.add(chair); furnitures.push(chair);
+        }
+    }
+}
+
 function spawnHintArrow() {
     if (!keyMesh || underground) return;
     const pr = Math.floor((player.position.z - UNIT / 2 + (ROWS * UNIT) / 2) / UNIT);
@@ -348,17 +394,14 @@ function spawnHintArrow() {
         const wz = (pr + targetWall.r - ROWS / 2) * UNIT + UNIT / 2;
         arrowMesh.position.set(wx - targetWall.c * (UNIT * 0.51), WH / 2 - 0.5, wz - targetWall.r * (UNIT * 0.51));
         arrowMesh.rotation.y = Math.atan2(targetWall.r, -targetWall.c);
-        scene.add(arrowMesh); 
+        scene.add(arrowMesh); surfaceDecals.push(arrowMesh);
     }
     
-    // 바닥 표식
     const floorArrow = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 5.0), arrowMatBright);
-    floorArrow.position.set(player.position.x, 0.05, player.position.z);
-    floorArrow.rotation.x = -Math.PI/2;
-    const dx = keyMesh.position.x - player.position.x;
-    const dz = keyMesh.position.z - player.position.z;
+    floorArrow.position.set(player.position.x, 0.05, player.position.z); floorArrow.rotation.x = -Math.PI/2;
+    const dx = keyMesh.position.x - player.position.x; const dz = keyMesh.position.z - player.position.z;
     floorArrow.rotation.z = Math.atan2(dz, dx) - Math.PI/2;
-    scene.add(floorArrow);
+    scene.add(floorArrow); surfaceDecals.push(floorArrow);
     
     hintSpawned = true;
     showToast("벽과 바닥에 누군가 남긴 표식이 나타났습니다...");
@@ -368,28 +411,14 @@ function genMaze(){
     mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
     reserved = Array(ROWS).fill().map(()=>Array(COLS).fill(false));
 
-    for(let r=1; r<=14; r++) {
-        for(let c=20; c<=38; c++) {
-            reserved[r][c] = true;
-        }
-    }
-
-    for(let r=6; r<=10; r++) {
-        for(let c=24; c<=28; c++) {
-            mapData[r][c] = 0;
-        }
-    }
-    pitCX = (26 - COLS/2) * UNIT + UNIT/2;
-    pitCZ = (8 - ROWS/2) * UNIT + UNIT/2;
+    for(let r=1; r<=14; r++) { for(let c=20; c<=38; c++) { reserved[r][c] = true; } }
+    for(let r=6; r<=10; r++) { for(let c=24; c<=28; c++) { mapData[r][c] = 0; } }
+    pitCX = (26 - COLS/2) * UNIT + UNIT/2; pitCZ = (8 - ROWS/2) * UNIT + UNIT/2;
 
     for(let r=11; r<=15; r++) mapData[r][26] = 0;
     for(let r=2; r<=5; r++) mapData[r][26] = 0;
-    
-    for(let c=21; c<=37; c++) {
-        mapData[3][c] = 0;
-    }
+    for(let c=21; c<=37; c++) { mapData[3][c] = 0; }
 
-    // 문 위치 및 설정 변경: 동쪽 벽면에 붙임
     escapeDoorPos.x = (37 - COLS/2) * UNIT - 0.2; 
     escapeDoorPos.z = (3 - ROWS/2) * UNIT + UNIT/2;
     escapeDoorPos.ang = Math.PI / 2; 
@@ -407,18 +436,12 @@ function genMaze(){
             }
         }
     }
-    carve(16, 26);
-    carve(ROWS-3, 3);
-    carve(3, 3);
+    carve(16, 26); carve(ROWS-3, 3); carve(3, 3);
 
     for(let r=2; r<ROWS-2; r+=2){
         for(let c=2; c<COLS-2; c+=2){
-            if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]) {
-                if(Math.random()<0.45) mapData[r+1][c]=0;
-            }
-            if(mapData[r][c]===0 && mapData[r][c+1]===1 && mapData[r][c+2]===0 && !reserved[r][c+1]) {
-                if(Math.random()<0.45) mapData[r][c+1]=0;
-            }
+            if(mapData[r][c]===0 && mapData[r+1][c]===1 && mapData[r+2][c]===0 && !reserved[r+1][c]) { if(Math.random()<0.45) mapData[r+1][c]=0; }
+            if(mapData[r][c]===0 && mapData[r][c+1]===1 && mapData[r][c+2]===0 && !reserved[r][c+1]) { if(Math.random()<0.45) mapData[r][c+1]=0; }
         }
     }
 
@@ -432,6 +455,7 @@ function buildGraphics(){
     if(floorM){scene.remove(floorM);floorM=null;}
     if(ceilM){scene.remove(ceilM);ceilM=null;}
     if(floorGroup){scene.remove(floorGroup);floorGroup=null;}
+    clearSurfaceDecals();
 
     let wc=0;
     for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(mapData[r][c]===1)wc++;
@@ -445,15 +469,30 @@ function buildGraphics(){
             if(mapData[r][c]===1){
                 dum.position.set(wx,WH/2,wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++,dum.matrix);
-            } else if(Math.random() < 0.04){ 
-                const lg=new THREE.Group();
-                const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
-                const pn=new THREE.Mesh(new THREE.BoxGeometry(4.3,.05,4.3),new THREE.MeshBasicMaterial({color:0xfffcd1}));
-                pn.position.y=-.01; lg.add(fr,pn);
-                lg.position.set(wx,WH-.02,wz);
-                scene.add(lg); lamps.push(lg);
-                const pl=new THREE.PointLight(0xfff5bf,.75,18,1.1);
-                pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
+            } else {
+                if(Math.random() < 0.04){ 
+                    const lg=new THREE.Group();
+                    const fr=new THREE.Mesh(new THREE.BoxGeometry(4.5,.04,4.5),new THREE.MeshStandardMaterial({color:0x151515}));
+                    const pn=new THREE.Mesh(new THREE.BoxGeometry(4.3,.05,4.3),new THREE.MeshBasicMaterial({color:0xfffcd1}));
+                    pn.position.y=-.01; lg.add(fr,pn);
+                    lg.position.set(wx,WH-.02,wz);
+                    scene.add(lg); lamps.push(lg);
+                    const pl=new THREE.PointLight(0xfff5bf,.75,18,1.1);
+                    pl.position.set(wx,WH-.3,wz); scene.add(pl); lamps.push(pl);
+                }
+                
+                if(Math.random() < 0.12 && !reserved[r][c]) {
+                    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                    for(let [dr, dc] of dirs) {
+                        if(r+dr>=0 && r+dr<ROWS && c+dc>=0 && c+dc<COLS && mapData[r+dr][c+dc]===1) {
+                            let g = createGraffiti();
+                            g.position.set(wx + dc*(UNIT/2 - 0.05), Math.max(1.5, WH/2 + (Math.random()-0.5)*2), wz + dr*(UNIT/2 - 0.05));
+                            g.rotation.y = Math.atan2(-dc, -dr);
+                            scene.add(g); surfaceDecals.push(g);
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -465,6 +504,8 @@ function buildGraphics(){
     floorM.rotation.x=-Math.PI/2; scene.add(floorM);
     ceilM=new THREE.Mesh(new THREE.PlaneGeometry(mW,mH),ceilMat);
     ceilM.rotation.x=Math.PI/2; ceilM.position.y=WH; scene.add(ceilM);
+    
+    spawnFurnitures();
 }
 
 function worldXZ(r,c){return{x:(c-COLS/2)*UNIT+UNIT/2,z:(r-ROWS/2)*UNIT+UNIT/2};}
@@ -698,6 +739,7 @@ function enterUnderground(){
     if(floorM)floorM.visible=false; if(floorGroup)floorGroup.visible=false; if(ceilM)ceilM.visible=false;
     if(keyMesh)keyMesh.visible=false; if(doorGroup)doorGroup.visible=false;
     if(surfaceHoleGroup)surfaceHoleGroup.visible=false;
+    surfaceDecals.forEach(d => d.visible = false); furnitures.forEach(f => f.visible = false);
     pitMeshes.forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;}); if(pitVoid)pitVoid.visible=false;
     scene.background.setHex(0x140b04); scene.fog.color.setHex(0x140b04); scene.fog.density=0.07;
     ambient.intensity=0.5; flash.intensity=isFlashOn?4.0:0;
@@ -712,6 +754,7 @@ function exitUnderground(){
     if(!pitBounds.active && floorM)floorM.visible=true; if(pitBounds.active && floorGroup)floorGroup.visible=true;
     if(ceilM)ceilM.visible=true; if(!hasKey&&keyMesh)keyMesh.visible=true; if(doorGroup)doorGroup.visible=true;
     if(surfaceHoleGroup)surfaceHoleGroup.visible=true;
+    surfaceDecals.forEach(d => d.visible = true); furnitures.forEach(f => f.visible = true);
     pitMeshes.forEach(m=>{m.visible=true;}); if(pitVoid)pitVoid.visible=true;
     
     player.position.set(surfaceHoleSpawn.x, 0.1, surfaceHoleSpawn.z); 
@@ -783,9 +826,9 @@ function entityAI(e,pp){
     if (gameState === 'MENU') {
         e.state = 'patrol'; e.scream = false;
     } else {
-        if(dist<45 && gameState==='PLAYING' && player.position.y>=-0.2){ 
+        if(dist<70 && gameState==='PLAYING' && player.position.y>=-0.2){ 
             if(!e.scream){e.scream=true; scream(true);} e.state='chase';
-        }else if(e.state==='chase'&&(dist>50||player.position.y<-.2)){ 
+        }else if(e.state==='chase'&&(dist>75||player.position.y<-.2)){ 
             e.state='patrol';e.scream=false;scream(false);e.patrolTarget=safeSpawn(pp,0,false);
         }
     }
@@ -984,7 +1027,7 @@ function triggerPause(s){
 function triggerGameOver(msg){gameState='GAMEOVER';scream(false);document.getElementById('go-cause').textContent=msg;document.getElementById('gameover-screen').style.display='flex';if(document.pointerLockElement===document.body)document.exitPointerLock();}
 function respawn(){
     gameState='PLAYING'; scream(false); if(underground)exitUnderground();
-    const rp=safeSpawn(player.position, 25, false); player.position.set(rp.x,0,rp.z);velY=0;grounded=true;stamina=100;exhausted=false;
+    const rp=safeSpawn(player.position, 25, false); player.position.set(rp.x,0,rp.z);velY=0;grounded=true;stamina=200;exhausted=false;
     entities.forEach(e=>{const ep=safeSpawn(player.position,20,false);e.mesh.position.set(ep.x,0,ep.z);e.state='patrol';e.patrolTarget=ep;e.scream=false;});
     document.getElementById('gameover-screen').style.display='none'; if(platform==='pc') { try{ document.body.requestPointerLock(); }catch(e){} }
 }
@@ -996,13 +1039,12 @@ function goMainMenu(){
     document.getElementById('glitch-overlay').style.cssText='background:rgba(0,0,0,0);opacity:0;';
     scene.background.setHex(BG_COL);scene.fog.color.setHex(BG_COL);scene.fog.density=.025;ambient.intensity=1.0; flash.intensity=isFlashOn?3.0:0;
     
-    ugObjs.forEach(o=>scene.remove(o));ugObjs=[];
+    ugObjs.forEach(o=>scene.remove(o));ugObjs=[]; clearSurfaceDecals();
     if(ugWalls){scene.remove(ugWalls);ugWalls=null;}if(ugFloor){scene.remove(ugFloor);ugFloor=null;}if(ugCeil){scene.remove(ugCeil);ugCeil=null;}
     if(ladderMesh){scene.remove(ladderMesh);ladderMesh=null;}if(holeGroup){scene.remove(holeGroup);holeGroup=null;}
     pitMeshes.forEach(m=>{if(m&&m.parent)scene.remove(m);});pitMeshes=[]; if(pitVoid){scene.remove(pitVoid);pitVoid=null;}pitBounds.active=false;
     
     if(surfaceHoleGroup){scene.remove(surfaceHoleGroup); surfaceHoleGroup=null;}
-    
     if(floorGroup){scene.remove(floorGroup); floorGroup=null;} if(floorM)floorM.visible=true; if(iWalls)iWalls.visible=true;lamps.forEach(l=>{if(l.visible!==undefined)l.visible=true;}); if(ceilM)ceilM.visible=true;
     
     try{if(ambO1){ambO1.stop();ambO1=null;}if(ambO2){ambO2.stop();ambO2=null;}if(khOsc){khOsc.stop();khOsc=null;}actx=null;}catch(e){}
@@ -1019,7 +1061,7 @@ function launchGame(){
     document.getElementById('top-controls').style.display='flex'; document.getElementById('cctv-ui').style.display='block'; document.getElementById('quest-ui').style.display='block'; document.getElementById('stamina-container').style.display='block';
 
     hasKey=false;doorOpened=false;underground=false;hasLadder=false;ladderPlaced=false;climbing=false;climbT=0;
-    stamina=100;exhausted=false;velY=0;grounded=true; lightState = 'normal'; hintSpawned = false; speedBoosted = false;
+    stamina=200;exhausted=false;velY=0;grounded=true; lightState = 'normal'; hintSpawned = false; speedBoosted = false;
     
     if(platform==='mobile'){ document.getElementById('joystick-zone').style.display='block'; document.getElementById('mobile-controls-right').style.display='flex'; }
     else{ document.getElementById('crosshair').style.display='block'; try{ document.body.requestPointerLock(); } catch(e){} }
@@ -1160,8 +1202,8 @@ function animate(){
         if(Math.abs(jInput.x)>.05||Math.abs(jInput.y)>.05){ mX = fX * (-jInput.y) + rX * jInput.x; mZ = fZ * (-jInput.y) + rZ * jInput.x; } moving=mX!==0||mZ!==0;sprinting=moving&&jRatio>.75&&!exhausted;
     }
 
-    if(sprinting){stamina-=.22;if(stamina<=0){stamina=0;exhausted=true;}} else{stamina+=moving?.7:2.2;if(stamina>=100){stamina=100;exhausted=false;}}
-    const sb=document.getElementById('stamina-bar'); if(sb){sb.style.width=stamina+'%';sb.style.background=exhausted?'#cc2424':'#d1bd71';}
+    if(sprinting){stamina-=.22;if(stamina<=0){stamina=0;exhausted=true;}} else{stamina+=moving?0.2:0.5;if(stamina>=200){stamina=200;exhausted=false;}}
+    const sb=document.getElementById('stamina-bar'); if(sb){sb.style.width=(stamina/2)+'%';sb.style.background=exhausted?'#cc2424':'#d1bd71';}
 
     const spd=exhausted?SPD_TIRED:(sprinting?SPD_SPRINT:SPD_BASE);
     const nx=player.position.x+mX*spd,nz=player.position.z+mZ*spd; let bobX=0,bobY=0;
@@ -1174,6 +1216,23 @@ function animate(){
             const now=Date.now(); if(now-lastFoot>(sprinting?220:380)){footstep(sprinting?.7:.35);lastFoot=now;}
         }
     }
+    
+    // 가구 밀침 기능 연산
+    furnitures.forEach(f => {
+        let dx = f.position.x - player.position.x; let dz = f.position.z - player.position.z; let dist = Math.sqrt(dx*dx + dz*dz);
+        let minDist = 0.55 + f.colliderRadius;
+        if(dist < minDist && dist > 0.001) {
+            let overlap = minDist - dist; let pushX = (dx/dist) * overlap; let pushZ = (dz/dist) * overlap;
+            let safeF = gridCollide(f.position.x, f.position.z, f.position.x + pushX, f.position.z + pushZ, f.colliderRadius);
+            f.position.x = safeF.x; f.position.z = safeF.z;
+            
+            let dx2 = f.position.x - player.position.x; let dz2 = f.position.z - player.position.z; let dist2 = Math.sqrt(dx2*dx2 + dz2*dz2);
+            if(dist2 < minDist && dist2 > 0.001) {
+                let pPushX = -(dx2/dist2) * (minDist - dist2); let pPushZ = -(dz2/dist2) * (minDist - dist2);
+                player.position.x += pPushX; player.position.z += pPushZ;
+            }
+        }
+    });
 
     if(!climbing){
         velY+=GRAVITY; player.position.y+=velY;
@@ -1184,16 +1243,11 @@ function animate(){
                 const inPit2=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
                 if(inPit2){
                     const lx = player.position.x - pitBounds.minX; const lz = player.position.z - pitBounds.minZ;
-                    const CELL = B_HOLE_W + B_PATH_W; 
-                    const mx = lx % CELL; const mz = lz % CELL;
-                    
+                    const CELL = B_HOLE_W + B_PATH_W; const mx = lx % CELL; const mz = lz % CELL;
                     const margin = 1.0; 
                     const isInsideHoleX = (mx > B_PATH_W + margin) && (mx < CELL - margin);
                     const isInsideHoleZ = (mz > B_PATH_W + margin) && (mz < CELL - margin);
-                    
-                    if(isInsideHoleX && isInsideHoleZ) {
-                        grounded = false; 
-                    } else {
+                    if(isInsideHoleX && isInsideHoleZ) { grounded = false; } else {
                         if(player.position.y<=0.05){player.position.y=0.05;velY=0;grounded=true;} else grounded=false; 
                     }
                 } else {
@@ -1208,7 +1262,12 @@ function animate(){
     let tiltX=0,tiltZ=0;
     if(!underground&&pitBounds.active){
         const inP=player.position.x>pitBounds.minX&&player.position.x<pitBounds.maxX&&player.position.z>pitBounds.minZ&&player.position.z<pitBounds.maxZ;
-        if(inP&&grounded){tiltX=Math.sin(Date.now()*.003)*.035;tiltZ=Math.cos(Date.now()*.0025)*.025;}
+        if(inP){
+            // 격한 흔들림 부여
+            tiltX = (Math.random()-0.5)*0.15 + Math.sin(Date.now()*.05)*0.06;
+            tiltZ = (Math.random()-0.5)*0.15 + Math.cos(Date.now()*.043)*0.06;
+            bobY += (Math.random()-0.5)*0.25;
+        }
     }
 
     player.rotation.y=sCamX; fpsRig.position.set(player.position.x,player.position.y+1.5,player.position.z); fpsRig.rotation.set(sCamY+tiltX,sCamX,tiltZ,'YXZ');

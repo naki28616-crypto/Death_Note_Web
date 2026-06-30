@@ -13,9 +13,9 @@
         #glitch-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0); opacity:0; pointer-events:none; z-index:3; transition:background-color .1s, opacity .1s; }
         
         .scanlines { position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%), linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06)); background-size:100% 4px, 3px 100%; pointer-events:none; z-index:4; }
-        .vhs-noise { position:absolute; top:0; left:0; width:100%; height:100%; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); pointer-events:none; z-index:4; opacity:0.12; animation:staticAnim 0.1s steps(2) infinite; }
+        .vhs-noise { position:absolute; top:0; left:0; width:100%; height:100%; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); pointer-events:none; z-index:4; opacity:0.15; animation:staticAnim 0.08s steps(2) infinite; }
         
-        @keyframes staticAnim { 0%, 100% { opacity:0.1; transform:translate(0,0); } 50% { opacity:0.15; transform:translate(-1px, 1px); } }
+        @keyframes staticAnim { 0%, 100% { opacity:0.1; transform:translate(0,0); } 50% { opacity:0.18; transform:translate(-1px, 1px); } }
 
         #crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:4px; height:4px; background:rgba(255,255,255,.5); border-radius:50%; pointer-events:none; z-index:5; display:none; }
         #cctv-ui { position:absolute; top:30px; left:30px; color:#fff; font-weight:bold; font-size:18px; z-index:210; letter-spacing:2px; pointer-events:none; display:none; text-shadow:0 0 10px rgba(255,255,255,0.8); }
@@ -40,32 +40,33 @@
         #stamina-bar { width:100%; height:100%; background:#d1bd71; transition:width 0.1s linear; }
         
         #heartbeat-ui { position:absolute; bottom:50px; left:50%; transform:translateX(-50%) scale(0); font-size:50px; color:#cc1818; text-shadow:0 0 25px rgba(204,24,24,.9); pointer-events:none; z-index:15; transition:transform .1s ease-out; }
-        #game-toast { position:absolute; top:15%; left:50%; transform:translate(-50%,-50%); color:#fff; font-weight:bold; font-size:16px; z-index:300; display:none; pointer-events:none; text-align:center; text-shadow: 0 2px 4px #000; letter-spacing:1px; }
+        #game-toast { position:absolute; top:15%; left:50%; transform:translate(-50%,-50%); color:#fff; font-weight:bold; font-size:16px; z-index:300; display:none; pointer-events:none; text-align:center; text-shadow: 0 2px 4px #000; letter-spacing:1px; background:rgba(0,0,0,0.8); padding: 10px 20px; border:1px solid #555; }
         #ladder-hud { position:absolute; bottom:80px; left:50%; transform:translateX(-50%); color:#66ff66; font-weight:bold; font-size:14px; z-index:210; display:none; pointer-events:none; text-shadow:0 1px 4px #000; }
         
         #joystick-zone { position:absolute; bottom:35px; left:35px; width:120px; height:120px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.2); border-radius:50%; z-index:10; touch-action:none; display:none; }
         #joystick-stick { position:absolute; top:35px; left:35px; width:50px; height:50px; background:rgba(255,255,255,.4); border-radius:50%; }
 
-        #start-screen { position:absolute; top:0; left:0; width:100%; height:100%; z-index:200; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; background:transparent; pointer-events:auto; }
+        /* Left Aligned Simple Start Screen */
+        #start-screen { position:absolute; top:0; left:0; width:100%; height:100%; z-index:200; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; padding-left: 8%; color:#fff; background:transparent; pointer-events:auto; box-sizing: border-box; }
+        #start-content { display:flex; flex-direction:column; align-items:flex-start; text-align:left; z-index:10; background:rgba(10, 8, 5, 0.6); padding: 45px; border-left: 6px solid #d1bd71; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
         
-        #start-content { display:flex; flex-direction:column; align-items:center; text-align:center; z-index:10; background:transparent; }
-        .title-sub { font-size:80px; font-weight:900; letter-spacing:10px; margin:0; color:#fff; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 4px 4px 10px rgba(0,0,0,0.8); }
-        .title-level { font-size:18px; letter-spacing:5px; margin:10px 0 50px; color:#d1bd71; text-shadow: 2px 2px 4px #000; }
+        .title-sub { font-size:75px; font-weight:900; letter-spacing:8px; margin:0; color:#fff; text-shadow: 3px 3px 0 #111, 6px 6px 15px rgba(0,0,0,0.9); line-height: 1.1; }
+        .title-level { font-size:16px; font-weight:bold; letter-spacing:4px; margin:15px 0 40px; color:#d1bd71; text-shadow: 2px 2px 4px #000; background: rgba(209, 189, 113, 0.15); padding: 5px 12px; }
         
-        .start-btn { padding:15px 40px; font-size:24px; font-weight:bold; letter-spacing:5px; color:#000; background:#d1bd71; border:none; cursor:pointer; font-family:'Courier New', Courier, monospace; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition:all 0.2s; }
-        .start-btn:hover { background:#fff; transform:scale(1.05); }
+        .start-btn { padding:15px 35px; font-size:20px; font-weight:900; letter-spacing:4px; color:#000; background:#d1bd71; border:none; cursor:pointer; font-family:'Courier New', Courier, monospace; box-shadow: 0 4px 15px rgba(209, 189, 113, 0.4); transition:all 0.2s; margin-top: 10px; width: 100%; text-align: center; }
+        .start-btn:hover { background:#ffea9f; transform:translateX(5px); }
 
-        #gameover-screen, #pause-screen, #clear-screen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(5,5,5,.9); z-index:150; display:none; flex-direction:column; justify-content:center; align-items:center; }
-        .screen-title { font-size:40px; margin-bottom:10px; letter-spacing:5px; font-weight:900; }
+        #gameover-screen, #pause-screen, #clear-screen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(5,5,5,.9); z-index:150; display:none; flex-direction:column; justify-content:center; align-items:center; backdrop-filter: blur(5px); }
+        .screen-title { font-size:40px; margin-bottom:10px; letter-spacing:5px; font-weight:900; text-align: center; }
         .go-btn { background:transparent; color:#fff; border:2px solid #fff; padding:15px 30px; font-size:16px; font-weight:bold; cursor:pointer; letter-spacing:2px; transition:all 0.2s; font-family:'Courier New', Courier, monospace; margin: 10px; }
         .go-btn:hover { background:#fff; color:#000; }
 
-        /* Admin UI */
-        #admin-panel { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(10,0,0,0.9); border:2px solid #f00; padding:30px; z-index:9999; flex-direction:column; align-items:center; box-shadow:0 0 30px rgba(255,0,0,0.5); }
+        /* Admin UI - Simplified */
+        #admin-panel { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(15,5,5,0.95); border:2px solid #f33; padding:30px; z-index:9999; flex-direction:column; align-items:center; box-shadow:0 0 40px rgba(255,0,0,0.6); }
         #admin-panel h3 { color:#f55; margin:0 0 20px 0; letter-spacing:3px; }
         #admin-pw { background:#000; color:#fff; border:1px solid #f55; padding:15px; margin-bottom:20px; width:220px; text-align:center; font-size:18px; outline:none; font-family:monospace; }
-        #admin-panel .btn-cancel { background:transparent; color:#aaa; border:1px solid #555; padding:10px 20px; cursor:pointer; font-family:monospace; width:100%; transition:all 0.2s; }
-        #admin-panel .btn-cancel:hover { background:#333; color:#fff; }
+        #admin-panel .btn-cancel { background:#222; color:#aaa; border:1px solid #555; padding:12px; cursor:pointer; font-family:monospace; width:100%; transition:all 0.2s; font-weight: bold; }
+        #admin-panel .btn-cancel:hover { background:#444; color:#fff; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -81,20 +82,20 @@
 <div id="interact-prompt"></div>
 <div id="game-toast"></div>
 <div id="heartbeat-ui">♡</div>
-<div id="ladder-hud">LADDER FOUND</div>
+<div id="ladder-hud">LADDER EQUIPPED</div>
 
 <div id="start-screen">
     <div id="start-content">
-        <h1 class="title-sub">THE BACKROOMS</h1>
-        <div class="title-level">LEVEL 0 - FOUND FOOTAGE</div>
-        <button class="start-btn" onclick="launchGame('pc')">PLAY PC</button>
-        <button class="start-btn" style="margin-top:20px; background:#555; color:#fff;" onclick="launchGame('mobile')">PLAY MOBILE</button>
+        <h1 class="title-sub">THE<br>BACKROOMS</h1>
+        <div class="title-level">TRUE ESCAPE ROUTE</div>
+        <button class="start-btn" onclick="launchGame('pc')">PLAY (PC)</button>
+        <button class="start-btn" style="background:#555; color:#ddd;" onclick="launchGame('mobile')">PLAY (MOBILE)</button>
     </div>
 </div>
 
 <div id="admin-panel">
     <h3>ADMIN ACCESS</h3>
-    <input type="password" id="admin-pw" placeholder="Enter Password (ENTER)">
+    <input type="password" id="admin-pw" placeholder="PASSWORD [ENTER]">
     <button class="btn-cancel" onclick="closeAdmin()">CANCEL</button>
 </div>
 
@@ -113,33 +114,34 @@
 <div id="joystick-zone"><div id="joystick-stick"></div></div>
 
 <div id="pause-screen">
-    <h1 class="screen-title" style="color:#fff;">PAUSED</h1>
+    <h1 class="screen-title" style="color:#d1bd71; text-shadow:0 0 20px #d1bd71;">PAUSED</h1>
+    <p style="color:#aaa; margin-bottom: 20px;">PRESS ESC TO RESUME</p>
     <div>
-        <button class="go-btn" onclick="triggerPause(false)">RESUME</button>
+        <button class="go-btn" style="background:#d1bd71; color:#000; border-color:#d1bd71;" onclick="triggerPause(false)">RESUME</button>
         <button class="go-btn" style="color:#f55; border-color:#f55;" onclick="goMainMenu()">MAIN MENU</button>
     </div>
 </div>
 <div id="gameover-screen">
-    <h1 class="screen-title" style="color:#f00; text-shadow:0 0 20px #f00;">SIGNAL LOST</h1>
+    <h1 class="screen-title" style="color:#f00; text-shadow:0 0 30px #f00;">YOU DIED</h1>
     <p id="go-cause" style="color:#aaa; margin-bottom:30px;"></p>
     <div>
         <button class="go-btn" onclick="goMainMenu()">MAIN MENU</button>
-        <button class="go-btn" onclick="respawn()">RESTART</button>
+        <button class="go-btn" style="background:#300; color:#f55; border-color:#f00;" onclick="respawn()">RESTART</button>
     </div>
 </div>
 <div id="clear-screen">
-    <h1 class="screen-title" style="color:#0f0; text-shadow:0 0 20px #0f0;">NOCLIP SUCCESSFUL</h1>
-    <p id="clear-time" style="color:#fff; font-size:24px; margin-bottom:30px;"></p>
-    <button class="go-btn" onclick="goMainMenu()">MAIN MENU</button>
+    <h1 class="screen-title" style="color:#0f0; text-shadow:0 0 30px #0f0;">NOCLIP SUCCESSFUL</h1>
+    <p id="clear-time" style="color:#fff; font-size:24px; margin-bottom:30px; font-weight:bold;"></p>
+    <button class="go-btn" style="background:#050; color:#0f0; border-color:#0f0;" onclick="goMainMenu()">MAIN MENU</button>
 </div>
 
 <script>
 let ROWS = 45, COLS = 45; 
 const UNIT = 9, WH = 7.0; 
 
-let mapData = [], obstacles = []; 
+let mapData = []; 
 let iWalls = null, lamps = [], floorM = null, ceilM = null, floorGroup = null;
-let surfaceDecals = [], furnitures = [], staticColliders = [];
+let surfaceDecals = [], furnitures = [];
 
 const UG_R = 12, UG_C = 12, UG_U = 8.0, UG_WH = 6.5;
 const UG_Y = -35; 
@@ -158,17 +160,18 @@ let lastHB = 0;
 const SPD_BASE = 0.14, SPD_SPRINT = 0.25, SPD_TIRED = 0.07;
 let stamina = 200, exhausted = false, moving = false, sprinting = false;
 
-let hasKey = false, doorOpened = false;
-let keyMesh = null, doorGroup = null, doorPivot = null;
-let escapeSensor = new THREE.Vector3();
-let escapeDoorPos = {x:0, z:0, ang:0};
+let hasKey = false;
+let keyMesh = null, doors = [];
+let trueDoorIdx = 0;
 
 let pitCX = 0, pitCZ = 0;
 let pitBounds = {minX:0, maxX:0, minZ:0, maxZ:0, active:false};
 let pitMeshes = [], pitVoid = null;
-const B_GRID_DIV = 4;    
-const B_PATH_W = 2.5; 
-const B_HOLE_W = 8.0; 
+
+// 9x9 Full Pit configuration
+const B_GRID_DIV = 9;    
+const B_HOLE_W = 6.2; 
+const B_PATH_W = 2.0; 
 let PIT_TOTAL = 0; 
 
 let underground = false;
@@ -181,12 +184,8 @@ let climbing = false, climbT = 0;
 let surfaceHoleSpawn = {x:0, z:0, lookX:0, lookZ:1};
 let surfaceHoleGroup = null;
 
-const centerSpawnPoint = {x: (22 - COLS/2)*UNIT + UNIT/2, z: (3 - ROWS/2)*UNIT + UNIT/2}; 
-// Guaranteed accessible key locations
-const keySpawnPoints = [
-    {r: 25, c: 20}, {r: 35, c: 18}, {r: 15, c: 20}, {r: 15, c: 28}
-];
-const entitySpawnPoint = {x: (22 - COLS/2)*UNIT + UNIT/2, z: (18 - ROWS/2)*UNIT + UNIT/2}; 
+let centerSpawnPoint = {x:0, z:0};
+let entitySpawnPoint = {x:0, z:0};
 
 const BG_COL = 0x8a7a40; 
 const scene = new THREE.Scene();
@@ -222,7 +221,6 @@ let player = new THREE.Group(); scene.add(player);
 
 function createProceduralTexture(type) {
     const c = document.createElement('canvas'); c.width = c.height = 512; const ctx = c.getContext('2d');
-    
     if (type === 'wall') {
         ctx.fillStyle = '#bfa95a'; ctx.fillRect(0,0,512,512);
         for(let i=0; i<4000; i++) {
@@ -242,82 +240,74 @@ function createProceduralTexture(type) {
         ctx.strokeStyle = '#8a8571'; ctx.lineWidth = 2;
         ctx.strokeRect(0,0,512,512);
     }
-    
     const tex = new THREE.CanvasTexture(c);
     if(type !== 'wall') { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(30, 30); }
     return tex;
 }
 
 const wallTex = createProceduralTexture('wall'), floorTex = createProceduralTexture('floor'), ceilTex = createProceduralTexture('ceil');
-const wallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.8, metalness:0.0});
+const wallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:0.8});
 const floorMat = new THREE.MeshStandardMaterial({map:floorTex, roughness:0.9});
 const ceilMat = new THREE.MeshStandardMaterial({map:ceilTex, roughness:1.0});
 
-function clearSurfaceDecals() {
-    surfaceDecals.forEach(d => { if(d.parent) scene.remove(d); if(d.geometry) d.geometry.dispose(); }); surfaceDecals = [];
-    staticColliders = []; 
-}
+function worldXZ(r,c){ return {x: (c-COLS/2)*UNIT + UNIT/2, z: (r-ROWS/2)*UNIT + UNIT/2}; }
 
-function genFixedMap() {
-    mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(2)); 
-    obstacles = Array(ROWS).fill().map(()=>Array(COLS).fill(null));
+function genRandomMap() {
+    mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1)); // 1 = Wall, 0 = Empty
 
     function clearArea(r1, r2, c1, c2) {
         for(let r=r1; r<=r2; r++) {
             for(let c=c1; c<=c2; c++) {
-                if(r>=0 && r<ROWS && c>=0 && c<COLS) mapData[r][c] = 0;
+                if(r>0 && r<ROWS-1 && c>0 && c<COLS-1) mapData[r][c] = 0;
             }
         }
     }
 
-    clearArea(2, 4, 20, 24);   // Spawn
-    clearArea(5, 11, 21, 23);  // Corridor
-    clearArea(12, 29, 12, 33); // Main hall
-    clearArea(20, 28, 2, 11);  // Bingo room
-    clearArea(30, 42, 12, 25); // SW room
-    clearArea(22, 42, 26, 42); // SE room
-    clearArea(28, 31, 43, 44); // Exit corridor
+    // 1. Small Start Room (West)
+    clearArea(21, 24, 3, 6);
+    centerSpawnPoint = worldXZ(22, 4);
 
-    pitCX = (7 - COLS/2) * UNIT; 
-    pitCZ = (24 - ROWS/2) * UNIT + UNIT/2;
+    // 2. 9x9 Full Bingo Pit Room (Center-East)
+    // Pit dimensions calculation to clear enough space
+    // 9 holes + 10 paths = 9 * 6.2 + 10 * 2.0 = 55.8 + 20 = 75.8 units
+    // 75.8 / 9 (UNIT) ~= 8.4 blocks. Let's clear a 10x10 area.
+    const prTop = 17, prBot = 27;
+    const prLeft = 21, prRight = 31;
+    clearArea(prTop, prBot, prLeft, prRight);
+    pitCX = (26 - COLS/2)*UNIT + UNIT/2;
+    pitCZ = (22 - ROWS/2)*UNIT + UNIT/2;
 
-    for(let r=24; r<=40; r+=4) {
-        for(let c=27; c<=40; c+=4) {
-            mapData[r][c] = 1; mapData[r+1][c] = 1;
-            mapData[r][c+1] = 1; mapData[r+1][c+1] = 1;
+    // 3. Exit Fork (East of Pit)
+    // Main corridor from pit
+    clearArea(21, 23, 32, 36); 
+    // Fork Up
+    clearArea(12, 21, 35, 37);
+    // Fork Down
+    clearArea(23, 32, 35, 37);
+
+    // 4. Random Maze Area (Between Start and Pit)
+    clearArea(5, 39, 7, 20); // Open a large area first
+    
+    // Fill with random pillars and walls to make it a maze
+    for(let r=6; r<=38; r+=3) {
+        for(let c=8; c<=19; c+=3) {
+            if(Math.random() > 0.25) {
+                mapData[r][c] = 1;
+                if(Math.random() > 0.5) mapData[r+1][c] = 1;
+                if(Math.random() > 0.5) mapData[r][c+1] = 1;
+            }
         }
     }
     
-    for(let r=14; r<=40; r+=4) {
-        for(let c=14; c<=24; c+=4) {
-            if(Math.random() > 0.4) {
-                mapData[r][c] = 1;
-                if(Math.random() > 0.5) mapData[r+1][c] = 1;
-                else mapData[r][c+1] = 1;
-            }
-        }
+    // Ensure main path is clear to pit room to avoid softlocks
+    clearArea(21, 23, 6, 20); 
+    // Add some obstacles in the main path so it's not too easy
+    for(let c=8; c<19; c+=3) {
+        if(Math.random() > 0.4) mapData[21][c] = 1;
+        if(Math.random() > 0.4) mapData[23][c] = 1;
     }
 
-    let tempMap = mapData.map(row => [...row]);
-    for(let r=0; r<ROWS; r++) {
-        for(let c=0; c<COLS; c++) {
-            if(tempMap[r][c] === 2) {
-                let hasFloor = false;
-                for(let dr=-1; dr<=1; dr++){
-                    for(let dc=-1; dc<=1; dc++){
-                        if(dr===0 && dc===0) continue;
-                        if(r+dr>=0 && r+dr<ROWS && c+dc>=0 && c+dc<COLS && tempMap[r+dr][c+dc] === 0) hasFloor = true;
-                    }
-                }
-                if(hasFloor) mapData[r][c] = 1; 
-            }
-        }
-    }
-
-    // Place exit door on the left or right wall of the exit corridor
-    escapeDoorPos.x = (43.5 - COLS/2) * UNIT; // Attached closer to the right wall of the 43~44 corridor
-    escapeDoorPos.z = (29 - ROWS/2) * UNIT + UNIT/2;
-    escapeDoorPos.ang = -Math.PI / 2;
+    entitySpawnPoint = worldXZ(22, 18);
 }
 
 function buildGraphics(){
@@ -326,7 +316,8 @@ function buildGraphics(){
     if(floorM){scene.remove(floorM); floorM=null;}
     if(ceilM){scene.remove(ceilM); ceilM=null;}
     if(floorGroup){scene.remove(floorGroup); floorGroup=null;}
-    clearSurfaceDecals();
+    
+    surfaceDecals.forEach(d => { if(d.parent) scene.remove(d); if(d.geometry) d.geometry.dispose(); }); surfaceDecals = [];
 
     let wc=0;
     for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(mapData[r][c]===1)wc++; 
@@ -365,11 +356,10 @@ function buildGraphics(){
     ceilM.rotation.x = Math.PI/2; ceilM.position.y = WH; scene.add(ceilM);
 }
 
-function worldXZ(r,c){ return {x: (c-COLS/2)*UNIT + UNIT/2, z: (r-ROWS/2)*UNIT + UNIT/2}; }
-
 function safeSpawn(avoid, minD){
     for(let i=0; i<1000; i++){
-        const r=Math.floor(Math.random()*(ROWS-2))+1, c=Math.floor(Math.random()*(COLS-2))+1;
+        // Spawn key mostly in the maze area (left of pit)
+        const r=Math.floor(Math.random()*34)+5, c=Math.floor(Math.random()*15)+6;
         if(mapData[r][c] === 0){
             const p = worldXZ(r,c);
             if(avoid && minD && Math.sqrt((p.x-avoid.x)**2 + (p.z-avoid.z)**2) < minD) continue;
@@ -399,7 +389,6 @@ function buildSurfaceHole() {
         surfaceHoleGroup.position.set(wx - targetWall.c*(UNIT*0.5 + 0.1), 0.5, wz - targetWall.r*(UNIT*0.5 + 0.1));
         surfaceHoleGroup.rotation.y = Math.atan2(targetWall.c, targetWall.r); 
         
-        const holeMat = new THREE.MeshStandardMaterial({color:0x00ff44, emissive:0x00ff44, emissiveIntensity:0.6}); 
         const hIn = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.0, 0.1), new THREE.MeshBasicMaterial({color:0x000})); 
         const hl1 = new THREE.PointLight(0x00ff44, 2, 8); hl1.position.set(0, 0, 0.5); 
         surfaceHoleGroup.add(hIn, hl1);
@@ -414,7 +403,6 @@ function buildBingoPit(){
     if(pitVoid) { scene.remove(pitVoid); pitVoid = null; }
     
     PIT_TOTAL = B_GRID_DIV * B_HOLE_W + (B_GRID_DIV + 1) * B_PATH_W;
-    // Pit bounding box smaller than the room, leaving floor margins around it
     const hf = PIT_TOTAL / 2;
     pitBounds.minX = pitCX - hf; pitBounds.maxX = pitCX + hf;
     pitBounds.minZ = pitCZ - hf; pitBounds.maxZ = pitCZ + hf;
@@ -464,29 +452,41 @@ function buildBingoPit(){
     scene.add(pitVoid);
 }
 
-function spawnDoor(){
-    if(doorGroup) scene.remove(doorGroup); doorGroup = new THREE.Group(); 
-    doorGroup.position.set(escapeDoorPos.x, 0, escapeDoorPos.z); 
-    doorGroup.rotation.y = escapeDoorPos.ang;
-    
-    const fMat2 = new THREE.MeshStandardMaterial({color:0x221100, roughness:0.9});
-    const tp = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.2, 0.3), fMat2); tp.position.set(0, 4.0, 0);
-    doorGroup.add(tp);
+function spawnDoors(){
+    doors.forEach(d => scene.remove(d.group)); doors = [];
+    trueDoorIdx = Math.random() > 0.5 ? 0 : 1;
 
-    // Correctly structured pivot
-    doorPivot = new THREE.Group(); doorPivot.position.set(-1.4, 2.0, 0);
-    const dp = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.8, 0.15), new THREE.MeshStandardMaterial({color:0x442211, roughness:0.8})); 
-    dp.position.set(1.4, 0, 0); doorPivot.add(dp);
-    
-    // Fixed knob position
-    const kn = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), new THREE.MeshStandardMaterial({color:0x999999, metalness:0.8})); 
-    kn.position.set(2.4, 0, 0.12); dp.add(kn);
-    
-    doorGroup.add(doorPivot);
-    scene.add(doorGroup); doorGroup.updateMatrixWorld(true);
-    
-    const sOff = new THREE.Vector3(0, 1.5, -2.0); sOff.applyQuaternion(doorGroup.quaternion); 
-    escapeSensor.copy(doorGroup.position).add(sOff);
+    function createDoorObj(r, c, isTrue) {
+        let group = new THREE.Group();
+        let wx = (c - COLS/2)*UNIT + UNIT/2;
+        let wz = (r - ROWS/2)*UNIT + UNIT/2;
+        
+        // Face left (West) because they are on the east wall
+        group.position.set(wx + UNIT/2 - 0.2, 0, wz);
+        group.rotation.y = -Math.PI/2;
+        
+        const fMat2 = new THREE.MeshStandardMaterial({color:0x221100, roughness:0.9});
+        const tp = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.2, 0.3), fMat2); tp.position.set(0, 4.0, 0);
+        group.add(tp);
+
+        let pivot = new THREE.Group(); pivot.position.set(-1.4, 2.0, 0);
+        const dp = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.8, 0.15), new THREE.MeshStandardMaterial({color:0x442211, roughness:0.8})); 
+        dp.position.set(1.4, 0, 0); pivot.add(dp);
+        
+        const kn = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), new THREE.MeshStandardMaterial({color:0x999999, metalness:0.8})); 
+        kn.position.set(2.4, 0, 0.12); dp.add(kn);
+        
+        group.add(pivot);
+        scene.add(group); group.updateMatrixWorld(true);
+        
+        const sOff = new THREE.Vector3(0, 1.5, -2.0); sOff.applyQuaternion(group.quaternion); 
+        let sensor = new THREE.Vector3().copy(group.position).add(sOff);
+        
+        doors.push({ group: group, pivot: pivot, sensor: sensor, isTrue: isTrue, opened: false });
+    }
+
+    createDoorObj(12, 36, trueDoorIdx === 0); // North Door
+    createDoorObj(32, 36, trueDoorIdx === 1); // South Door
 }
 
 function spawnKey(){
@@ -496,10 +496,8 @@ function spawnKey(){
     keyMesh.add(kr, kb);
     const kl = new THREE.PointLight(0xffcc00, 2, 10); kl.position.y = 0.5; keyMesh.add(kl);
     
-    let sp = keySpawnPoints[Math.floor(Math.random() * keySpawnPoints.length)];
-    let pX = (sp.c - COLS/2)*UNIT + UNIT/2;
-    let pZ = (sp.r - ROWS/2)*UNIT + UNIT/2;
-    keyMesh.position.set(pX, 1.0, pZ); 
+    let sp = safeSpawn(centerSpawnPoint, 15);
+    keyMesh.position.set(sp.x, 1.0, sp.z); 
     scene.add(keyMesh);
 }
 
@@ -602,7 +600,7 @@ function enterUnderground(){
     player.position.set(safeUgPos.x, UG_Y + 0.1, safeUgPos.z); velY=0; grounded=true;
     if(iWalls) iWalls.visible = false; lamps.forEach(l => { if(l.visible!==undefined) l.visible = false; });
     if(floorM) floorM.visible = false; if(floorGroup) floorGroup.visible = false; if(ceilM) ceilM.visible = false;
-    if(keyMesh) keyMesh.visible = false; if(doorGroup) doorGroup.visible = false;
+    if(keyMesh) keyMesh.visible = false; doors.forEach(d => d.group.visible = false);
     if(surfaceHoleGroup) surfaceHoleGroup.visible = false;
     pitMeshes.forEach(m => { if(m && m.visible!==undefined) m.visible = false; }); if(pitVoid) pitVoid.visible = false;
     
@@ -618,7 +616,7 @@ function exitUnderground(){
     
     if(iWalls) iWalls.visible = true; lamps.forEach(l => { if(l.visible!==undefined) l.visible = true; });
     if(!pitBounds.active && floorM) floorM.visible = true; if(pitBounds.active && floorGroup) floorGroup.visible = true;
-    if(ceilM) ceilM.visible = true; if(!hasKey && keyMesh) keyMesh.visible = true; if(doorGroup) doorGroup.visible = true;
+    if(ceilM) ceilM.visible = true; if(!hasKey && keyMesh) keyMesh.visible = true; doors.forEach(d => d.group.visible = true);
     if(surfaceHoleGroup) surfaceHoleGroup.visible = true;
     pitMeshes.forEach(m => { m.visible = true; }); if(pitVoid) pitVoid.visible = true;
     
@@ -711,6 +709,10 @@ function toggleAdminPanel() {
         document.getElementById('admin-pw').focus();
     }
 }
+document.getElementById('admin-pw').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') checkAdmin();
+});
+
 function toggleNoClip() {
     isFlying = !isFlying;
     showToast(isFlying ? "NOCLIP ON" : "NOCLIP OFF");
@@ -797,7 +799,7 @@ function placeLadder(){
     ladderPlaced = true; hasLadder = false; document.getElementById('ladder-hud').style.display = 'none';
     ladderMesh = new THREE.Group(); const lMat = new THREE.MeshStandardMaterial({color:0x885522});
     const lv1 = new THREE.Mesh(new THREE.BoxGeometry(.1, UG_WH*.9, .1), lMat); lv1.position.set(-.3, 0, 0); 
-    const lv2 = new THREE.Mesh(new THREE.BoxGeometry(.1, UG_WH*.9, .1), lMat); lv2.position.set(.3, 0, 0); 
+    const lv2 = new Mesh(new THREE.BoxGeometry(.1, UG_WH*.9, .1), lMat); lv2.position.set(.3, 0, 0); 
     ladderMesh.add(lv1, lv2);
     for(let i=0; i<7; i++){ const lh = new THREE.Mesh(new THREE.BoxGeometry(.7, .05, .05), lMat); lh.position.set(0, -UG_WH*.4 + i*(UG_WH*.8/6), 0); ladderMesh.add(lh); }
     ladderMesh.position.set(holePosX, UG_Y+UG_WH*.42, holePosZ+holeWallNZ*.25); ladderMesh.rotation.x = .1; scene.add(ladderMesh); ugObjs.push(ladderMesh);
@@ -807,15 +809,17 @@ function placeLadder(){
 document.getElementById('btn-mobile-interact').addEventListener('touchstart', e => {
     e.preventDefault(); e.stopPropagation(); if(gameState !== 'PLAYING') return;
     if(underground){ if(hasLadder && !ladderPlaced && holeGroup){ const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2); if(d<7.0){ placeLadder(); return; } } }
-    else{ if(hasKey && !doorOpened) openDoor(); }
+    else{ interactDoors(); }
 });
 
 window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if(k in keys) keys[k] = true;
     
-    if(e.key === 'Escape' && gameState === 'PLAYING') { triggerPause(true); }
-    if(e.key === 'Enter' && document.getElementById('admin-panel').style.display === 'flex') { checkAdmin(); }
+    if(e.key === 'Escape') {
+        if(gameState === 'PLAYING') triggerPause(true);
+        else if(gameState === 'PAUSED') triggerPause(false);
+    }
     
     if(e.key === ' ' && gameState === 'PLAYING'){
         keys.space = true;
@@ -832,14 +836,30 @@ window.addEventListener('keydown', e => {
     if(k === 'f' && gameState === 'PLAYING') toggleFlash();
     if(k === 'e' && gameState === 'PLAYING'){
         if(underground){ if(hasLadder && !ladderPlaced && holeGroup){ const d=Math.sqrt((player.position.x-holePosX)**2+(player.position.z-holePosZ)**2); if(d<7.0){ placeLadder(); return; } } }
-        else{ if(doorGroup && player.position.distanceTo(doorGroup.position)<3.5) openDoor(); }
+        else{ interactDoors(); }
     }
 });
 window.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if(k in keys) keys[k] = false; if(e.key === ' ') keys.space = false; });
 
-function openDoor(){
-    if(!hasKey || doorOpened) return; doorOpened = true; showToast("DOOR UNLOCKED!<br>PROCEED TO EXIT!");
-    document.getElementById('interact-prompt').style.display = 'none'; document.getElementById('btn-mobile-interact').style.display = 'none';
+function interactDoors() {
+    if(!hasKey) return;
+    let closestDoor = null; let minDist = 3.5;
+    doors.forEach(d => {
+        let dist = player.position.distanceTo(d.group.position);
+        if(dist < minDist && !d.opened) { closestDoor = d; minDist = dist; }
+    });
+    
+    if(closestDoor) {
+        if(closestDoor.isTrue) {
+            closestDoor.opened = true;
+            showToast("TRUE DOOR UNLOCKED!<br>PROCEED TO ESCAPE!");
+        } else {
+            closestDoor.opened = true;
+            showToast("FAKE DOOR...<br>IT'S A TRAP!");
+            setTimeout(() => { triggerGameOver("YOU OPENED THE WRONG DOOR."); }, 1500);
+        }
+        document.getElementById('interact-prompt').style.display = 'none'; document.getElementById('btn-mobile-interact').style.display = 'none';
+    }
 }
 
 function triggerPause(s){
@@ -853,7 +873,7 @@ function triggerGameOver(msg){ gameState = 'GAMEOVER'; document.getElementById('
 function respawn(){
     gameState = 'PLAYING'; if(underground) exitUnderground();
     player.position.set(centerSpawnPoint.x, 0.1, centerSpawnPoint.z);
-    sCamX = Math.PI; camX = Math.PI; sCamY = 0; camY = 0;
+    sCamX = Math.PI/2; camX = Math.PI/2; sCamY = 0; camY = 0;
     velY = 0; grounded = true; stamina = 200; exhausted = false;
     isFlying = false; camera.far = 150; camera.updateProjectionMatrix(); scene.fog.density = 0.035;
     
@@ -868,7 +888,7 @@ function goMainMenu(){
     document.getElementById('glitch-overlay').style.cssText = 'background:rgba(0,0,0,0);opacity:0;';
     scene.background.setHex(BG_COL); scene.fog.color.setHex(BG_COL); scene.fog.density = 0.035; ambient.intensity = 0.7; flash.intensity = isFlashOn ? 2.5 : 0;
     
-    ugObjs.forEach(o => scene.remove(o)); ugObjs = []; clearSurfaceDecals();
+    ugObjs.forEach(o => scene.remove(o)); ugObjs = []; 
     if(ugWalls){scene.remove(ugWalls); ugWalls=null;} if(ugFloor){scene.remove(ugFloor); ugFloor=null;} if(ugCeil){scene.remove(ugCeil); ugCeil=null;}
     if(ladderMesh){scene.remove(ladderMesh); ladderMesh=null;} if(holeGroup){scene.remove(holeGroup); holeGroup=null;}
     pitMeshes.forEach(m => { if(m && m.parent) scene.remove(m); }); pitMeshes = []; if(pitVoid){scene.remove(pitVoid); pitVoid=null;} pitBounds.active = false;
@@ -879,8 +899,8 @@ function goMainMenu(){
     if(document.pointerLockElement === document.body) document.exitPointerLock(); lightState = 'normal'; hintSpawned = false; targetFov = 65;
     isFlying = false; camera.far = 150; camera.updateProjectionMatrix();
     
-    genFixedMap(); buildGraphics();
-    buildBingoPit(); spawnDoor(); spawnKey();
+    genRandomMap(); buildGraphics();
+    buildBingoPit(); spawnDoors(); spawnKey();
     entities.forEach(e => { e.mesh.position.set(entitySpawnPoint.x, 0, entitySpawnPoint.z); e.patrolTarget = entitySpawnPoint; e.state = 'patrol'; });
 }
 
@@ -889,25 +909,25 @@ function launchGame(pf){
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('top-controls').style.display = 'flex'; document.getElementById('cctv-ui').style.display = 'block'; document.getElementById('quest-ui').style.display = 'block'; document.getElementById('stamina-container').style.display = 'block';
 
-    hasKey = false; doorOpened = false; underground = false; hasLadder = false; ladderPlaced = false; climbing = false; climbT = 0;
+    hasKey = false; underground = false; hasLadder = false; ladderPlaced = false; climbing = false; climbT = 0;
     stamina = 200; exhausted = false; velY = 0; grounded = true; lightState = 'normal'; hintSpawned = false; speedBoosted = false; targetFov = 65;
     isFlying = false; camera.far = 150; camera.updateProjectionMatrix(); scene.fog.density = 0.035;
     
     if(platform === 'mobile'){ document.getElementById('joystick-zone').style.display = 'block'; document.getElementById('mobile-controls-right').style.display = 'flex'; }
     else{ document.getElementById('crosshair').style.display = 'block'; try{ document.body.requestPointerLock(); } catch(e){} }
     
-    genFixedMap(); buildGraphics(); buildSurfaceHole(); 
+    genRandomMap(); buildGraphics(); buildSurfaceHole(); 
     
     player.position.set(centerSpawnPoint.x, 0.1, centerSpawnPoint.z);
-    sCamX = Math.PI; camX = Math.PI; sCamY = 0; camY = 0;
+    sCamX = Math.PI/2; camX = Math.PI/2; sCamY = 0; camY = 0; // Face east (towards the maze)
     
-    buildBingoPit(); spawnDoor(); spawnKey();
+    buildBingoPit(); spawnDoors(); spawnKey();
     entities.forEach(e => { e.mesh.position.set(entitySpawnPoint.x, 0, entitySpawnPoint.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = entitySpawnPoint; e.state = 'patrol'; });
     
     gameState = 'PLAYING'; recTime = 0;
 }
 
-genFixedMap(); buildGraphics(); entities.push(mkEntity()); 
+genRandomMap(); buildGraphics(); entities.push(mkEntity()); 
 
 let menuCamAngle = 0;
 
@@ -917,8 +937,8 @@ function animate(){
 
     if(gameState === 'MENU') {
         menuCamAngle += 0.002;
-        camera.position.set(entitySpawnPoint.x + Math.sin(menuCamAngle)*20, 5, entitySpawnPoint.z + Math.cos(menuCamAngle)*20);
-        camera.lookAt(entitySpawnPoint.x, 3.5, entitySpawnPoint.z);
+        camera.position.set(centerSpawnPoint.x + Math.sin(menuCamAngle)*15, 5, centerSpawnPoint.z + Math.cos(menuCamAngle)*15);
+        camera.lookAt(centerSpawnPoint.x, 3.5, centerSpawnPoint.z);
         renderer.render(scene, camera); return;
     }
 
@@ -967,11 +987,12 @@ function animate(){
     const qu = document.getElementById('quest-ui');
     if(!underground){
         if(isFlying) qu.innerHTML = "ADMIN MODE<br><span style='color:#0ff;'>NOCLIP ACTIVE</span>";
-        else if(!hasKey) qu.innerHTML = "QUEST: FIND THE HIDDEN KEY";
-        else if(doorGroup){
-            const dd = Math.floor(player.position.distanceTo(doorGroup.position));
-            if(!doorOpened) qu.innerHTML = `QUEST: UNLOCK EXIT DOOR<br>DIST: ${dd}m`;
-            else qu.innerHTML = "<span style='color:#0f0;'>ESCAPE THROUGH THE EXIT!</span>";
+        else if(!hasKey) qu.innerHTML = "QUEST: FIND THE HIDDEN KEY IN MAZE";
+        else {
+            let trueDist = 999;
+            doors.forEach(d => { if(d.isTrue && !d.opened) trueDist = Math.floor(player.position.distanceTo(d.group.position)); });
+            if(trueDist < 999) qu.innerHTML = `QUEST: CHOOSE THE TRUE DOOR<br>DIST: ${trueDist}m`;
+            else qu.innerHTML = "<span style='color:#0f0;'>ESCAPE THROUGH THE TRUE PORTAL!</span>";
         }
     } else {
         if(isFlying) qu.innerHTML = "ADMIN MODE<br><span style='color:#0ff;'>NOCLIP ACTIVE</span>";
@@ -980,20 +1001,29 @@ function animate(){
         else qu.innerHTML = "QUEST: CLIMB THE LADDER";
     }
 
-    if(!underground && doorGroup){
-        const dd = player.position.distanceTo(doorGroup.position);
-        if(hasKey && dd < 3.5 && !doorOpened){
+    if(!underground && doors.length > 0){
+        let closestDoor = null; let minDist = 3.5;
+        doors.forEach(d => {
+            let dist = player.position.distanceTo(d.group.position);
+            if(dist < minDist && !d.opened) { closestDoor = d; minDist = dist; }
+        });
+
+        if(hasKey && closestDoor){
             if(platform === 'pc'){ document.getElementById('interact-prompt').innerHTML = '[E] OPEN DOOR'; document.getElementById('interact-prompt').style.display = 'block'; }
             else{ document.getElementById('btn-mobile-interact').innerHTML = 'USE'; document.getElementById('btn-mobile-interact').style.display = 'flex'; }
         } else if(!underground){ document.getElementById('interact-prompt').style.display = 'none'; document.getElementById('btn-mobile-interact').style.display = 'none'; }
         
-        if(doorOpened && doorPivot){
-            if(doorPivot.rotation.y > -Math.PI/2){ doorPivot.rotation.y -= .05; doorGroup.updateMatrixWorld(true); }
-            else{
-                const de = player.position.distanceTo(escapeSensor);
-                if(de < 1.8){ gameState = 'CLEAR'; document.getElementById('clear-time').textContent = `TIME: ${m}:${s}`; document.getElementById('clear-screen').style.display = 'flex'; if(platform === 'pc') document.exitPointerLock(); return; }
+        doors.forEach(d => {
+            if(d.opened && d.pivot){
+                if(d.pivot.rotation.y > -Math.PI/2){ d.pivot.rotation.y -= .05; d.group.updateMatrixWorld(true); }
+                else if (d.isTrue) {
+                    const de = player.position.distanceTo(d.sensor);
+                    if(de < 1.8){ gameState = 'CLEAR'; document.getElementById('clear-time').textContent = `TIME: ${m}:${s}`; document.getElementById('clear-screen').style.display = 'flex'; if(platform === 'pc') document.exitPointerLock(); return; }
+                }
             }
-        } else if(!hasKey && dd < 2.0) showToast("DOOR IS LOCKED.<br>KEY REQUIRED.");
+        });
+        
+        if(!hasKey && closestDoor && minDist < 2.0) showToast("DOOR IS LOCKED.<br>KEY REQUIRED.");
     }
 
     if(underground && hasLadder && !ladderPlaced && holeGroup){
@@ -1124,5 +1154,6 @@ window.addEventListener('resize', () => {
 </script>
 </body>
 </html>
+
 
 ```

@@ -46,14 +46,19 @@
         #joystick-zone { position:absolute; bottom:35px; left:35px; width:120px; height:120px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.2); border-radius:50%; z-index:10; touch-action:none; display:none; }
         #joystick-stick { position:absolute; top:35px; left:35px; width:50px; height:50px; background:rgba(255,255,255,.4); border-radius:50%; }
 
-        #start-screen { position:absolute; top:0; left:0; width:100%; height:100%; z-index:200; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; padding-left: 8%; color:#fff; background:transparent; pointer-events:auto; box-sizing: border-box; }
-        #start-content { display:flex; flex-direction:column; align-items:flex-start; text-align:left; z-index:10; background:rgba(10, 8, 5, 0.6); padding: 45px; border-left: 6px solid #d1bd71; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        /* Start Screen - No Box, Center Aligned */
+        #start-screen { position:absolute; top:0; left:0; width:100%; height:100%; z-index:200; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; background:transparent; pointer-events:auto; text-align: center; }
         
-        .title-sub { font-size:75px; font-weight:900; letter-spacing:8px; margin:0; color:#fff; text-shadow: 3px 3px 0 #111, 6px 6px 15px rgba(0,0,0,0.9); line-height: 1.1; }
-        .title-level { font-size:16px; font-weight:bold; letter-spacing:4px; margin:15px 0 40px; color:#d1bd71; text-shadow: 2px 2px 4px #000; background: rgba(209, 189, 113, 0.15); padding: 5px 12px; }
+        .title-sub { font-size:80px; font-weight:900; letter-spacing:10px; margin:0; color:#fff; text-shadow: 4px 4px 0 #000, 0 0 30px rgba(0,0,0,1); line-height: 1.1; }
+        .title-level { font-size:18px; font-weight:bold; letter-spacing:5px; margin:15px 0 40px; color:#d1bd71; text-shadow: 2px 2px 5px #000, 0 0 10px #000; }
         
-        .start-btn { padding:15px 35px; font-size:20px; font-weight:900; letter-spacing:4px; color:#000; background:#d1bd71; border:none; cursor:pointer; font-family:'Courier New', Courier, monospace; box-shadow: 0 4px 15px rgba(209, 189, 113, 0.4); transition:all 0.2s; margin-top: 10px; width: 100%; text-align: center; }
-        .start-btn:hover { background:#ffea9f; transform:translateX(5px); }
+        .start-btn { padding:15px 35px; font-size:20px; font-weight:900; letter-spacing:4px; color:#000; background:#d1bd71; border:none; cursor:pointer; font-family:'Courier New', Courier, monospace; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8); transition:all 0.2s; min-width: 220px; }
+        .start-btn:hover { background:#ffea9f; transform:translateY(-3px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.9); }
+
+        /* Settings UI Restored */
+        .settings-panel { margin-top: 40px; display: flex; flex-direction: column; gap: 15px; background: rgba(0,0,0,0.5); padding: 20px 30px; border: 1px solid #474436; border-radius: 5px; backdrop-filter: blur(4px); }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; width: 320px; font-weight: bold; font-size: 14px; color: #d1bd71; text-shadow: 1px 1px 3px #000; }
+        .setting-row input[type=range] { width: 150px; cursor: pointer; accent-color: #d1bd71; }
 
         #gameover-screen, #pause-screen, #clear-screen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(5,5,5,.9); z-index:150; display:none; flex-direction:column; justify-content:center; align-items:center; backdrop-filter: blur(5px); }
         .screen-title { font-size:40px; margin-bottom:10px; letter-spacing:5px; font-weight:900; text-align: center; }
@@ -83,11 +88,24 @@
 <div id="ladder-hud">LADDER EQUIPPED</div>
 
 <div id="start-screen">
-    <div id="start-content">
-        <h1 class="title-sub">THE<br>BACKROOMS</h1>
-        <div class="title-level">TRUE ESCAPE ROUTE</div>
+    <h1 class="title-sub">THE BACKROOMS</h1>
+    <div class="title-level">TRUE ESCAPE ROUTE</div>
+    
+    <div style="display:flex; gap:20px;">
         <button class="start-btn" onclick="launchGame('pc')">PLAY (PC)</button>
-        <button class="start-btn" style="background:#555; color:#ddd;" onclick="launchGame('mobile')">PLAY (MOBILE)</button>
+        <button class="start-btn" style="background:#8a7a40; color:#fff;" onclick="launchGame('mobile')">PLAY (MOBILE)</button>
+    </div>
+
+    <!-- 셋팅 복원 -->
+    <div class="settings-panel">
+        <div class="setting-row">
+            <span>SENSITIVITY (감도)</span>
+            <input type="range" id="set-sens" min="0.1" max="3.0" step="0.1" value="1.0" oninput="sensitivity=parseFloat(this.value)">
+        </div>
+        <div class="setting-row">
+            <span>FOV (시야각)</span>
+            <input type="range" id="set-fov" min="50" max="100" step="1" value="65" oninput="baseFov=parseInt(this.value); if(gameState==='MENU'){ camera.fov=baseFov; camera.updateProjectionMatrix(); }">
+        </div>
     </div>
 </div>
 
@@ -147,6 +165,7 @@ const UG_Y = -35;
 let gameState = 'MENU';
 let platform = null;
 let isFlashOn = true, sensitivity = 1.0, volBgm = 0.4, volSfx = 0.7;
+let baseFov = 65, targetFov = 65;
 let recTime = 0, speedBoosted = false;
 let lightState = 'normal'; 
 let hintSpawned = false; 
@@ -166,12 +185,11 @@ let pitCX = 0, pitCZ = 0;
 let pitBounds = {minX:0, maxX:0, minZ:0, maxZ:0, active:false};
 let pitMeshes = [], pitVoid = null;
 
-// 빙고판 사이즈 조정 (방 크기에 완벽하게 맞물림)
-// 방 크기 = 7칸 (63 유닛)
+// 빙고판 사이즈 조정 (방 크기에 완벽하게 맞물림, 7x7)
 const B_GRID_DIV = 5;       // 5x5 구멍
 const B_PATH_W = 2.0;       // 길 너비
 const B_HOLE_W = 10.2;      // 구멍 너비
-let PIT_TOTAL = 0;          // 5 * 10.2 + 6 * 2.0 = 63. 완벽하게 7칸(7*9=63)에 맞물림.
+let PIT_TOTAL = 0;          // 5 * 10.2 + 6 * 2.0 = 63. 완벽하게 7칸(7*9=63)
 
 let underground = false;
 let ugMap = [], ugWalls = null, ugFloor = null, ugCeil = null, ugObjs = [];
@@ -189,10 +207,9 @@ let entitySpawnPoint = {x:0, z:0};
 const BG_COL = 0x8a7a40; 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(BG_COL);
-scene.fog = new THREE.FogExp2(BG_COL, 0.015); // 안개를 줄여 전체 백룸이 더 잘 보이게 조정
+scene.fog = new THREE.FogExp2(BG_COL, 0.015); 
 
-const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 150);
-let targetFov = 65;
+const camera = new THREE.PerspectiveCamera(baseFov, innerWidth/innerHeight, 0.1, 150);
 
 const renderer = new THREE.WebGLRenderer({antialias:false, powerPreference:'high-performance'});
 renderer.setSize(innerWidth, innerHeight);
@@ -200,7 +217,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.0));
 renderer.shadowMap.enabled = false; 
 document.body.appendChild(renderer.domElement);
 
-const ambient = new THREE.AmbientLight(0xe8dcb8, 1.0); // 조명 밝기 상향 (전체 맵이 잘 보이게)
+const ambient = new THREE.AmbientLight(0xe8dcb8, 1.0); 
 scene.add(ambient);
 
 const fpsRig = new THREE.Group(); scene.add(fpsRig);
@@ -252,9 +269,9 @@ const ceilMat = new THREE.MeshStandardMaterial({map:ceilTex, roughness:1.0});
 function worldXZ(r,c){ return {x: (c-COLS/2)*UNIT + UNIT/2, z: (r-ROWS/2)*UNIT + UNIT/2}; }
 
 function genRandomMap() {
-    mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1)); // 1 = Wall, 0 = Empty
+    mapData = Array(ROWS).fill().map(()=>Array(COLS).fill(1));
 
-    // 1. 깊이우선탐색(DFS)을 이용한 복잡한 미로 생성 (박스/기둥 제거)
+    // 1. 미로 생성 알고리즘 (백트래킹)
     function carve(r, c) {
         mapData[r][c] = 0;
         const dirs = [[-2,0], [2,0], [0,-2], [0,2]].sort(()=>Math.random()-0.5);
@@ -267,13 +284,7 @@ function genRandomMap() {
         }
     }
     carve(3, 3);
-
-    // 2. 다중 경로를 위한 루프 뚫기
-    for(let i=0; i<400; i++) {
-        let r = Math.floor(Math.random()*(ROWS-4))+2;
-        let c = Math.floor(Math.random()*(COLS-4))+2;
-        mapData[r][c] = 0;
-    }
+    for(let i=0; i<400; i++) { let r = Math.floor(Math.random()*(ROWS-4))+2; let c = Math.floor(Math.random()*(COLS-4))+2; mapData[r][c] = 0; }
 
     function clearArea(r1, r2, c1, c2) {
         for(let r=r1; r<=r2; r++) {
@@ -283,21 +294,31 @@ function genRandomMap() {
         }
     }
 
-    // 3. 주요 필수 경로 (시작점 -> 중심 척추 경로 -> 빙고판 입구 보장)
-    clearArea(2, 6, 2, 6);       // 시작 방
-    clearArea(4, 5, 6, 12);      // 중앙 척추 경로로 이어지는 길
-    clearArea(5, 38, 12, 13);    // 중앙 척추 (너무 막히지 않게)
-    clearArea(22, 24, 13, 19);   // 빙고판으로 들어가는 입구 길
+    // 2. 작은 스폰 방 (3x3 크기)
+    clearArea(2, 4, 2, 4);
+    centerSpawnPoint = worldXZ(3, 3);
+    // 스폰 방에서 미로로 나가는 유일한 입구
+    mapData[5][3] = 0;
+    mapData[6][3] = 0;
 
-    centerSpawnPoint = worldXZ(4, 4);
-
-    // 4. 빙고판 방 (정확히 7x7 유닛 룸으로 클리어 -> 벽 사이에 딱 맞물림)
+    // 3. 빙고판 방 (정확히 7x7 유닛 룸: r=20~26, c=20~26)
     clearArea(20, 26, 20, 26);
     pitCX = (23 - COLS/2)*UNIT + UNIT/2;
     pitCZ = (23 - ROWS/2)*UNIT + UNIT/2;
 
-    // 5. 빙고판 건너편의 탈출 복도
-    clearArea(22, 24, 27, 36);
+    // 4. 빙고판 방으로 들어가는 단 하나의 입구 (남쪽)
+    mapData[27][23] = 0; 
+    mapData[28][23] = 0; 
+    clearArea(28, 30, 22, 24); // 입구 앞 작은 대기 공간
+
+    // 5. 빙고판을 건넌 후 2개의 출구 (북쪽 - 왼쪽/오른쪽)
+    // 벽은 r=19에 위치.
+    mapData[19][21] = 0; // 왼쪽 출구
+    mapData[19][25] = 0; // 오른쪽 출구
+
+    // 6. 탈출구 뒤쪽 복도
+    clearArea(16, 18, 20, 22); // 왼쪽 방
+    clearArea(16, 18, 24, 26); // 오른쪽 방
 
     entitySpawnPoint = worldXZ(35, 12);
 }
@@ -325,7 +346,7 @@ function buildGraphics(){
                 dum.position.set(wx, WH/2, wz); dum.updateMatrix();
                 iWalls.setMatrixAt(idx++, dum.matrix);
             } else if(mapData[r][c]===0) { 
-                if(Math.random() < 0.15){ // 조명을 늘려 전체적으로 더 잘보이게
+                if(Math.random() < 0.15){ 
                     const lg = new THREE.Group();
                     const fr = new THREE.Mesh(new THREE.BoxGeometry(4, .05, 1.5), new THREE.MeshStandardMaterial({color:0x222}));
                     const pn = new THREE.Mesh(new THREE.BoxGeometry(3.8, .06, 1.3), new THREE.MeshBasicMaterial({color:0xfffcd1}));
@@ -352,6 +373,9 @@ function safeSpawn(avoid, minD){
     for(let i=0; i<1000; i++){
         const r=Math.floor(Math.random()*(ROWS-10))+5;
         const c=Math.floor(Math.random()*(COLS-10))+5;
+        // 빙고판 구역 내에서 스폰 방지
+        if(r >= 19 && r <= 27 && c >= 19 && c <= 27) continue;
+
         if(mapData[r][c] === 0){
             const p = worldXZ(r,c);
             if(avoid && minD && Math.sqrt((p.x-avoid.x)**2 + (p.z-avoid.z)**2) < minD) continue;
@@ -446,38 +470,40 @@ function buildBingoPit(){
 
 function spawnDoors(){
     doors.forEach(d => scene.remove(d.group)); doors = [];
-    trueDoorIdx = Math.random() > 0.5 ? 0 : 1;
+    trueDoorIdx = Math.random() > 0.5 ? 0 : 1; // 0 = Left, 1 = Right
 
-    function createDoorObj(r, c, isTrue) {
+    function createDoorObj(r, c, isTrue, label) {
         let group = new THREE.Group();
         let wx = (c - COLS/2)*UNIT + UNIT/2;
         let wz = (r - ROWS/2)*UNIT + UNIT/2;
         
-        group.position.set(wx + UNIT/2 - 0.2, 0, wz);
-        group.rotation.y = -Math.PI/2;
+        // 문을 r=19의 남쪽 면(플레이어를 마주보는 방향)에 밀착 배치
+        group.position.set(wx, 0, wz + UNIT/2 - 0.2);
+        group.rotation.y = 0; // 남쪽을 바라봄
         
         const fMat2 = new THREE.MeshStandardMaterial({color:0x221100, roughness:0.9});
         const tp = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.2, 0.3), fMat2); tp.position.set(0, 4.0, 0);
         group.add(tp);
 
-        let pivot = new THREE.Group(); pivot.position.set(-1.4, 2.0, 0);
+        let pivot = new THREE.Group(); pivot.position.set(1.4, 2.0, 0);
         const dp = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.8, 0.15), new THREE.MeshStandardMaterial({color:0x442211, roughness:0.8})); 
-        dp.position.set(1.4, 0, 0); pivot.add(dp);
+        dp.position.set(-1.4, 0, 0); pivot.add(dp);
         
         const kn = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), new THREE.MeshStandardMaterial({color:0x999999, metalness:0.8})); 
-        kn.position.set(2.4, 0, 0.12); dp.add(kn);
+        kn.position.set(-2.4, 0, 0.12); dp.add(kn);
         
         group.add(pivot);
         scene.add(group); group.updateMatrixWorld(true);
         
-        const sOff = new THREE.Vector3(0, 1.5, -2.0); sOff.applyQuaternion(group.quaternion); 
+        const sOff = new THREE.Vector3(0, 1.5, 2.0); sOff.applyQuaternion(group.quaternion); 
         let sensor = new THREE.Vector3().copy(group.position).add(sOff);
         
         doors.push({ group: group, pivot: pivot, sensor: sensor, isTrue: isTrue, opened: false });
     }
 
-    createDoorObj(22, 36, trueDoorIdx === 0); 
-    createDoorObj(24, 36, trueDoorIdx === 1); 
+    // 왼쪽 문과 오른쪽 문 생성
+    createDoorObj(19, 21, trueDoorIdx === 0, "LEFT");
+    createDoorObj(19, 25, trueDoorIdx === 1, "RIGHT");
 }
 
 function spawnKey(){
@@ -863,8 +889,8 @@ function triggerGameOver(msg){ gameState = 'GAMEOVER'; document.getElementById('
 function respawn(){
     gameState = 'PLAYING'; if(underground) exitUnderground();
     player.position.set(centerSpawnPoint.x, 0.1, centerSpawnPoint.z);
-    sCamX = Math.PI/4; camX = Math.PI/4; sCamY = 0; camY = 0;
-    velY = 0; grounded = true; stamina = 200; exhausted = false;
+    sCamX = Math.PI; camX = Math.PI; sCamY = 0; camY = 0;
+    velY = 0; grounded = true; stamina = 200; exhausted = false; targetFov = baseFov; camera.fov = baseFov;
     isFlying = false; camera.far = 150; camera.updateProjectionMatrix(); scene.fog.density = 0.015;
     
     entities.forEach(e => { e.mesh.position.set(entitySpawnPoint.x, 0, entitySpawnPoint.z); e.state = 'patrol'; e.patrolTarget = entitySpawnPoint; });
@@ -886,7 +912,7 @@ function goMainMenu(){
     if(surfaceHoleGroup){scene.remove(surfaceHoleGroup); surfaceHoleGroup=null;}
     if(floorGroup){scene.remove(floorGroup); floorGroup=null;} if(floorM) floorM.visible=true; if(iWalls) iWalls.visible=true; lamps.forEach(l=>{if(l.visible!==undefined) l.visible=true;}); if(ceilM) ceilM.visible=true;
     
-    if(document.pointerLockElement === document.body) document.exitPointerLock(); lightState = 'normal'; hintSpawned = false; targetFov = 65;
+    if(document.pointerLockElement === document.body) document.exitPointerLock(); lightState = 'normal'; hintSpawned = false; targetFov = baseFov; camera.fov = baseFov;
     isFlying = false; camera.far = 150; camera.updateProjectionMatrix();
     
     genRandomMap(); buildGraphics();
@@ -900,7 +926,7 @@ function launchGame(pf){
     document.getElementById('top-controls').style.display = 'flex'; document.getElementById('cctv-ui').style.display = 'block'; document.getElementById('quest-ui').style.display = 'block'; document.getElementById('stamina-container').style.display = 'block';
 
     hasKey = false; underground = false; hasLadder = false; ladderPlaced = false; climbing = false; climbT = 0;
-    stamina = 200; exhausted = false; velY = 0; grounded = true; lightState = 'normal'; hintSpawned = false; speedBoosted = false; targetFov = 65;
+    stamina = 200; exhausted = false; velY = 0; grounded = true; lightState = 'normal'; hintSpawned = false; speedBoosted = false; targetFov = baseFov; camera.fov = baseFov;
     isFlying = false; camera.far = 150; camera.updateProjectionMatrix(); scene.fog.density = 0.015;
     
     if(platform === 'mobile'){ document.getElementById('joystick-zone').style.display = 'block'; document.getElementById('mobile-controls-right').style.display = 'flex'; }
@@ -909,7 +935,7 @@ function launchGame(pf){
     genRandomMap(); buildGraphics(); buildSurfaceHole(); 
     
     player.position.set(centerSpawnPoint.x, 0.1, centerSpawnPoint.z);
-    sCamX = Math.PI/4; camX = Math.PI/4; sCamY = 0; camY = 0; 
+    sCamX = Math.PI; camX = Math.PI; sCamY = 0; camY = 0; 
     
     buildBingoPit(); spawnDoors(); spawnKey();
     entities.forEach(e => { e.mesh.position.set(entitySpawnPoint.x, 0, entitySpawnPoint.z); e.lastPos.copy(e.mesh.position); e.patrolTarget = entitySpawnPoint; e.state = 'patrol'; });
@@ -1005,10 +1031,10 @@ function animate(){
         
         doors.forEach(d => {
             if(d.opened && d.pivot){
-                if(d.pivot.rotation.y > -Math.PI/2){ d.pivot.rotation.y -= .05; d.group.updateMatrixWorld(true); }
+                if(d.pivot.rotation.y < Math.PI/2){ d.pivot.rotation.y += .05; d.group.updateMatrixWorld(true); }
                 else if (d.isTrue) {
                     const de = player.position.distanceTo(d.sensor);
-                    if(de < 1.8){ gameState = 'CLEAR'; document.getElementById('clear-time').textContent = `TIME: ${m}:${s}`; document.getElementById('clear-screen').style.display = 'flex'; if(platform === 'pc') document.exitPointerLock(); return; }
+                    if(de < 2.0){ gameState = 'CLEAR'; document.getElementById('clear-time').textContent = `TIME: ${m}:${s}`; document.getElementById('clear-screen').style.display = 'flex'; if(platform === 'pc') document.exitPointerLock(); return; }
                 }
             }
         });
@@ -1102,11 +1128,11 @@ function animate(){
         }
     }
 
-    let tiltX = 0, tiltZ = 0; targetFov = 65;
+    let tiltX = 0, tiltZ = 0; targetFov = baseFov;
     if(!underground && pitBounds.active && !isFlying){
         const inP = player.position.x > pitBounds.minX && player.position.x < pitBounds.maxX && player.position.z > pitBounds.minZ && player.position.z < pitBounds.maxZ;
         if(inP && !grounded){
-            targetFov = 80; tiltZ += (Math.random()-0.5)*0.1; velY -= 0.01;
+            targetFov = baseFov + 15; tiltZ += (Math.random()-0.5)*0.1; velY -= 0.01;
         }
     }
     camera.fov += (targetFov - camera.fov) * 0.1;
@@ -1144,5 +1170,6 @@ window.addEventListener('resize', () => {
 </script>
 </body>
 </html>
+
 
 ```
